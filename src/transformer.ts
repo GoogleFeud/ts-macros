@@ -28,7 +28,6 @@ export class MacroTransformer {
 
     extractMacroDeclarations(node: ts.Node) : ts.Node | undefined {
         if (ts.isFunctionDeclaration(node) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
-            const name = ts.getNameOfDeclaration(node)!.getText().slice(1);
             const params: Array<MacroParam> = [];
             for (const param of node.parameters) {
                 params.push({
@@ -38,17 +37,16 @@ export class MacroTransformer {
                     optional: Boolean(param.questionToken)
                 });
             }
-            this.macros.set(name, {
+            this.macros.set(ts.getNameOfDeclaration(node)!.getText(), {
                 params,
                 body: node.body
             });
             return undefined;
         }
-        return node;
-    }
-
-    findAndReplaceMacros(node: ts.Node) : ts.Node {
-        return node;
+        if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression) && this.macros.has(node.expression.expression.getText())) {
+            console.log(`Found a macro call: ${node.expression.expression.getText()}`)
+        }
+        return ts.visitEachChild(node, this.extractMacroDeclarations.bind(this), this.context);
     }
 
 }

@@ -2,6 +2,8 @@
 
 ## Examples
 
+A macro is any function which starts with a dollar sign ($).
+
 ### Simple example
 
 ```ts

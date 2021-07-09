@@ -9,3 +9,5 @@ function $test(...a: Array<number>) : void {
 function $test2(a: any, b: any) {
     1 + 2;
 }
+
+$test2!(1, 2);
