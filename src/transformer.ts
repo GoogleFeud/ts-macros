@@ -9,7 +9,6 @@ export interface MacroParam {
     optional: boolean
 }
 
-
 export interface Macro {
     params: Array<MacroParam>,
     body?: ts.FunctionBody
@@ -78,6 +77,7 @@ export class MacroTransformer {
 
     unwrapMacroVisitor(node: ts.Node) : ts.Node|Array<ts.Node>|undefined {
         if (ts.isIdentifier(node) && this.currentMacro!.params.some(p => p.name === node.text)) {
+
             const index = this.currentMacro!.params.findIndex(p => p.name === node.text);
             const paramMacro = this.currentMacro!.params[index];
             if (this.repeat !== undefined && paramMacro.spread) {
@@ -86,31 +86,106 @@ export class MacroTransformer {
                     delete this.repeat;
                     return this.context.factory.createNull();
                 }
-                this.repeat++;
                 return arg;
             }
             if (paramMacro.spread) return this.context.factory.createArrayLiteralExpression(this.currentArgs!.slice(paramMacro.start));
             return this.currentArgs![index] || this.currentMacro!.params[index].defaultVal || this.context.factory.createNull();
         }
         else if (ts.isExpressionStatement(node)) {
-            if (ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isParenthesizedExpression(node.expression.operand)) {
+            if (ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
                 const repeatedParam = this.currentMacro!.params.find(p => p.spread);
                 if (!repeatedParam) return this.context.factory.createNull();
-                const fn = node.expression.operand.expression;
+                let separator;
+                let fn;
+                if (node.expression.operand.elements.length) {
+                    separator = node.expression.operand.elements[0];
+                    if (!separator || !ts.isStringLiteral(separator)) throw new Error("Repetition separator must be a string literal");
+                    separator = separator.text;
+                    fn = node.expression.operand.elements[1];
+                } else fn = node.expression.operand.elements[0];
                 if (!fn || !ts.isArrowFunction(fn) || !fn.body) throw new Error("Missing repeat function");
-                if (fn.parameters.length) throw new Error("Repeat function cannot contain arguments");
+                if (fn.parameters.length) throw new Error("Repetition function cannot contain arguments");
                 const newBod = [];
                 this.repeat = 0;
                 while (this.currentArgs!.length > (this.repeat + repeatedParam.start)) {
-                    const t = ts.visitEachChild(fn.body, this.unwrapMacroVisitor.bind(this), this.context);
-                    if ("statements" in t) newBod.push(...t.statements);
-                    else newBod.push(t);
+                    if ("statements" in fn.body) newBod.push(...ts.visitEachChild(fn.body, this.unwrapMacroVisitor.bind(this), this.context).statements);
+                    else newBod.push(ts.visitNode(fn.body, this.unwrapMacroVisitor.bind(this)));
+                    this.repeat++;
                 }
-                return newBod;
+                return separator && separators[separator] ? separators[separator](this, newBod):newBod;
             }
+        } else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
+            const repeatedParam = this.currentMacro!.params.find(p => p.spread);
+                if (!repeatedParam) return this.context.factory.createNull();
+                let separator: string|ts.Expression = node.operand.elements[0];
+                if (!separator || !ts.isStringLiteral(separator)) throw new Error("Repetition separator must be a string literal");
+                separator = separator.text;
+                const fn = node.operand.elements[1];
+                if (!fn || !ts.isArrowFunction(fn) || !fn.body) throw new Error("Missing repeat function");
+                if (fn.parameters.length) throw new Error("Repetition function cannot contain arguments");
+                const newBod = [];
+                this.repeat = 0;
+                while (this.currentArgs!.length > (this.repeat + repeatedParam.start)) {
+                    if ("statements" in fn.body) newBod.push(...ts.visitEachChild(fn.body, this.unwrapMacroVisitor.bind(this), this.context).statements);
+                    else newBod.push(ts.visitNode(fn.body, this.unwrapMacroVisitor.bind(this)));
+                    this.repeat++;
+                }
+                return separator && separators[separator] ? separators[separator](this, newBod):newBod;
         }
         return ts.visitEachChild(node, this.unwrapMacroVisitor.bind(this), this.context);
     }
 
 
+}
+
+const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Expression|ts.Statement>) => ts.Expression> = {
+    "[]": (transformer, body) => {
+        //@ts-expect-error
+        return transformer.context.factory.createArrayLiteralExpression(body.map(m => m.expression || m));
+    },
+    "+": (transformer, body) => {
+        let last;
+        //@ts-expect-error
+        for (const element of body.map(m => m.expression || m)) {
+            if (!last) last = element;
+            else last = transformer.context.factory.createBinaryExpression(last, 39, element);
+        }
+        return last;
+    },
+    "-": (transformer, body) => {
+        let last;
+        //@ts-expect-error
+        for (const element of body.map(m => m.expression || m)) {
+            if (!last) last = element;
+            else last = transformer.context.factory.createBinaryExpression(last, 40, element);
+        }
+        return last;
+    },
+    "*": (transformer, body) => {
+        let last;
+        //@ts-expect-error
+        for (const element of body.map(m => m.expression || m)) {
+            if (!last) last = element;
+            else last = transformer.context.factory.createBinaryExpression(last, 41, element);
+        }
+        return last;
+    },
+    ".": (transformer, body) => {
+        let last;
+        //@ts-expect-error
+        for (const element of body.map(m => m.expression || m)) {
+            if (!last) last = element;
+            else last = transformer.context.factory.createElementAccessExpression(last, element);
+        }
+        return last;
+    },
+    ",": (transformer, body) => {
+        let last;
+        //@ts-expect-error
+        for (const element of body.map(m => m.expression || m)) {
+            if (!last) last = element;
+            else last = transformer.context.factory.createBinaryExpression(last, 27, element);
+        }
+        return last;
+    }
 }

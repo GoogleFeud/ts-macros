@@ -39,19 +39,28 @@ After that put this in your tsconfig.json:
 
 ### Repetitions
 
-*Syntax:* `+(separator?, code)`
+*Syntax:* `+[separator?, code]`
 
-The code inside the callback must be wrapped in an arrow function. The code is going to get repeated for every "spread" argument. 
+The code inside the callback must be wrapped in an arrow function. The code is going to get repeated for every "spread" argument. Repetitions without separators cannot be used as `Expressions`. 
 
 **Example:**
 
 ```ts
 function $random(...nums) {
-    +("[]", () => nums * Math.random() << 0) // The [] separator puts everything in an array
+    +["[]", () => nums * Math.random() << 0] // The [] separator puts everything in an array
 }
 
 $random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
 ```
+
+#### Available separators
+
+- `[]` - Puts all the values in an array
+- `+` - Adds all the values
+- `-` - Subtracts all the values
+- `*` - Multiplies all the values
+- `.` - Chains element access (`a[b][c]`)
+- `,` - Separates all expressions with a `,`
 
 ### Expressions / Expression statements
 
@@ -73,10 +82,10 @@ const randomNums;
 ```ts
 function $bigMacro(...elements) {
     const arr = [];
-    +(() => arr.push(elements));
+    +[() => arr.push(elements)];
 }
 
-const nums = $bigMacro(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+const nums = $bigMacro!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 // Transpiles to:
 const randomNums;
 
