@@ -16,6 +16,7 @@
         "@typescript-eslint"
     ],
     "rules": {
+        "@typescript-eslint/no-non-null-assertion": "off",
         "indent": [
             "error",
             4
@@ -32,5 +33,5 @@
             "error",
             "always"
         ]
-    }
+    },
 }

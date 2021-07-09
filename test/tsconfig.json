@@ -4,9 +4,11 @@
       "module": "commonjs",
       "declaration": true,
       "outDir": "./dist",
-      "rootDir": "./src",
       "removeComments": true,
-      "strict": true
+      "strict": true,
+      "experimentalDecorators": true,
+      "plugins": [
+        { "transform": "../dist/index.js" }
+    ]
     },
-    "exclude": ["./test", "./dist", "./node_modules"]
   }
