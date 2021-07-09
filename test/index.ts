@@ -1,13 +1,13 @@
 /* eslint-disable */
 
 
-function $test(...a: Array<number>) : void {
+function $sendAndReturn(message: string) {
     //@ts-expect-error
-    +("+")(a)
+    ctx.send(message);
+    return false;
 }
 
-function $test2(a: any, b: any) {
-    1 + 2;
+function a(ctx: unknown) {
+    // Some other code
+    $sendAndReturn!("Hello World!");
 }
-
-$test2!(1, 2);

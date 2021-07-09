@@ -1,67 +1,100 @@
 # ts-macros
 
-## Examples
+**This project is WIP!**
 
-A macro is any function which starts with a dollar sign ($).
+`ts-macros` is a typescript transformer which makes it possible to implement **function** macros in typescript! The macros are pretty similar to rust's macros, except these are way less verbose and powerful - still very useful nonetheless.
 
-### Simple example
+All macros must start with a dollar sign (`$`) and must be declared using the `function` keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `macro!(params)`.
 
-```ts
-function $random(max) {
-    max * Math.random() << 0;
-}
-
-const rng = random!(5);
-```
-
-Transpiles to:
-
-```js
-const rng = 5 * Math.random() << 0;
-```
-
-### Iterating over args
+**Example:**
 
 ```ts
-function $myMacro(...a) {
-    +("+")(a);
+function $random(max = 1) {
+    max * Math.random() << 0
 }
 
-myMacro!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+$random!(5); // Transpiles to: 5 * Math.random() << 0
 ```
 
-Transpiles to:
+## Usage
+
+You must use the `ttypescript` package in order to use this. 
+
+```
+npm i ttypescript
+```
+
+After that put this in your tsconfig.json:
 
 ```js
-1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10
+"compilerOptions": {
+//... other options
+"plugins": [
+        { "transform": "ts-macros" }
+]
+}
 ```
 
-### As if it's a regular function
+## ts-macros in depth
+
+### Repetitions
+
+*Syntax:* `+(separator?, code)`
+
+The code inside the callback must be wrapped in an arrow function. The code is going to get repeated for every "spread" argument. 
+
+**Example:**
 
 ```ts
-function $sendLargeMsg(content, quiet = false) {
-    ctx.respond({
-        type: InteractionCallbackTypes.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-            content: `> **❌ ${content}**`,
-            flags: quiet ? 1 << 6:undefined, 
-            allowedMentions: { parse: [] }
-        }
-    });
+function $random(...nums) {
+    +("[]", () => nums * Math.random() << 0) // The [] separator puts everything in an array
 }
 
-// In a scope where "ctx" is available
-sendLargeMsg!("Hello World");
+$random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
 ```
 
-Transpiles to:
+### Expressions / Expression statements
 
-```js
-    ctx.respond({
-        type: 3,
-        data: {
-            content: "> **❌ Hello World**",
-            allowedMentions: { parse: [] }
-        }
-    });
+Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. 
+
+If a macro call is used as an `Expression`, then it's only going to expand to **the first** returned expression. Make sure to generate an expression, otherwise there's going to be undefined behaviour.
+
+```ts
+function $macroWhichExpandsAStatement() {
+    const a = 5;
+}
+const randomNums = $macroWhichExpandsAStatement!(); 
+// Transpiles to: 
+const randomNums; 
+
+// because "const randomNums = const a = 5" is invalid syntax.
+```
+
+```ts
+function $bigMacro(...elements) {
+    const arr = [];
+    +(() => arr.push(elements));
+}
+
+const nums = $bigMacro(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+// Transpiles to:
+const randomNums;
+
+// Because "const randomNums = const arr = []" is invalid syntax.
+```
+
+### Return in macros
+
+`return` is allowed in macros, but you should only call the macro in functions so javascript doesn't throw an error.
+
+```ts
+function $sendAndReturn(message) {
+    ctx.send(message);
+    return false;
+}
+
+function handle(ctx) {
+    // Some other code
+    $sendAndReturn!();
+}
 ```
