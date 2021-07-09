@@ -5,8 +5,7 @@
 ### Simple example
 
 ```ts
-@Macro
-function random(max) {
+function $random(max) {
     max * Math.random() << 0;
 }
 
@@ -23,7 +22,7 @@ const rng = 5 * Math.random() << 0;
 
 ```ts
 @Macro
-function myMacro(...a) {
+function $myMacro(...a) {
     +("+")(a);
 }
 
@@ -40,7 +39,7 @@ Transpiles to:
 
 ```ts
 @Macro
-function sendLargeMsg(content, quiet = false) {
+function $sendLargeMsg(content, quiet = false) {
     ctx.respond({
         type: InteractionCallbackTypes.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
