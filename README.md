@@ -21,7 +21,6 @@ const rng = 5 * Math.random() << 0;
 ### Iterating over args
 
 ```ts
-@Macro
 function $myMacro(...a) {
     +("+")(a);
 }
@@ -38,7 +37,6 @@ Transpiles to:
 ### As if it's a regular function
 
 ```ts
-@Macro
 function $sendLargeMsg(content, quiet = false) {
     ctx.respond({
         type: InteractionCallbackTypes.CHANNEL_MESSAGE_WITH_SOURCE,

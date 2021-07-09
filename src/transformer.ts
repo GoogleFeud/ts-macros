@@ -4,13 +4,14 @@ import * as ts from "typescript";
 export interface MacroParam {
     spread: boolean,
     name: string,
-    defaultVal: ts.Expression
+    defaultVal?: ts.Expression,
+    optional: boolean
 }
 
 
 export interface Macro {
     params: Array<MacroParam>,
-    body: ts.FunctionBody
+    body?: ts.FunctionBody
 }
 
 export class MacroTransformer {
@@ -22,13 +23,26 @@ export class MacroTransformer {
     }
 
     run(node: ts.Node) : ts.Node {
-        return ts.visitEachChild(node, this.extractMacros.bind(this), this.context);
+        return ts.visitEachChild(node, this.extractMacroDeclarations.bind(this), this.context);
     }
 
-    extractMacros(node: ts.Node) : ts.Node {
+    extractMacroDeclarations(node: ts.Node) : ts.Node | undefined {
         if (ts.isFunctionDeclaration(node) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
             const name = ts.getNameOfDeclaration(node)!.getText().slice(1);
-            console.log(`Found macro declaration with name "${name}"`);
+            const params: Array<MacroParam> = [];
+            for (const param of node.parameters) {
+                params.push({
+                    spread: Boolean(param.dotDotDotToken),
+                    name: param.name.getText(),
+                    defaultVal: param.initializer,
+                    optional: Boolean(param.questionToken)
+                });
+            }
+            this.macros.set(name, {
+                params,
+                body: node.body
+            });
+            return undefined;
         }
         return node;
     }
