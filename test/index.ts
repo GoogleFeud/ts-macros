@@ -1,8 +1,11 @@
 /* eslint-disable */
 
-
-function $random(...nums: Array<number>) {
-    +["+", () => (nums as unknown as number) + (nums as unknown as number)] // The [] separator puts everything in an array
+function $doubleNum(num: number) {
+    num * 2
 }
 
-$random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
+function $doubleAll(...nums: Array<number>) {
+    +["[]", (nums: number) => $doubleNum!(nums)];
+}
+
+console.log($doubleAll!(1, 2, 3, 4, 5));

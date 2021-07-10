@@ -11,7 +11,7 @@
     "typescript": "^4.3.5"
   },
   "scripts": {
-    "test": "tsc && ttsc test/index"
+    "test": "tsc && ttsc test/index && node test/dist/index"
   },
   "repository": {
     "type": "git",

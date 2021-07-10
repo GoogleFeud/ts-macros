@@ -2,9 +2,9 @@
 
 **This project is WIP!**
 
-`ts-macros` is a typescript transformer which makes it possible to implement **function** macros in typescript! The macros are pretty similar to rust's macros, except these are way less verbose and powerful - still very useful nonetheless.
+`ts-macros` is a typescript transformer which makes it possible to create **function** macros in typescript! The macros are pretty similar to rust's macros (macro_types!), except these are way less verbose and powerful - still very useful nonetheless.
 
-All macros must start with a dollar sign (`$`) and must be declared using the `function` keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `macro!(params)`.
+All macro names must start with a dollar sign (`$`) and must be declared using the `function` keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `macro!(params)`.
 
 **Example:**
 
@@ -39,9 +39,9 @@ After that put this in your tsconfig.json:
 
 ### Repetitions
 
-*Syntax:* `+[separator?, code]`
+*Syntax:* `+[separator?, () => codeToRepeat]`
 
-The code inside the callback must be wrapped in an arrow function. The code is going to get repeated for every "spread" argument. Repetitions without separators cannot be used as `Expressions`. 
+Repetitions without separators cannot be used as `Expressions`. 
 
 **Example:**
 
@@ -107,3 +107,20 @@ function handle(ctx) {
     $sendAndReturn!();
 }
 ```
+
+### Calling other macros inside macros
+
+Calling other macros is possible!
+
+```ts
+function $doubleNum(num) {
+    num * 2
+}
+
+function $doubleAll(...nums) {
+    +["[]", () => $doubleNum!(nums)];
+}
+
+$doubleAll(1, 2, 3, 4, 5); // Transpiles to [1 * 2, 2 * 2, 3 * 2, 4 * 2, 5 * 2];
+```
+
