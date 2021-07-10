@@ -83,22 +83,55 @@ export class MacroTransformer {
 
             if (ts.isIdentifier(node) && currentMacro.params.some(p => p.name === node.text)) return this.resolveIdentifier(node, currentMacro, currentArgs);
 
-            else if (ts.isConditionalExpression(node) && ts.isIdentifier(node.condition) && currentMacro.params.some(p => p.name === node.condition.getText())) {
-                const param = this.resolveIdentifier(node.condition, currentMacro, currentArgs);
+            else if (ts.isConditionalExpression(node)) {
+                const param = ts.visitNode(node.condition, this.boundVisitor);
+                if (param.kind === ts.SyntaxKind.FalseKeyword || param.kind === ts.SyntaxKind.NullKeyword) return ts.visitNode(node.whenFalse, this.boundVisitor);
                 const text = param.getText();
-                if (text === "false" || text === "undefined" || text === "null" || text === "0") return node.whenFalse;
-                if (text === "true" || ts.isNumericLiteral(param) || ts.isStringLiteral(param)) return node.whenTrue;
+                if (text === "false" || text === "undefined" || text === "null" || text === "0") return ts.visitNode(node.whenFalse, this.boundVisitor);
+                if (text === "true" || ts.isNumericLiteral(param) || ts.isStringLiteral(param)) return ts.visitNode(node.whenTrue, this.boundVisitor);
                 return this.context.factory.createConditionalExpression(param, undefined, node.whenTrue, undefined, node.whenFalse);
             }
 
             else if (ts.isBinaryExpression(node)) {
                 switch (node.operatorToken.kind) {
-                    case 36: // ===
-                    case 34:  {// ===
+                    case ts.SyntaxKind.EqualsEqualsEqualsToken: 
+                    case ts.SyntaxKind.EqualsEqualsToken:  {
                         const left = ts.visitNode(node.left, this.boundVisitor);
                         const right = ts.visitNode(node.right, this.boundVisitor);
                         if (!ts.isLiteralExpression(left) || !ts.isLiteralExpression(right)) return this.context.factory.createBinaryExpression(left, node.operatorToken.kind, right);
                         return this.context.factory.createToken(left.getText() === right.getText() ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword);
+                    }
+                    case ts.SyntaxKind.PlusToken: {
+                        let left = ts.visitNode(node.left, this.boundVisitor);
+                        let right = ts.visitNode(node.right, this.boundVisitor);
+                        const num = isNumericLiteral(left);
+                        const num2 = isNumericLiteral(right);
+                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text + +num2.text);
+                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.PlusToken, right);
+                    }
+                    case ts.SyntaxKind.AsteriskToken: {
+                        let left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
+                        let right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
+                        const num = isNumericLiteral(left);
+                        const num2 = isNumericLiteral(right);
+                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text * +num2.text);
+                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.AsteriskToken, right);
+                    }
+                    case ts.SyntaxKind.MinusToken: {
+                        let left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
+                        let right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
+                        const num = isNumericLiteral(left);
+                        const num2 = isNumericLiteral(right);
+                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text - +num2.text);
+                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.AsteriskToken, right);
+                    }
+                    case ts.SyntaxKind.SlashToken: {
+                        let left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
+                        let right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
+                        const num = isNumericLiteral(left);
+                        const num2 = isNumericLiteral(right);
+                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text / +num2.text);
+                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.AsteriskToken, right);
                     }
                 }
             }
@@ -165,6 +198,12 @@ export class MacroTransformer {
 
 }
 
+function isNumericLiteral(node: ts.Expression) : ts.NumericLiteral|false {
+    if (ts.isParenthesizedExpression(node)) return isNumericLiteral(node.expression);
+    if (ts.isNumericLiteral(node)) return node;
+    return false;
+}
+
 function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>, id: number) {
     let last;
     //@ts-expect-error
@@ -172,7 +211,7 @@ function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Expression | 
         if (!last) last = element;
         else last = transformer.context.factory.createBinaryExpression(last, id, element);
     }
-    return last;
+    return ts.visitNode(last, transformer.boundVisitor);
 }
 
 const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>) => ts.Expression> = {

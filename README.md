@@ -122,7 +122,7 @@ function $doubleAll(...nums) {
     +["[]", () => $doubleNum!(nums)];
 }
 
-$doubleAll!(1, 2, 3, 4, 5); // Transpiles to [1 * 2, 2 * 2, 3 * 2, 4 * 2, 5 * 2];
+$doubleAll!(1, 2, 3, 4, 5); // Transpiles to [2, 4, 6, 8, 10];
 ```
 
 ### Ternary operator in macros
@@ -134,7 +134,7 @@ function $test(double, ...nums) {
     +["[]", () => nums * (double ? 2:1)]
 }
 
-$test!(true, 1, 2, 3); // Transpiles to: [1 * (2), 2 * (2), 3 * (2)]
+$test!(true, 1, 2, 3); // Transpiles to: [2, 4, 6]
 
 const val = false;
 $test!(val, 1, 2, 3) // Transpiles to: [1 * (val ? 2:1), 2 * (val ? 2:1), 3 * (val ? 2:1)]
@@ -151,4 +151,30 @@ $cmp!("google"); // Transpiles to: true
 $cmp!("tj"); // Transpiles to: false
 ```
 
+### Adding / subtracting / multiplying / dividing literals
+
+Number literals will automatically be added / subtracted / multiplied / divided.
+
+```ts
+function $add(...nums: Array<number>) {
+    +["+", (nums: number) => nums];
+} 
+
+$add!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15); // Transpiles to 120
+```
+
+### Macros inside macros
+
+Not recommended, but possible. The inner-macros don't have access to any previous arguments.
+
+```ts
+function $contains(value: number, ...possible: Array<number>) {
+    function $inc(value: number) {
+        value + 1;
+    }
+    +["||", (possible: unknown) => $inc!(value) === possible];
+}
+
+console.log($contains!(1, 1, 2, 3, 4, 5, 6, 7, 8)); 
+```
 
