@@ -1,7 +1,5 @@
 # ts-macros
 
-**This project is WIP!**
-
 `ts-macros` is a typescript transformer which makes it possible to create **function** macros in typescript! The macros are pretty similar to rust's macros (macro_types!), except these are way less verbose and powerful - still very useful nonetheless.
 
 All macro names must start with a dollar sign (`$`) and must be declared using the `function` keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `macro!(params)`.
@@ -9,11 +7,13 @@ All macro names must start with a dollar sign (`$`) and must be declared using t
 **Example:**
 
 ```ts
-function $random(max = 1) {
-    max * Math.random() << 0
+function $contains(value: unknown, ...possible: Array<unknown>) {
+    +["||", (possible: unknown) => value === possible];
 }
 
-$random!(5); // Transpiles to: 5 * Math.random() << 0
+const searchItem = "google";
+console.log($contains!(searchItem, "erwin", "tj")); 
+// Transpiles to: (searchItem === "erwin" || searchItem === "tj")
 ```
 
 ## Usage
@@ -59,8 +59,9 @@ $random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() 
 - `+` - Adds all the values
 - `-` - Subtracts all the values
 - `*` - Multiplies all the values
-- `.` - Chains element access (`a[b][c]`)
 - `,` - Separates all expressions with a `,`
+- `||` 
+- `&&`
 
 ### Expressions / Expression statements
 
@@ -121,6 +122,33 @@ function $doubleAll(...nums) {
     +["[]", () => $doubleNum!(nums)];
 }
 
-$doubleAll(1, 2, 3, 4, 5); // Transpiles to [1 * 2, 2 * 2, 3 * 2, 4 * 2, 5 * 2];
+$doubleAll!(1, 2, 3, 4, 5); // Transpiles to [1 * 2, 2 * 2, 3 * 2, 4 * 2, 5 * 2];
 ```
+
+### Ternary operator in macros
+
+If the condition of a ternary operator inside a macro is one of the macro parameters, the entire ternary operation is going to replaced, as long as the given value is a literal:
+
+```ts
+function $test(double, ...nums) {
+    +["[]", () => nums * (double ? 2:1)]
+}
+
+$test!(true, 1, 2, 3); // Transpiles to: [1 * (2), 2 * (2), 3 * (2)]
+
+const val = false;
+$test!(val, 1, 2, 3) // Transpiles to: [1 * (val ? 2:1), 2 * (val ? 2:1), 3 * (val ? 2:1)]
+```
+
+### Comparing literals
+
+```ts
+function $cmp(a) {
+    a === "google";
+}
+
+$cmp!("google"); // Transpiles to: true
+$cmp!("tj"); // Transpiles to: false
+```
+
 

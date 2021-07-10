@@ -1,11 +1,7 @@
 /* eslint-disable */
 
-function $doubleNum(num: number) {
-    num * 2
+function $cmp(...params: Array<unknown>) {
+    +["+", () => params];
 }
 
-function $doubleAll(...nums: Array<number>) {
-    +["[]", (nums: number) => $doubleNum!(nums)];
-}
-
-console.log($doubleAll!(1, 2, 3, 4, 5));
+$cmp!(1, 2, 3, 4, 5)
