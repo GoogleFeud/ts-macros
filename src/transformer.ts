@@ -120,8 +120,8 @@ export class MacroTransformer {
                     case ts.SyntaxKind.EqualsEqualsToken:  {
                         const left = ts.visitNode(node.left, this.boundVisitor);
                         const right = ts.visitNode(node.right, this.boundVisitor);
-                        if (!ts.isLiteralExpression(left) || !ts.isLiteralExpression(right)) return this.context.factory.createBinaryExpression(left, node.operatorToken.kind, right);
-                        return this.context.factory.createToken(left.getText() === right.getText() ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword);
+                        if (!left || !right || !ts.isLiteralExpression(left) || !ts.isLiteralExpression(right)) return this.context.factory.createBinaryExpression(left, node.operatorToken.kind, right);
+                        return this.context.factory.createToken(left.text === right.text ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword);
                     }
                     case ts.SyntaxKind.PlusToken: {
                         let left = ts.visitNode(node.left, this.boundVisitor);

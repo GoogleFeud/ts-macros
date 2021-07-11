@@ -1,8 +1,11 @@
 /* eslint-disable */
 /* @ts-ignore */
 
-function $add(...nums: Array<number>) {
-    +["+", (nums: number) => nums];
-} 
+function $contains(value: number, ...possible: Array<number>) {
+    function $inc(value: number) {
+        value + 1;
+    }
+    +["||", (possible: unknown) => $inc!(value) === possible];
+}
 
-$add!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15); // Transpiles to 120
+console.log($contains!(1, 1, 2, 3, 4, 5, 6, 7, 8)); 
