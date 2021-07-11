@@ -13,7 +13,7 @@ function $contains(value: unknown, ...possible: Array<unknown>) {
 
 const searchItem = "google";
 console.log($contains!(searchItem, "erwin", "tj")); 
-// Transpiles to: (searchItem === "erwin" || searchItem === "tj")
+// Transpiles to: console.log(searchItem === "erwin" || searchItem === "tj")
 ```
 
 ## Usage
@@ -65,32 +65,54 @@ $random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() 
 
 ### Expressions / Expression statements
 
-Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. 
+Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Macro calls can never be `Statement`s, but:
 
-If a macro call is used as an `Expression`, then it's only going to expand to **the first** returned expression. Make sure to generate an expression, otherwise there's going to be undefined behaviour.
-
+**If a macro call is a `ExpressionStatement`, then it's going to get "flattened" - the macro call will literally be replaced by the macro body.**
 ```ts
-function $macroWhichExpandsAStatement() {
-    const a = 5;
+function $map(arr, cb) {
+   const array = arr;
+   const res = [];
+   for (let i=0; i < array.length; i++) {
+      res.push(cb(array[i]);
+   }
 }
-const randomNums = $macroWhichExpandsAStatement!(); 
-// Transpiles to: 
-const randomNums; 
 
-// because "const randomNums = const a = 5" is invalid syntax.
+$map!([1, 2, 3], (num) => num * 2); // This is an ExpressionStatement
+
+// Transpiles to:
+const array = [1, 2, 3];
+const res = [];
+for (let i = 0; i < array.length; i++) {
+    res.push(((item) => item * 2)(array[i], i));
+}
 ```
 
+**If a macro call is in an `Expression` and it's body expands to a single expression then the call is replaced by the expression**
 ```ts
-function $bigMacro(...elements) {
-    const arr = [];
-    +[() => arr.push(elements)];
+function $push( ...nums: Array<number>) {
+    +["[]", (nums: number) => nums * Math.random() << 0]
 }
 
-const nums = $bigMacro!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+const rngNums = $push!(1, 2, 3, 4, 5, 6, 7, 8); // Macro call is an expression here
 // Transpiles to:
-const randomNums;
+const rngNums = [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0, 4 * Math.random() << 0, 5 * Math.random() << 0, 6 * Math.random() << 0, 7 * Math.random() << 0, 8 * Math.random() << 0];
+```
 
-// Because "const randomNums = const arr = []" is invalid syntax.
+**If a macro call is in an `Expression` and it's body contains **more** than a single expression, or contains a `Statement`, then the body is wrapped in an IIFE.**
+```ts
+function $push(array: Array<number>, ...nums: Array<number>) {
+    +[(nums: number) => array.push(nums)];
+}
+
+const arr: Array<number> = [];
+const newSize = $push!(arr, 1, 2, 3);
+// Transpiles to:
+const arr = [];
+const newSize = (() => {
+    arr.push(1)
+    arr.push(2)
+    return arr.push(3);
+})();
 ```
 
 ### Return in macros
