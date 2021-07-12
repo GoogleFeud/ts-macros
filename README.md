@@ -35,6 +35,8 @@ After that put this in your tsconfig.json:
 }
 ```
 
+Then run your code with `ttsc`.
+
 ## ts-macros in depth
 
 ### Repetitions
