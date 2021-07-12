@@ -127,10 +127,21 @@ export class MacroTransformer {
             else if (ts.isConditionalExpression(node)) {
                 const param = ts.visitNode(node.condition, this.boundVisitor);
                 if (param.kind === ts.SyntaxKind.FalseKeyword || param.kind === ts.SyntaxKind.NullKeyword) return ts.visitNode(node.whenFalse, this.boundVisitor);
+                if (param.kind === ts.SyntaxKind.TrueKeyword) return ts.visitNode(node.whenTrue, this.boundVisitor);
                 const text = param.getText();
                 if (text === "false" || text === "undefined" || text === "null" || text === "0") return ts.visitNode(node.whenFalse, this.boundVisitor);
                 if (text === "true" || ts.isNumericLiteral(param) || ts.isStringLiteral(param)) return ts.visitNode(node.whenTrue, this.boundVisitor);
                 return this.context.factory.createConditionalExpression(param, undefined, node.whenTrue, undefined, node.whenFalse);
+            }
+
+            else if (ts.isIfStatement(node)) {
+                const condition = ts.visitNode(node.expression, this.boundVisitor);
+                if (condition.kind === ts.SyntaxKind.FalseKeyword || condition.kind === ts.SyntaxKind.NullKeyword) return ts.visitNode(node.elseStatement, this.boundVisitor);
+                if (condition.kind === ts.SyntaxKind.TrueKeyword) return ts.visitNode(node.thenStatement, this.boundVisitor);
+                const text = condition.getText();
+                if (text === "false" || text === "undefined" || text === "null" || text === "0") return ts.visitNode(node.elseStatement, this.boundVisitor);
+                if (text === "true" || ts.isNumericLiteral(condition) || ts.isStringLiteral(condition)) return ts.visitNode(node.thenStatement, this.boundVisitor);
+                return this.context.factory.createIfStatement(condition, node.thenStatement, node.elseStatement);
             }
 
             else if (ts.isBinaryExpression(node)) {

@@ -147,16 +147,22 @@ function $doubleAll(...nums) {
 $doubleAll!(1, 2, 3, 4, 5); // Transpiles to [2, 4, 6, 8, 10];
 ```
 
-### Ternary operator in macros
+### If statements and ternary operators in macros
 
-If the condition of a ternary operator inside a macro is one of the macro parameters, the entire ternary operation is going to be replaced, as long as the given value is a literal:
+If the condition of a ternary operator / if statement inside a macro is one of the macro parameters, the entire ternary operation / if statement is going to be replaced, as long as the given value is a literal:
 
 ```ts
 function $test(double, ...nums) {
     +["[]", () => nums * (double ? 2:1)]
 }
 
+function $test2(double, ...nums) {
+    if (double) +["[]", () => nums * 2];
+    else +["[]", () => nums];
+}
+
 $test!(true, 1, 2, 3); // Transpiles to: [2, 4, 6]
+$test2!(true, 1, 2, 3); // // Transpiles to: [2, 4, 6]
 
 const val = false;
 $test!(val, 1, 2, 3) // Transpiles to: [1 * (val ? 2:1), 2 * (val ? 2:1), 3 * (val ? 2:1)]
@@ -205,16 +211,20 @@ You don't have to export macros in order to use them but it's recommended to do 
 
 ```ts
 // Inside macros.ts
-export function $add(...nums: Array<number>) : number|void {
-    +["+", (nums: number) => nums];
+export function $calc(type: string, ...nums: Array<number>) : number|void {
+    type === "+" ? +["+", (nums: number) => nums] :
+    type === "-" ? +["-", (nums: number) => nums] : 
+    type === "*" ? +["*", (nums: number) => nums] : 0;
 }
 ```
 
 ```ts
 // Inside index.ts
-import {$add} from "./macros";
+import {$calc} from "./macros";
 
-const num = $add!(1, 2, 3, 4, 5);
+const num = $calc!("*", 1, 2, 3, 4, 5); 
+// Transpiles to: 
+const num = 120;
 ```
 
 ### Macros inside macros
