@@ -56,12 +56,21 @@ export class MacroTransformer {
         }
 
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
-            const exp = node.expression;
-            const macro = this.macros.get((exp.expression as ts.NonNullExpression).expression.getText());
+            const chain = node.expression.expression as ts.NonNullExpression;
+            let macro;
+            let args;
+            if (ts.isPropertyAccessExpression(chain.expression)) {
+                macro = this.macros.get(chain.expression.name.text); 
+                const newArgs = this.context.factory.createNodeArray([ts.visitNode(chain.expression.expression, this.boundVisitor), ...node.expression.arguments]);
+                args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
+            } else {
+                macro = this.macros.get(chain.expression.getText());
+                args = this.macroStack.length ? ts.visitNodes(node.expression.arguments, this.boundVisitor) : node.expression.arguments;
+            }
             if (!macro || !macro.body) return this.context.factory.createNull();
             this.macroStack.push({
                 macro,
-                args: this.macroStack.length ? ts.visitNodes(node.expression.arguments, this.boundVisitor) : node.expression.arguments,
+                args
             })
             const res = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
             this.macroStack.pop();
@@ -69,11 +78,20 @@ export class MacroTransformer {
         }
 
         if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression)) {
-            const macro = this.macros.get(node.expression.expression.getText());
+            let macro;
+            let args;
+            if (ts.isPropertyAccessExpression(node.expression.expression)) {
+                macro = this.macros.get(node.expression.expression.name.text); 
+                const newArgs = this.context.factory.createNodeArray([ts.visitNode(node.expression.expression.expression, this.boundVisitor), ...node.arguments]);
+                args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
+            } else {
+                macro = this.macros.get(node.expression.expression.getText());
+                args = this.macroStack.length ? ts.visitNodes(node.arguments, this.boundVisitor) : node.arguments;
+            }
             if (!macro || !macro.body) return this.context.factory.createNull();
             this.macroStack.push({
                 macro,
-                args: this.macroStack.length ? ts.visitNodes(node.arguments, this.boundVisitor) : node.arguments,
+                args,
             });
             const res = [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
             this.macroStack.pop();

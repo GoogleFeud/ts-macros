@@ -93,9 +93,9 @@ function $push( ...nums: Array<number>) {
     +["[]", (nums: number) => nums * Math.random() << 0]
 }
 
-const rngNums = $push!(1, 2, 3, 4, 5, 6, 7, 8); // Macro call is an expression here
+const rngNums = $push!(1, 2, 3); // Macro call is an expression here
 // Transpiles to:
-const rngNums = [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0, 4 * Math.random() << 0, 5 * Math.random() << 0, 6 * Math.random() << 0, 7 * Math.random() << 0, 8 * Math.random() << 0];
+const rngNums = [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0];
 ```
 
 **If a macro call is in an `Expression` and it's body contains **more** than a single expression, or contains a `Statement`, then the body is wrapped in an IIFE.**
@@ -185,6 +185,20 @@ function $add(...nums: Array<number>) {
 $add!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15); // Transpiles to 120
 ```
 
+### Chaining macros
+
+It's possible to chain macros with any javascript object you want.
+
+```ts
+function $doubleNum(number: number) : number|void {
+    number * number
+}
+
+(5).$doubleNum!(); // Transpiles to: 25
+const someNum = 10;
+someNum.$doubleNum!(); // Transpiles to: someNum * someNum
+```
+
 ### Macros inside macros
 
 Not recommended, but possible. The inner-macros don't have access to any previous arguments.
@@ -199,4 +213,3 @@ function $contains(value: number, ...possible: Array<number>) {
 
 console.log($contains!(1, 1, 2, 3, 4, 5, 6, 7, 8)); 
 ```
-
