@@ -1,11 +1,5 @@
 /* eslint-disable */
 
-function $inc(value: number) {
-    value + 1;
-}
+import {$add} from "./macros";
 
-function $contains(value: number, ...possible: Array<number>) {
-    +["||", (possible: unknown) => $inc!(value) === possible];
-}
-
-$contains!(1, 1, 2, 3, 4, 5);
+const num = $add!(1, 2, 3, 4, 5);

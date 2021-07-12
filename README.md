@@ -149,7 +149,7 @@ $doubleAll!(1, 2, 3, 4, 5); // Transpiles to [2, 4, 6, 8, 10];
 
 ### Ternary operator in macros
 
-If the condition of a ternary operator inside a macro is one of the macro parameters, the entire ternary operation is going to replaced, as long as the given value is a literal:
+If the condition of a ternary operator inside a macro is one of the macro parameters, the entire ternary operation is going to be replaced, as long as the given value is a literal:
 
 ```ts
 function $test(double, ...nums) {
@@ -197,6 +197,24 @@ function $doubleNum(number: number) : number|void {
 (5).$doubleNum!(); // Transpiles to: 25
 const someNum = 10;
 someNum.$doubleNum!(); // Transpiles to: someNum * someNum
+```
+
+### Exporting macros
+
+You don't have to export macros in order to use them but it's recommended to do so to please the typescript compiler. Macro names are unqiue and if you have two macros with the same name inside your project, you'll get an "Macro X is already defined" error.
+
+```ts
+// Inside macros.ts
+export function $add(...nums: Array<number>) : number|void {
+    +["+", (nums: number) => nums];
+}
+```
+
+```ts
+// Inside index.ts
+import {$add} from "./macros";
+
+const num = $add!(1, 2, 3, 4, 5);
 ```
 
 ### Macros inside macros

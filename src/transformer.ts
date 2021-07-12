@@ -1,6 +1,8 @@
 
 import * as ts from "typescript";
 
+const MACROS = new Map<string, Macro>();
+
 export interface MacroParam {
     spread: boolean,
     start: number,
@@ -19,13 +21,11 @@ export interface MacroExpand {
 }
 
 export class MacroTransformer {
-    macros: Map<string, Macro>
     context: ts.TransformationContext
     macroStack: Array<MacroExpand>
     repeat?: number
     boundVisitor: ts.Visitor
     constructor(context: ts.TransformationContext) {
-        this.macros = new Map();
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.macroStack = [];
@@ -37,6 +37,8 @@ export class MacroTransformer {
 
     visitor(node: ts.Node): ts.Node | Array<ts.Node> | undefined {
         if (ts.isFunctionDeclaration(node) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
+            const macroName = ts.getNameOfDeclaration(node)!.getText();
+            if (MACROS.has(macroName)) throw new Error(`Macro ${macroName} is already defined.`);
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
@@ -47,8 +49,7 @@ export class MacroTransformer {
                     defaultVal: param.initializer
                 });
             }
-            const macroName = ts.getNameOfDeclaration(node)!.getText();
-            this.macros.set(macroName, {
+            MACROS.set(macroName, {
                 params,
                 body: node.body
             });
@@ -60,11 +61,11 @@ export class MacroTransformer {
             let macro;
             let args;
             if (ts.isPropertyAccessExpression(chain.expression)) {
-                macro = this.macros.get(chain.expression.name.text); 
+                macro = MACROS.get(chain.expression.name.text); 
                 const newArgs = this.context.factory.createNodeArray([ts.visitNode(chain.expression.expression, this.boundVisitor), ...node.expression.arguments]);
                 args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
             } else {
-                macro = this.macros.get(chain.expression.getText());
+                macro = MACROS.get(chain.expression.getText());
                 args = this.macroStack.length ? ts.visitNodes(node.expression.arguments, this.boundVisitor) : node.expression.arguments;
             }
             if (!macro || !macro.body) return this.context.factory.createNull();
@@ -81,11 +82,11 @@ export class MacroTransformer {
             let macro;
             let args;
             if (ts.isPropertyAccessExpression(node.expression.expression)) {
-                macro = this.macros.get(node.expression.expression.name.text); 
+                macro = MACROS.get(node.expression.expression.name.text); 
                 const newArgs = this.context.factory.createNodeArray([ts.visitNode(node.expression.expression.expression, this.boundVisitor), ...node.arguments]);
                 args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
             } else {
-                macro = this.macros.get(node.expression.expression.getText());
+                macro = MACROS.get(node.expression.expression.getText());
                 args = this.macroStack.length ? ts.visitNodes(node.arguments, this.boundVisitor) : node.arguments;
             }
             if (!macro || !macro.body) return this.context.factory.createNull();
