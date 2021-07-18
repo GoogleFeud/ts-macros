@@ -1,14 +1,10 @@
-/* eslint-disable */
-
-import {$add, $calc} from "./macros";
-
-function $test(double: boolean, ...nums: Array<number>) {
+function $test(double: boolean, ...nums: Array<number>)  {
     +["[]", (nums: number) => nums * (double ? 2:1)]
 }
 
 function $test2(double: boolean, ...nums: Array<number>) {
     if (double) +["[]", (nums: number) => nums * 2];
-    else +["[]", (nums: number) => nums];
+    else +["[]", () => nums];
 }
 
 $test!(true, 1, 2, 3); // Transpiles to: [2, 4, 6]

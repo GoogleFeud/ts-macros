@@ -1,5 +1,6 @@
 
 import * as ts from "typescript";
+import nativeMacros from "./nativeMacros";
 
 const MACROS = new Map<string, Macro>();
 
@@ -20,15 +21,23 @@ export interface MacroExpand {
     args: ts.NodeArray<ts.Expression>,
 }
 
+export interface MacroTransformerBuiltinProps {
+    optimizeEnv?: boolean
+}
+
 export class MacroTransformer {
     context: ts.TransformationContext
     macroStack: Array<MacroExpand>
     repeat?: number
     boundVisitor: ts.Visitor
-    constructor(context: ts.TransformationContext) {
+    dirname: string
+    props: MacroTransformerBuiltinProps
+    constructor(dirname: string, context: ts.TransformationContext) {
+        this.dirname = dirname;
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.macroStack = [];
+        this.props = {};
     }
 
     run(node: ts.Node): ts.Node {
@@ -65,6 +74,7 @@ export class MacroTransformer {
                 const newArgs = this.context.factory.createNodeArray([ts.visitNode(chain.expression.expression, this.boundVisitor), ...node.expression.arguments]);
                 args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
             } else {
+                if (nativeMacros[chain.expression.getText()]) return nativeMacros[chain.expression.getText()](ts.visitNodes(node.expression.arguments, this.boundVisitor), this);
                 macro = MACROS.get(chain.expression.getText());
                 args = this.macroStack.length ? ts.visitNodes(node.expression.arguments, this.boundVisitor) : node.expression.arguments;
             }
@@ -86,6 +96,7 @@ export class MacroTransformer {
                 const newArgs = this.context.factory.createNodeArray([ts.visitNode(node.expression.expression.expression, this.boundVisitor), ...node.arguments]);
                 args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
             } else {
+                if (nativeMacros[node.expression.expression.getText()]) return nativeMacros[node.expression.expression.getText()](ts.visitNodes(node.arguments, this.boundVisitor), this);
                 macro = MACROS.get(node.expression.expression.getText());
                 args = this.macroStack.length ? ts.visitNodes(node.arguments, this.boundVisitor) : node.arguments;
             }
@@ -109,6 +120,13 @@ export class MacroTransformer {
         if (this.macroStack.length) {
             const {macro, args} = this.macroStack[this.macroStack.length - 1];
 
+            if (this.props.optimizeEnv && ts.isPropertyAccessExpression(node) && node.expression.getText() === "process.env") {
+                const value = process.env[node.name.text];
+                if (typeof value === "string") return this.context.factory.createStringLiteral(value);
+                else if (typeof value === "number") return this.context.factory.createNumericLiteral(value);
+                else return node;
+            } 
+
             if (ts.isIdentifier(node) && macro.params.some(p => p.name === node.text)) {
                 const index = macro.params.findIndex(p => p.name === node.text);
                 const paramMacro = macro.params[index];
@@ -126,22 +144,19 @@ export class MacroTransformer {
 
             else if (ts.isConditionalExpression(node)) {
                 const param = ts.visitNode(node.condition, this.boundVisitor);
-                if (param.kind === ts.SyntaxKind.FalseKeyword || param.kind === ts.SyntaxKind.NullKeyword) return ts.visitNode(node.whenFalse, this.boundVisitor);
+                if (param.kind === ts.SyntaxKind.FalseKeyword || param.kind === ts.SyntaxKind.NullKeyword || ts.isIdentifier(param) && param.text === "undefined" || ts.isNumericLiteral(param) && param.text === "0" || ts.isStringLiteral(param) && param.text === "") return ts.visitNode(node.whenFalse, this.boundVisitor);
                 if (param.kind === ts.SyntaxKind.TrueKeyword) return ts.visitNode(node.whenTrue, this.boundVisitor);
-                const text = param.getText();
-                if (text === "false" || text === "undefined" || text === "null" || text === "0") return ts.visitNode(node.whenFalse, this.boundVisitor);
-                if (text === "true" || ts.isNumericLiteral(param) || ts.isStringLiteral(param)) return ts.visitNode(node.whenTrue, this.boundVisitor);
-                return this.context.factory.createConditionalExpression(param, undefined, node.whenTrue, undefined, node.whenFalse);
+                return this.context.factory.createConditionalExpression(param, undefined, ts.visitNode(node.whenTrue, this.boundVisitor), undefined, ts.visitNode(node.whenFalse, this.boundVisitor));
             }
 
             else if (ts.isIfStatement(node)) {
                 const condition = ts.visitNode(node.expression, this.boundVisitor);
-                if (condition.kind === ts.SyntaxKind.FalseKeyword || condition.kind === ts.SyntaxKind.NullKeyword) return ts.visitNode(node.elseStatement, this.boundVisitor);
+                if (condition.kind === ts.SyntaxKind.FalseKeyword || condition.kind === ts.SyntaxKind.NullKeyword || ts.isIdentifier(condition) && condition.text === "undefined" || ts.isNumericLiteral(condition) && condition.text === "0" || ts.isStringLiteral(condition) && condition.text === "") {
+                    if (!node.elseStatement) return undefined;
+                    return ts.visitNode(node.elseStatement, this.boundVisitor);
+                }
                 if (condition.kind === ts.SyntaxKind.TrueKeyword) return ts.visitNode(node.thenStatement, this.boundVisitor);
-                const text = condition.getText();
-                if (text === "false" || text === "undefined" || text === "null" || text === "0") return ts.visitNode(node.elseStatement, this.boundVisitor);
-                if (text === "true" || ts.isNumericLiteral(condition) || ts.isStringLiteral(condition)) return ts.visitNode(node.thenStatement, this.boundVisitor);
-                return this.context.factory.createIfStatement(condition, node.thenStatement, node.elseStatement);
+                return this.context.factory.createIfStatement(condition, ts.visitNode(node.thenStatement, this.boundVisitor), ts.visitNode(node.elseStatement, this.boundVisitor));
             }
 
             else if (ts.isBinaryExpression(node)) {

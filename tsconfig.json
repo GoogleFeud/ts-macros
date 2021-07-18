@@ -1,12 +1,13 @@
+  
 {
-    "compilerOptions": {
-      "target": "es6",
-      "module": "commonjs",
-      "declaration": true,
-      "outDir": "./dist",
-      "rootDir": "./src",
-      "removeComments": true,
-      "strict": true
-    },
-    "exclude": ["./test", "./dist", "./node_modules"]
-  }
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "removeComments": true,
+    "strict": true
+  },
+  "exclude": ["./test", "./dist", "./node_modules"]
+}

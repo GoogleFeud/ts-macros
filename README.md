@@ -243,3 +243,89 @@ function $contains(value: number, ...possible: Array<number>) {
 
 console.log($contains!(1, 1, 2, 3, 4, 5, 6, 7, 8)); 
 ```
+
+### Built-in macros
+
+This library has a few built-in macros which utilize the lib's optimizing capabilities. 
+
+**Important:** Built-in macros cannot be used with the dot notation `.`.
+
+#### $$loadEnv(path?: string)
+
+Loads an `env` file from the provided path, or from the base directory of your project (aka where `package.json` is). The macro loads the enviourment variables in the output AND while typescript is transpiling your code. This means expressions like `process.env.SOME_CONFIG_OPTION` in macro bodies will be replaced with the literal value of the enviourment variable.
+
+`.env`:
+```
+TRIPLE=yes
+```
+
+`index.ts`:
+```ts
+import { $$loadEnv } from "ts-macros";
+$$loadEnv!();
+
+function $multiply(num: number) : number {
+    process.env.TRIPLE === "yes" ? num * 3 : num * 2;
+}
+
+[$multiply!(1), $multiply!(2), (3).$multiply!()];
+```
+
+`index.js`:
+```js
+Object.defineProperty(exports, "__esModule", { value: true });
+const dist_1 = require("../../dist");
+require("dotenv").config();
+[3, 6, 9];
+```
+
+#### $$loadJSONAsEnv(path: string)
+
+Loads a JSON object and puts all properties in the `process.env` object. Since that object can only contain strings, it's not recommended to put arrays or other complex objects inside the JSON. Works the same way as `$$loadEnv`. This macro only loads the properties inside the JSON during the transpilation process - you won't find the properties if you run the transpiled code.
+
+`config.json`:
+```
+{ debug: false }
+```
+
+```index.ts`:
+```ts
+import { $$loadJSONAsEnv } from "../../dist";
+$$loadJSONAsEnv!("config.json");
+
+function $debug(exp: unknown) : void {
+    if (process.env.debug === "true") console.log(exp);
+}
+
+$debug!(1 + 1);
+```
+
+```index.js`:
+```js
+Object.defineProperty(exports, "__esModule", { value: true });
+const dist_1 = require("../../dist");
+```
+
+#### $$inlineFunc(func: ArrowFunction) 
+
+Inlines the provided arrow function. The arrow function must have 0 arguments.
+
+`index.ts`:
+```ts
+import { $$inlineFunc } from "../../dist";
+function $if(condition: unknown, then: Function) : void {
+    if (condition) {
+        $$inlineFunc!(then);
+    }
+}
+$if!(1 + 1 === 2, () => console.log(5));
+```
+
+`index.js`:
+```js
+Object.defineProperty(exports, "__esModule", { value: true });
+const dist_1 = require("../../dist");
+if (1 + 1 === 2) {
+    console.log(5)
+}
+```
