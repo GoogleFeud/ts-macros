@@ -288,7 +288,7 @@ Loads a JSON object and puts all properties in the `process.env` object. Since t
 { debug: false }
 ```
 
-```index.ts`:
+`index.ts`:
 ```ts
 import { $$loadJSONAsEnv } from "../../dist";
 $$loadJSONAsEnv!("config.json");
@@ -300,7 +300,7 @@ function $debug(exp: unknown) : void {
 $debug!(1 + 1);
 ```
 
-```index.js`:
+`index.js`:
 ```js
 Object.defineProperty(exports, "__esModule", { value: true });
 const dist_1 = require("../../dist");
