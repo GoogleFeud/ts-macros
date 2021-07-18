@@ -11,7 +11,8 @@ export default {
         } catch {
             throw new Error("`loadEnv` macro called but `dotenv` module is not installed.");
         }
-        dotenv.config({path: path.join(transformer.dirname, extraPath)});
+        if (extraPath) dotenv.config({path: path.join(transformer.dirname, extraPath)});
+        else dotenv.config();
         transformer.props.optimizeEnv = true;
         return transformer.context.factory.createCallExpression(
             transformer.context.factory.createPropertyAccessExpression(

@@ -139,7 +139,7 @@ export class MacroTransformer {
                     return arg;
                 }
                 if (paramMacro.spread) return this.context.factory.createArrayLiteralExpression(args.slice(paramMacro.start));
-                return args[index] || macro!.params[index].defaultVal || this.context.factory.createNull();
+                return ts.visitNode(args[index], this.boundVisitor) || macro!.params[index].defaultVal || this.context.factory.createNull();
             }
 
             else if (ts.isConditionalExpression(node)) {
