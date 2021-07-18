@@ -39,10 +39,14 @@ export default {
       transformer.props.optimizeEnv = true;
       return undefined;
     },
-    "$$inlineFunc": (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => {
+    "$$inlineFunc": (args: ts.NodeArray<ts.Expression>) => {
       const fn = args[0];
       if (!ts.isArrowFunction(fn)) throw new Error("`unwrapFunc` macro expects an arrow function as the first parameter.");
       if (fn.parameters.length) throw new Error("`unwrapFunc` function must have no parameters.");
       return fn.body;
+    },
+    "$$kindof": (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => { 
+      if (!args.length) throw new Error("`typeof` macro expects a single parameter.");
+      return transformer.context.factory.createNumericLiteral(args[0].kind);
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => ts.Node|undefined>

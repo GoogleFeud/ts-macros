@@ -1,14 +1,11 @@
-function $test(double: boolean, ...nums: Array<number>)  {
-    +["[]", (nums: number) => nums * (double ? 2:1)]
+import {$$kindof} from "../../dist";
+
+function $doSomethingBasedOnTypeOfParam(param: unknown) {
+    if ($$kindof!(param) === 200) "Provided value is an array literal!";
+    else if ($$kindof!(param) === 210) "Provided value is an arrow function!";
+    else if ($$kindof!(param) === 204) "Provided value is a function call!";
 }
 
-function $test2(double: boolean, ...nums: Array<number>) {
-    if (double) +["[]", (nums: number) => nums * 2];
-    else +["[]", () => nums];
-}
-
-$test!(true, 1, 2, 3); // Transpiles to: [2, 4, 6]
-$test2!(true, 1, 2, 3); // // Transpiles to: [2, 4, 6]
-
-const val = false;
-$test!(val, 1, 2, 3) // Transpiles to: [1 * (val ? 2:1), 2 * (val ? 2:1), 3 * (val ? 2:1)]
+$doSomethingBasedOnTypeOfParam!([1, 2, 3]);
+$doSomethingBasedOnTypeOfParam!(console.log(1));
+$doSomethingBasedOnTypeOfParam!(() => 1 + 1);

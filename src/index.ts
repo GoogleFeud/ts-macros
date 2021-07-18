@@ -20,3 +20,8 @@ export function $$loadJSONAsEnv(path: string) {
 export function $$inlineFunc(func: Function) {
     /* Native implementation */
 }
+
+//@ts-expect-error
+export function $$kindof(ast: unknown) : number {
+    /* Native implementation */
+}
