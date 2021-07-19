@@ -21,7 +21,7 @@ console.log($contains!(searchItem, "erwin", "tj"));
 ### Install
 
 ```
-npm i ts-macros --no-optional
+npm i ts-macros
 ```
 
 You must use the `ttypescript` package in order to use this. 
