@@ -1,11 +1,7 @@
-import { $$inlineFunc, $$kindof } from "../../dist";
-function $map(arr: Array<number>, cb: Function) {
-    if ($$kindof!(arr) === 200) var arr = arr; // Only declare a variable if the `arr` argument is an array literal
-    const res = [];
-    for (let i=0; i < arr.length; i++) {
-       res.push($$inlineFunc!(cb, arr[i]));
-    }
-    res
+export function $calc(type: string, ...nums: Array<number>) : number|void {
+    type === "+" ? +["+", (nums: number) => nums] :
+    type === "-" ? +["-", (nums: number) => nums] : 
+    type === "*" ? +["*", (nums: number) => nums] : 0;
 }
 
-console.log($map!([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], (number: number) => number * 2));
+$calc!("*", 1, 2, 3);

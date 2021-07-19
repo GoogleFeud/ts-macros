@@ -212,6 +212,8 @@ const val = false;
 $test!(val, 1, 2, 3) // Transpiles to: [1 * (val ? 2:1), 2 * (val ? 2:1), 3 * (val ? 2:1)]
 ```
 
+You can also use the OR and AND operators in if statements because those get simplified as well.
+
 ### Comparing literals
 
 ```ts
@@ -273,7 +275,7 @@ const num = 120;
 
 ### Macros inside macros
 
-Not recommended, but possible. The inner-macros don't have access to any previous arguments.
+Not recommended, but possible. The inner-macros don't have access to any previous arguments, and you can call the macros even outside the macro it's defined in.
 
 ```ts
 function $contains(value: number, ...possible: Array<number>) {
@@ -284,6 +286,7 @@ function $contains(value: number, ...possible: Array<number>) {
 }
 
 console.log($contains!(1, 1, 2, 3, 4, 5, 6, 7, 8)); 
+console.log($inc!(4));
 ```
 
 ### Built-in macros
@@ -399,10 +402,10 @@ console.log($map!([1, 2, 3, 4, 5], (num: number) => num * 2));
 Object.defineProperty(exports, "__esModule", { value: true });
 const dist_1 = require("../../dist");
 console.log((() => {
-    const array = [1, 2, 3, 4, 5];
+    var arr = [1, 2, 3, 4, 5];
     const res = [];
-    for (let i = 0; i < array.length; i++) {
-        res.push(array[i] * 2);
+    for (let i = 0; i < arr.length; i++) {
+        res.push(arr[i] * 2);
     }
     return res;
 })());
