@@ -217,7 +217,7 @@ export class MacroTransformer {
                         const isFalseyRight = isFalsey(right);
                         const isTruthyLeft = isTruthy(left);
                         const isTruthyRight = isTruthy(right);
-                        if ( (!isFalseyLeft && !isTruthyLeft) || (!isFalseyRight && !isTruthyRight) ) return node;
+                        if ( (!isFalseyLeft && !isTruthyLeft) || (!isFalseyRight && !isTruthyRight) ) return ts.visitEachChild(node, this.boundVisitor, this.context);
                         if (!isTruthyLeft) return right;
                         return left;
                     }
@@ -228,7 +228,7 @@ export class MacroTransformer {
                         const isFalseyRight = isFalsey(right);
                         const isTruthyLeft = isTruthy(left);
                         const isTruthyRight = isTruthy(right);
-                        if ( (!isFalseyLeft && !isTruthyLeft) || (!isFalseyRight && !isTruthyRight) ) return node;
+                        if ( (!isFalseyLeft && !isTruthyLeft) || (!isFalseyRight && !isTruthyRight) ) return ts.visitEachChild(node, this.boundVisitor, this.context);
                         if (isFalseyLeft) return left;
                         if (isFalseyRight) return right;
                         return right;
@@ -291,7 +291,7 @@ function isFalsey(node: ts.Node) : boolean {
 }
 
 function isTruthy(node: ts.Node) : boolean {
-    return node.kind === ts.SyntaxKind.TrueKeyword;
+    return node.kind === ts.SyntaxKind.TrueKeyword || ts.isStringLiteral(node) && node.text !== "" || ts.isNumericLiteral(node) && node.text !== "0";
 }
 
 function isNumericLiteral(node: ts.Expression) : ts.NumericLiteral|false {
