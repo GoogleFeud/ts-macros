@@ -3,7 +3,7 @@ import { MacroTransformer } from "./transformer";
 import * as path from "path";
 
 export default {
-    "$$loadEnv": (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => {
+    "$$loadEnv": (args, transformer) => {
         const extraPath = args.length && ts.isStringLiteral(args[0]) ? args[0].text:"";
         let dotenv;
         try {
@@ -31,7 +31,7 @@ export default {
               )])]:[]
           )
     },
-    "$$loadJSONAsEnv": (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => {
+    "$$loadJSONAsEnv": (args, transformer) => {
       const extraPath = ts.isStringLiteral(args[0]) ? args[0].text:undefined;
       if (!extraPath) throw new Error("`loadJSONAsEnv` macro expects a path to the JSON file.");
       const json = require(path.join(transformer.dirname, extraPath));
@@ -39,11 +39,21 @@ export default {
       transformer.props.optimizeEnv = true;
       return undefined;
     },
-    "$$inlineFunc": (args: ts.NodeArray<ts.Expression>) => {
-      const fn = args[0];
-      if (!ts.isArrowFunction(fn)) throw new Error("`unwrapFunc` macro expects an arrow function as the first parameter.");
-      if (fn.parameters.length) throw new Error("`unwrapFunc` function must have no parameters.");
-      return fn.body;
+    "$$inlineFunc": (args, transformer) => {
+      const argsArr = [...args].reverse();
+      const fn = argsArr.pop();
+      if (!fn || !ts.isArrowFunction(fn)) throw new Error("`unwrapFunc` macro expects an arrow function as the first parameter.");
+      if (!fn.parameters.length) return fn.body;
+      const replacements = new Map();
+      for (const param of fn.parameters) {
+        if (ts.isIdentifier(param.name)) replacements.set(param.name.text, argsArr.pop());
+      }
+      const visitor = (node: ts.Node): ts.Node|undefined => {
+        if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
+        return ts.visitEachChild(node, visitor, transformer.context);
+      };
+      const newFn = ts.visitEachChild(fn, visitor, transformer.context)
+      return newFn.body;
     },
     "$$kindof": (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => { 
       if (!args.length) throw new Error("`typeof` macro expects a single parameter.");

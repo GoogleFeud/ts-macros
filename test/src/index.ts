@@ -1,11 +1,25 @@
-import {$$kindof} from "../../dist";
+import { $$inlineFunc } from "../../dist";
+import { performance } from "perf_hooks";
 
-function $doSomethingBasedOnTypeOfParam(param: unknown) {
-    if ($$kindof!(param) === 200) "Provided value is an array literal!";
-    else if ($$kindof!(param) === 210) "Provided value is an arrow function!";
-    else if ($$kindof!(param) === 204) "Provided value is a function call!";
+function $map(arr: Array<number>, cb: Function) {
+    const array = arr;
+    const len = array.length;
+    const res = [];
+    for (let i=0; i < len; i++) {
+       res.push($$inlineFunc!(cb, array[i]));
+       //res.push(cb(array[i]));
+    }
+    res
 }
 
-$doSomethingBasedOnTypeOfParam!([1, 2, 3]);
-$doSomethingBasedOnTypeOfParam!(console.log(1));
-$doSomethingBasedOnTypeOfParam!(() => 1 + 1);
+const arrayToBeUsed = Array.from({length: 1000}, (_, index) => index + 1);
+
+
+let before = performance.now();
+const res1 = arrayToBeUsed.map(num => num * 2);
+console.log(`Default: ${performance.now() - before}`)
+
+before = performance.now();
+//@ts-expect-error
+const res = arrayToBeUsed.$map!((num: number) => num * 2);
+console.log(`Macro: ${performance.now() - before}`);

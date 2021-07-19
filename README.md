@@ -1,6 +1,6 @@
 # ts-macros
 
-`ts-macros` is a typescript transformer which makes it possible to create **function** macros in typescript! The macros are pretty similar to rust's macros (macro_types!), except these are way less verbose and powerful - still very useful nonetheless.
+`ts-macros` is a typescript transformer which makes it possible to create **function** macros in typescript! The macros are very similar to rust's `macro_types!` and are just as powerful!
 
 All macro names must start with a dollar sign (`$`) and must be declared using the `function` keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `macro!(params)`.
 
@@ -151,7 +151,7 @@ $doubleAll!(1, 2, 3, 4, 5); // Transpiles to [2, 4, 6, 8, 10];
 
 ### If statements and ternary operators in macros
 
-If the condition of a ternary operator / if statement inside a macro is one of the macro parameters, the entire ternary operation / if statement is going to be replaced, as long as the given value is a literal:
+If the condition of a ternary operator / if statement inside a macro is one of the macro parameters, or an expression which can be simplified to a literal value, the entire ternary operation / if statement is going to be replaced:
 
 ```ts
 function $test(double, ...nums) {
@@ -306,28 +306,37 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dist_1 = require("../../dist");
 ```
 
-#### $$inlineFunc(func: ArrowFunction) 
+#### $$inlineFunc(func: ArrowFunction, ...argReplacements: Array<any>) 
 
-Inlines the provided arrow function. The arrow function must have 0 arguments.
+Inlines the provided arrow function, replacing any argument occurrences with the corresponding values inside the `argReplacements` array.
 
 `index.ts`:
 ```ts
 import { $$inlineFunc } from "../../dist";
-function $if(condition: unknown, then: Function) : void {
-    if (condition) {
-        $$inlineFunc!(then);
+function $map(arr: Array<number>, cb: Function) {
+    const array = arr;
+    const res = [];
+    for (let i=0; i < array.length; i++) {
+       res.push($$inlineFunc!(cb, array[i]));
     }
+    res
 }
-$if!(1 + 1 === 2, () => console.log(5));
+console.log($map!([1, 2, 3, 4, 5], (num: number) => num * 2));
 ```
 
 `index.js`:
 ```js
 Object.defineProperty(exports, "__esModule", { value: true });
 const dist_1 = require("../../dist");
-if (1 + 1 === 2) {
-    console.log(5)
-}
+console.log((() => {
+    const array = [1, 2, 3, 4, 5];
+    const res = [];
+    for (let i = 0; i < array.length; i++) {
+        res.push(array[i] * 2);
+    }
+    return res;
+})());
+
 ```
 
 #### $$kindof(ast: any) 

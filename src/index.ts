@@ -9,19 +9,8 @@ export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
     };
 };
 
-export function $$loadEnv(path?: string) {
-    /* Native implementation */
-}
 
-export function $$loadJSONAsEnv(path: string) {
-    /* Native implementation */
-}
-
-export function $$inlineFunc(func: Function) {
-    /* Native implementation */
-}
-
-//@ts-expect-error
-export function $$kindof(ast: unknown) : number {
-    /* Native implementation */
-}
+export declare function $$loadEnv(path?: string) : void;
+export declare function $$loadJSONAsEnv(path: string) : void;
+export declare function $$inlineFunc(func: Function, ...params: Array<unknown>) : void;
+export declare function $$kindof(ast: unknown) : number;
