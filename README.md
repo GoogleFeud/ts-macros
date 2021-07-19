@@ -18,6 +18,12 @@ console.log($contains!(searchItem, "erwin", "tj"));
 
 ## Usage
 
+### Install
+
+```
+npm i ts-macros --no-optional
+```
+
 You must use the `ttypescript` package in order to use this. 
 
 ```
@@ -65,6 +71,42 @@ $random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() 
 - `||` 
 - `&&`
 
+### Macro parameters
+
+Initially, all parameters are **literally** replaced, for example, when you pass an array literal (`[1, 2, 3]`) to a macro, all uses of that parameter will be replaced with that EXACT array literal:
+
+```ts
+function $loop(arr: Array<number>, cb: (element: number) => void) {
+    for (let i=0; i < arr.length; i++) {
+        cb(arr[i]);
+    }
+}
+
+$loop!([1, 2, 3, 4, 5], (el) => console.log(el)); 
+//Transpiles to:
+for (let i = 0; i < [1, 2, 3, 4, 5].length; i++) {
+    ((el) => console.log(el))([1, 2, 3, 4, 5][i]);
+}
+```
+
+To avoid this, you can do something called parameter overwriting: (you can use let and const as well!)
+
+```ts
+function $loop(arr: Array<number>, cb: (element: number) => void) {
+    var arr = arr;
+    for (let i=0; i < arr.length; i++) {
+        cb(arr[i]);
+    }
+}
+
+$loop!([1, 2, 3, 4, 5], (el) => console.log(el)); 
+//Transpiles to:
+var arr = [1, 2, 3, 4, 5];
+for (let i = 0; i < arr.length; i++) {
+    ((el) => console.log(el))(arr[i]);
+}
+```
+
 ### Expressions / Expression statements
 
 Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Macro calls can never be `Statement`s, but:
@@ -72,7 +114,7 @@ Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `State
 **If a macro call is a `ExpressionStatement`, then it's going to get "flattened" - the macro call will literally be replaced by the macro body.**
 ```ts
 function $map(arr, cb) {
-   const array = arr;
+   const array = arr; 
    const res = [];
    for (let i=0; i < array.length; i++) {
       res.push(cb(array[i]);
@@ -254,6 +296,8 @@ This library has a few built-in macros which utilize the lib's optimizing capabi
 
 Loads an `env` file from the provided path, or from the base directory of your project (aka where `package.json` is). The macro loads the enviourment variables in the output AND while typescript is transpiling your code. This means expressions like `process.env.SOME_CONFIG_OPTION` in macro bodies will be replaced with the literal value of the enviourment variable.
 
+**This macro requires you have the `dotenv` module installed. It doesn't come with the library by default.**
+
 `.env`:
 ```
 TRIPLE=yes
@@ -290,7 +334,7 @@ Loads a JSON object and puts all properties in the `process.env` object. Since t
 
 `index.ts`:
 ```ts
-import { $$loadJSONAsEnv } from "../../dist";
+import { $$loadJSONAsEnv } from "ts-macros";
 $$loadJSONAsEnv!("config.json");
 
 function $debug(exp: unknown) : void {
@@ -306,18 +350,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dist_1 = require("../../dist");
 ```
 
+#### $$kindof(ast: any) 
+
+Expands to the `kind` of the AST node.
+
+`index.ts`:
+```ts
+import {$$kindof} from "ts-macros";
+function $doSomethingBasedOnTypeOfParam(param: unknown) {
+    if ($$kindof!(param) === 200) "Provided value is an array literal!";
+    else if ($$kindof!(param) === 210) "Provided value is an arrow function!";
+    else if ($$kindof!(param) === 204) "Provided value is a function call!";
+}
+$doSomethingBasedOnTypeOfParam!([1, 2, 3]);
+$doSomethingBasedOnTypeOfParam!(console.log(1));
+$doSomethingBasedOnTypeOfParam!(() => 1 + 1);
+```
+
+`index.js`:
+```js
+Object.defineProperty(exports, "__esModule", { value: true });
+const dist_1 = require("../../dist");
+"Provided value is an array literal!";
+"Provided value is a function call!";
+"Provided value is an arrow function!";
+```
+
 #### $$inlineFunc(func: ArrowFunction, ...argReplacements: Array<any>) 
 
 Inlines the provided arrow function, replacing any argument occurrences with the corresponding values inside the `argReplacements` array.
 
 `index.ts`:
 ```ts
-import { $$inlineFunc } from "../../dist";
+import { $$inlineFunc, $$kindof } from "../../dist";
 function $map(arr: Array<number>, cb: Function) {
-    const array = arr;
+    if ($$kindof!(arr) === 200) var arr = arr; // Only declare a variable if the `arr` argument is an array literal
     const res = [];
-    for (let i=0; i < array.length; i++) {
-       res.push($$inlineFunc!(cb, array[i]));
+    for (let i=0; i < arr.length; i++) {
+       res.push($$inlineFunc!(cb, arr[i]));
     }
     res
 }
@@ -337,30 +407,4 @@ console.log((() => {
     return res;
 })());
 
-```
-
-#### $$kindof(ast: any) 
-
-Expands to the `kind` of the AST node.
-
-`index.ts`:
-```ts
-import {$$kindof} from "../../dist";
-function $doSomethingBasedOnTypeOfParam(param: unknown) {
-    if ($$kindof!(param) === 200) "Provided value is an array literal!";
-    else if ($$kindof!(param) === 210) "Provided value is an arrow function!";
-    else if ($$kindof!(param) === 204) "Provided value is a function call!";
-}
-$doSomethingBasedOnTypeOfParam!([1, 2, 3]);
-$doSomethingBasedOnTypeOfParam!(console.log(1));
-$doSomethingBasedOnTypeOfParam!(() => 1 + 1);
-```
-
-`index.js`:
-```js
-Object.defineProperty(exports, "__esModule", { value: true });
-const dist_1 = require("../../dist");
-"Provided value is an array literal!";
-"Provided value is a function call!";
-"Provided value is an arrow function!";
 ```

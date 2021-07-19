@@ -18,9 +18,6 @@
     "type": "git",
     "url": "git+https://github.com/GoogleFeud/ts-macros.git"
   },
-  "optionalDependencies": {
-    "dotenv": "^10.0.0"
-  },
   "keywords": [
     "typescript",
     "macros"

@@ -19,6 +19,7 @@ export interface Macro {
 export interface MacroExpand {
     macro: Macro,
     args: ts.NodeArray<ts.Expression>,
+    declaredParams: Set<string>
 }
 
 export interface MacroTransformerBuiltinProps {
@@ -51,6 +52,7 @@ export class MacroTransformer {
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
+                if (!ts.isIdentifier(param.name)) throw new Error("You cannot use deconstruction patterns in macros.");
                 params.push({
                     spread: Boolean(param.dotDotDotToken),
                     start: i,
@@ -81,7 +83,8 @@ export class MacroTransformer {
             if (!macro || !macro.body) return this.context.factory.createNull();
             this.macroStack.push({
                 macro,
-                args
+                args,
+                declaredParams: new Set()
             })
             const res = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
             this.macroStack.pop();
@@ -104,6 +107,7 @@ export class MacroTransformer {
             this.macroStack.push({
                 macro,
                 args,
+                declaredParams: new Set()
             });
             const res = [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
             this.macroStack.pop();
@@ -118,16 +122,22 @@ export class MacroTransformer {
         }
 
         if (this.macroStack.length) {
-            const {macro, args} = this.macroStack[this.macroStack.length - 1];
+            const {macro, args, declaredParams} = this.macroStack[this.macroStack.length - 1];
 
             if (this.props.optimizeEnv && ts.isPropertyAccessExpression(node) && node.expression.getText() === "process.env") {
                 const value = process.env[node.name.text];
-                if (typeof value === "string") return this.context.factory.createStringLiteral(value);
-                else if (typeof value === "number") return this.context.factory.createNumericLiteral(value);
-                else return node;
+                if (!value) return node;
+                return this.context.factory.createStringLiteral(value);
             } 
 
+            if (ts.isVariableDeclaration(node) && node.initializer && ts.isIdentifier(node.name) && macro.params.some(p => p.name === (node.name as ts.Identifier).text)) {
+                const val = ts.visitNode(node.initializer, this.boundVisitor);
+                declaredParams.add(node.name.text);
+                return this.context.factory.updateVariableDeclaration(node, node.name, undefined, undefined, val);
+            }
+
             if (ts.isIdentifier(node) && macro.params.some(p => p.name === node.text)) {
+                if (declaredParams.has(node.text)) return node;
                 const index = macro.params.findIndex(p => p.name === node.text);
                 const paramMacro = macro.params[index];
                 if (this.repeat !== undefined && paramMacro.spread) {
@@ -139,7 +149,7 @@ export class MacroTransformer {
                     return arg;
                 }
                 if (paramMacro.spread) return this.context.factory.createArrayLiteralExpression(args.slice(paramMacro.start));
-                return ts.visitNode(args[index], this.boundVisitor) || macro!.params[index].defaultVal || this.context.factory.createNull();
+                return args[index] ? ts.isIdentifier(args[index]) ? args[index]:ts.visitNode(args[index], this.boundVisitor) : (macro!.params[index].defaultVal || this.context.factory.createNull())
             }
 
             else if (ts.isConditionalExpression(node)) {
@@ -231,10 +241,10 @@ export class MacroTransformer {
                 }
             } else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
                 let separator: string | ts.Expression = node.operand.elements[0];
-                if (!separator || !ts.isStringLiteral(separator)) throw new Error("Repetition separator must be a string literal");
+                if (!separator || !ts.isStringLiteral(separator)) throw new Error("Repetition separator must be a string literal.");
                 separator = separator.text;
                 const fn = node.operand.elements[1];
-                if (!fn || !ts.isArrowFunction(fn) || !fn.body) throw new Error("Missing repeat function");
+                if (!fn || !ts.isArrowFunction(fn) || !fn.body) throw new Error("Missing repeat function.");
                 const repeatedParam = macro!.params.find(p => p.spread)!;
                 const newBod = [];
                 this.repeat = 0;

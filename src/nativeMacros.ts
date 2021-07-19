@@ -55,8 +55,8 @@ export default {
       const newFn = ts.visitEachChild(fn, visitor, transformer.context)
       return newFn.body;
     },
-    "$$kindof": (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => { 
-      if (!args.length) throw new Error("`typeof` macro expects a single parameter.");
+    "$$kindof": (args, transformer) => { 
+      if (!args.length) throw new Error("`kindof` macro expects a single parameter.");
       return transformer.context.factory.createNumericLiteral(args[0].kind);
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => ts.Node|undefined>

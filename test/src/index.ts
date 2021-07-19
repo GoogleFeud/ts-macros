@@ -1,25 +1,11 @@
-import { $$inlineFunc } from "../../dist";
-import { performance } from "perf_hooks";
-
+import { $$inlineFunc, $$kindof } from "../../dist";
 function $map(arr: Array<number>, cb: Function) {
-    const array = arr;
-    const len = array.length;
+    if ($$kindof!(arr) === 200) var arr = arr; // Only declare a variable if the `arr` argument is an array literal
     const res = [];
-    for (let i=0; i < len; i++) {
-       res.push($$inlineFunc!(cb, array[i]));
-       //res.push(cb(array[i]));
+    for (let i=0; i < arr.length; i++) {
+       res.push($$inlineFunc!(cb, arr[i]));
     }
     res
 }
 
-const arrayToBeUsed = Array.from({length: 1000}, (_, index) => index + 1);
-
-
-let before = performance.now();
-const res1 = arrayToBeUsed.map(num => num * 2);
-console.log(`Default: ${performance.now() - before}`)
-
-before = performance.now();
-//@ts-expect-error
-const res = arrayToBeUsed.$map!((num: number) => num * 2);
-console.log(`Macro: ${performance.now() - before}`);
+console.log($map!([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], (number: number) => number * 2));
