@@ -52,7 +52,8 @@ export default {
         if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
         return ts.visitEachChild(node, visitor, transformer.context);
       };
-      const newFn = ts.visitEachChild(fn, visitor, transformer.context)
+      const newFn = ts.visitEachChild(fn, visitor, transformer.context);
+      if ("statements" in newFn.body) return transformer.context.factory.createImmediatelyInvokedArrowFunction(newFn.body.statements);
       return newFn.body;
     },
     "$$kindof": (args, transformer) => { 

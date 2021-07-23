@@ -1,9 +1,7 @@
 
-function $test(a: string) {
-    if (a === "hello") console.log(true);
-    else console.log(false);
-}
+import { $$inlineFunc } from "../../dist";
 
-const a = "hello";
-
-$test!(a);
+console.log($$inlineFunc!((a: unknown) => {
+    
+    console.log(a)
+}, "Hello!"));
