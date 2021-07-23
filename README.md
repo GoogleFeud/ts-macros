@@ -107,11 +107,14 @@ for (let i = 0; i < arr.length; i++) {
 }
 ```
 
-### Expressions / Expression statements
+### Hygiene
+
+The macros are **always** hygienic!
 
 Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Macro calls can never be `Statement`s, but:
 
-**If a macro call is a `ExpressionStatement`, then it's going to get "flattened" - the macro call will literally be replaced by the macro body.**
+**If a macro call is a `ExpressionStatement`, then it's going to get "flattened" - the macro call will literally be replaced by the macro body, but all the new declared variables will have their names changed to a unique name.**
+
 ```ts
 function $map(arr, cb) {
    const array = arr; 
@@ -124,14 +127,14 @@ function $map(arr, cb) {
 $map!([1, 2, 3], (num) => num * 2); // This is an ExpressionStatement
 
 // Transpiles to:
-const array = [1, 2, 3];
-const res = [];
-for (let i = 0; i < array.length; i++) {
-    res.push(((item) => item * 2)(array[i], i));
+const array_1 = [1, 2, 3];
+const res_1 = [];
+for (let i_1 = 0; i_1 < array_1.length; i_1++) {
+    res.push(((item) => item * 2)(array_1[i_1], i_1));
 }
 ```
 
-**If a macro call is in an `Expression` and it's body expands to a single expression then the call is replaced by the expression**
+**If a macro call is in an `Expression` and it's body expands to a single expression then the call is replaced by the expression.**
 ```ts
 function $push( ...nums: Array<number>) {
     +["[]", (nums: number) => nums * Math.random() << 0]

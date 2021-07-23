@@ -86,7 +86,17 @@ export class MacroTransformer {
                 args,
                 declaredParams: new Set()
             })
-            const res = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
+            const defined = new Map<string, ts.Identifier>();
+            const visitor = (node: ts.Node) : ts.Node => {
+                if (ts.isVariableDeclaration(node)) {
+                    const newName = this.context.factory.createUniqueName(node.name.getText());
+                    defined.set(node.name.getText(), newName);
+                    return this.context.factory.updateVariableDeclaration(node, newName, undefined, undefined, node.initializer);
+                }
+                else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
+                return ts.visitEachChild(node, visitor, this.context);
+            };
+            const res = ts.visitNodes(ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements, visitor);
             this.macroStack.pop();
             return [...res];
         }
