@@ -18,3 +18,4 @@ export declare function $$kindof(ast: unknown) : number;
 export declare function $$const(varname: string, initializer: unknown) : number;
 
 export type AsRest<T extends Array<unknown>> = T | (T & { __marker: "AsRest" });
+export type Accumulator = number | (number & { __marker: "Accumulator" });

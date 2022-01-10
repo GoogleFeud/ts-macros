@@ -1,18 +1,22 @@
-import { AsRest, $$kindof, $$const } from "../../src";
+import { Accumulator, $$kindof, $$const } from "../../src";
 import * as ts from "typescript";
 
-class Test {
-    readonly debug = true;
-    constructor(debug: boolean) {
-        //this.debug = debug;
-    } 
+function $test2(acc: Accumulator = 0) {
+    acc;
 }
 
-function $log(cl: Test, msg: string) {
-    if (cl.debug) console.log(msg);
-}
+$test2!();
+$test2!();
+$test2!();
+$test2!();$test2!();
+$test2!();$test2!();
+$test2!();$test2!();
+$test2!();$test2!();
+$test2!();$test2!();
+$test2!();$test2!();
+$test2!();$test2!();
+$test2!();$test2!();
+$test2!();
 
-
-const myTest = new Test(false);
-
-$log!(myTest, "Hello World!");
+const a = $test2!();
+$test2!();

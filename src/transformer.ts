@@ -7,6 +7,7 @@ const MACROS = new Map<string, Macro>();
 export interface MacroParam {
     spread: boolean,
     asRest?: boolean,
+    isAccumulator?: boolean,
     start: number,
     name: string,
     defaultVal?: ts.Expression
@@ -61,6 +62,7 @@ export class MacroTransformer {
                 params.push({
                     spread: Boolean(param.dotDotDotToken),
                     asRest: this.isValidMarker("AsRest", param),
+                    isAccumulator: this.isValidMarker("Accumulator", param),
                     start: i,
                     name: param.name.getText(),
                     defaultVal: param.initializer
@@ -103,6 +105,8 @@ export class MacroTransformer {
                 return ts.visitEachChild(node, visitor, this.context);
             };
             const res = ts.visitNodes(ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements, visitor);
+            const acc = macro.params.find(p => p.isAccumulator);
+            if (acc) acc.defaultVal = this.context.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
             this.macroStack.pop();
             return [...res];
         }
@@ -126,6 +130,8 @@ export class MacroTransformer {
                 declaredParams: new Set()
             });
             const res = [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
+            const acc = macro.params.find(p => p.isAccumulator);
+            if (acc) acc.defaultVal = this.context.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
             this.macroStack.pop();
             let last = res.pop()!;
             if (res.length === 0) return ts.isExpressionStatement(last) ? last.expression:last;

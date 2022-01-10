@@ -71,21 +71,6 @@ $random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() 
 - `||` 
 - `&&`
 
-#### `AsRest` marker
-
-You can mark a parameter with the `AsRest` type. The parameter will act exactly like a rest parameter, but instead of separating all values of the parameter with a comma, you put them all in an array. This way you can have multiple repetition arguments. 
-
-**Example:**
-```ts
-import { AsRest } from "ts-macros"
-
-function $random(nums: AsRest<Array<number>>) : Array<number> {
-    +["[]", () => nums * Math.random() << 0]
-} 
-
-$random!([1, 2, 3]); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
-```
-
 ### Macro parameters
 
 Initially, all parameters are **literally** replaced, for example, when you pass an array literal (`[1, 2, 3]`) to a macro, all uses of that parameter will be replaced with that EXACT array literal:
@@ -175,6 +160,43 @@ const newSize = (() => {
     arr.push(2)
     return arr.push(3);
 })();
+```
+
+### Markers
+
+`Markers` make macro parameters behave differently. They don't alter the parameter's type, but it's **behaviour**. 
+
+#### `AsRest` 
+
+You can mark a parameter with the `AsRest` marker. The parameter will act exactly like a rest parameter, but instead of separating all values of the parameter with a comma, you put them all in an array. This way you can have multiple repetition arguments. 
+
+**Example:**
+```ts
+import { AsRest } from "ts-macros"
+
+// This wouldn't work if the type was just Array<number>
+function $random(nums: AsRest<Array<number>>) : Array<number> {
+    +["[]", () => nums * Math.random() << 0]
+} 
+
+$random!([1, 2, 3]); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
+```
+
+#### `Accumulator`
+
+A parameter which increments every time the macro is called. 
+
+**Example:**
+```ts
+import { Accumulator } from "ts-macros"
+
+function $num(acc: Accumulator = 0) : Array<number> {
+    acc;
+} 
+
+$num!(); // 0
+$num!(); // 1
+$num!(); // 2
 ```
 
 ### Strings as identifiers
@@ -448,7 +470,7 @@ console.log((() => {
 
 ```
 
-#### ##const(varname: string, initializer: any)
+#### $$const(varname: string, initializer: any)
 
 Creates a const variable with the provided name and initializer. 
 
