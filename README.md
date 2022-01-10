@@ -41,7 +41,7 @@ After that put this in your tsconfig.json:
 }
 ```
 
-Then run your code with `ttsc`.
+Then transpile your code with `ttsc`.
 
 ## ts-macros in depth
 
@@ -49,7 +49,7 @@ Then run your code with `ttsc`.
 
 *Syntax:* `+[separator?, () => codeToRepeat]`
 
-Repetitions without separators cannot be used as `Expressions`. 
+Repetitions without separators cannot be used as `Expressions`. If a **rest parameter** is used in a repetition, it gets replaced by the value at the current repetition index, but if it's used outside of a repetition, then it's replaced by an array literal containing all the values. It's also possible to have repetitions inside repetitions.
 
 **Example:**
 
@@ -70,6 +70,21 @@ $random!(1, 2, 3); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() 
 - `,` - Separates all expressions with a `,`
 - `||` 
 - `&&`
+
+#### `AsRest` marker
+
+You can mark a parameter with the `AsRest` type. The parameter will act exactly like a rest parameter, but instead of separating all values of the parameter with a comma, you put them all in an array. This way you can have multiple repetition arguments. 
+
+**Example:**
+```ts
+import { AsRest } from "ts-macros"
+
+function $random(nums: AsRest<Array<number>>) : Array<number> {
+    +["[]", () => nums * Math.random() << 0]
+} 
+
+$random!([1, 2, 3]); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
+```
 
 ### Macro parameters
 
@@ -145,7 +160,7 @@ const rngNums = $push!(1, 2, 3); // Macro call is an expression here
 const rngNums = [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0];
 ```
 
-**If a macro call is in an `Expression` and it's body contains **more** than a single expression, or contains a `Statement`, then the body is wrapped in an IIFE.**
+**If a macro call is in an `Expression` and it's body contains **more** than a single expression, or contains a `Statement`, then the body is wrapped in an IIFE, and the last expression will be returned.**
 ```ts
 function $push(array: Array<number>, ...nums: Array<number>) {
     +[(nums: number) => array.push(nums)];
@@ -160,6 +175,31 @@ const newSize = (() => {
     arr.push(2)
     return arr.push(3);
 })();
+```
+
+### Strings as identifiers
+
+If a parameter (or a repetition parameter) is a string literal, and a class / enum / function has the **exact** same name, then the name of the class is going to replaced with the contents of the string.
+
+```ts
+function $createClasses(values: AsRest<Array<number>>, ...names: Array<string>) {
+    +[() => {
+        class names {
+            static value = values
+        }
+    }]
+}
+
+$createClasses!([1, 2], "A", "B"); 
+// Transpiles to:
+/*
+class A {
+}
+A.value = 1;
+class B {
+}
+B.value = 2;
+*/
 ```
 
 ### Return in macros
