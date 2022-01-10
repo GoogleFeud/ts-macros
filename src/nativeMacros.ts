@@ -59,5 +59,14 @@ export default {
     "$$kindof": (args, transformer) => { 
       if (!args.length) throw new Error("`kindof` macro expects a single parameter.");
       return transformer.context.factory.createNumericLiteral(args[0].kind);
+    },
+    "$$const": (args, transformer) => {
+      const name = args[0];
+      if (!name || !ts.isStringLiteral(name)) throw new Error("`define` macro expects a string literal as the first parameter.");
+      const value = args[1];
+      return transformer.context.factory.createVariableStatement(undefined, 
+        transformer.context.factory.createVariableDeclarationList([
+          transformer.context.factory.createVariableDeclaration(name.text, undefined, undefined, value)
+        ], ts.NodeFlags.Const));
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => ts.Node|undefined>

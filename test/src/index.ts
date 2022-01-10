@@ -1,26 +1,18 @@
-import type { AsRest } from "../../src";
+import { AsRest, $$kindof, $$const } from "../../src";
+import * as ts from "typescript";
 
-function $test(classNames: AsRest<Array<string>>, ...names: Array<string>) {
-    const test = names;
-    +[() => {
-        function classNames() {
-            return +["[]", () => names]
-        }
-    }]
+class Test {
+    readonly debug = true;
+    constructor(debug: boolean) {
+        //this.debug = debug;
+    } 
 }
 
-$test!(["A", "B", "C"], "a", "b", "c", "d");
-
-function $random(nums: AsRest<Array<number>>) {
-    +["[]", (nums: number) => nums * Math.random() << 0]
-} 
-
-$random!([1, 2, 3]); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
-
-//@ts-expect-error asss
-function $test2(thing: string) {
-    //@ts-expect-error asss
-    const thing = 5;
+function $log(cl: Test, msg: string) {
+    if (cl.debug) console.log(msg);
 }
 
-$test2!("aaaa");
+
+const myTest = new Test(false);
+
+$log!(myTest, "Hello World!");

@@ -94,7 +94,7 @@ export class MacroTransformer {
             })
             const defined = new Map<string, ts.Identifier>();
             const visitor = (node: ts.Node) : ts.Node => {
-                if (ts.isVariableDeclaration(node)) {
+                if (ts.isVariableDeclaration(node) && node.pos !== -1) {
                     const newName = this.context.factory.createUniqueName(node.name.getText());
                     defined.set(node.name.getText(), newName);
                     return this.context.factory.updateVariableDeclaration(node, newName, undefined, undefined, node.initializer);
@@ -178,19 +178,21 @@ export class MacroTransformer {
 
             else if (ts.isConditionalExpression(node)) {
                 const param = ts.visitNode(node.condition, this.boundVisitor);
-                if (isTruthy(param)) return ts.visitNode(node.whenTrue, this.boundVisitor);
-                if (isFalsey(param)) return ts.visitNode(node.whenFalse, this.boundVisitor);
-                return this.context.factory.createConditionalExpression(param, undefined, ts.visitNode(node.whenTrue, this.boundVisitor), undefined, ts.visitNode(node.whenFalse, this.boundVisitor));
+                const res = this.getBoolFromNode(param);
+                if (res === false) return ts.visitNode(node.whenFalse, this.boundVisitor);
+                else if (res === true) return ts.visitNode(node.whenTrue, this.boundVisitor);
+                else return this.context.factory.createConditionalExpression(param, undefined, ts.visitNode(node.whenTrue, this.boundVisitor), undefined, ts.visitNode(node.whenFalse, this.boundVisitor));
             }
 
             else if (ts.isIfStatement(node)) {
                 const condition = ts.visitNode(node.expression, this.boundVisitor);
-                if (isFalsey(condition)) {
+                const res = this.getBoolFromNode(condition);
+                if (res === true) return ts.visitNode(node.thenStatement, this.boundVisitor);
+                else if (res === false) {
                     if (!node.elseStatement) return undefined;
                     return ts.visitNode(node.elseStatement, this.boundVisitor);
                 }
-                if (isTruthy(condition)) return ts.visitNode(node.thenStatement, this.boundVisitor);
-                return this.context.factory.createIfStatement(condition, ts.visitNode(node.thenStatement, this.boundVisitor), ts.visitNode(node.elseStatement, this.boundVisitor));
+                else return this.context.factory.createIfStatement(condition, ts.visitNode(node.thenStatement, this.boundVisitor), ts.visitNode(node.elseStatement, this.boundVisitor));
             }
 
             else if (ts.isBinaryExpression(node)) {
@@ -199,63 +201,62 @@ export class MacroTransformer {
                     case ts.SyntaxKind.EqualsEqualsToken:  {
                         const left = ts.visitNode(node.left, this.boundVisitor);
                         const right = ts.visitNode(node.right, this.boundVisitor);
-                        if (!left || !right || !ts.isLiteralExpression(left) || !ts.isLiteralExpression(right)) return this.context.factory.createBinaryExpression(left, node.operatorToken.kind, right);
-                        return this.context.factory.createToken(left.text === right.text ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword);
+                        const leftLit = this.getLiteralFromNode(left);
+                        const rightLit = this.getLiteralFromNode(right);
+                        if (leftLit === undefined || rightLit === undefined) return this.context.factory.createBinaryExpression(left, node.operatorToken.kind, right);
+                        return this.context.factory.createToken(leftLit === rightLit ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword);
                     }
                     case ts.SyntaxKind.PlusToken: {
                         const left = ts.visitNode(node.left, this.boundVisitor);
                         const right = ts.visitNode(node.right, this.boundVisitor);
-                        const num = isNumericLiteral(left);
-                        const num2 = isNumericLiteral(right);
-                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text + +num2.text);
+                        const num = this.getNumberFromNode(left);
+                        const num2 = this.getNumberFromNode(right);
+                        if (num !== undefined && num2 !== undefined) return this.context.factory.createNumericLiteral(num + num2);
                         return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.PlusToken, right);
                     }
                     case ts.SyntaxKind.AsteriskToken: {
                         const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
                         const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const num = isNumericLiteral(left);
-                        const num2 = isNumericLiteral(right);
-                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text * +num2.text);
+                        const num = this.getNumberFromNode(left);
+                        const num2 = this.getNumberFromNode(right);
+                        if (num !== undefined && num2 !== undefined) return this.context.factory.createNumericLiteral(num * num2);
                         return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.AsteriskToken, right);
                     }
                     case ts.SyntaxKind.MinusToken: {
                         const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
                         const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const num = isNumericLiteral(left);
-                        const num2 = isNumericLiteral(right);
-                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text - +num2.text);
-                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.AsteriskToken, right);
+                        const num = this.getNumberFromNode(left);
+                        const num2 = this.getNumberFromNode(right);
+                        if (num !== undefined && num2 !== undefined) return this.context.factory.createNumericLiteral(num - num2);
+                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.MinusToken, right);
                     }
                     case ts.SyntaxKind.SlashToken: {
                         const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
                         const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const num = isNumericLiteral(left);
-                        const num2 = isNumericLiteral(right);
-                        if (num && num2) return this.context.factory.createNumericLiteral(+num.text / +num2.text);
-                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.AsteriskToken, right);
+                        const num = this.getNumberFromNode(left);
+                        const num2 = this.getNumberFromNode(right);
+                        if (num !== undefined && num2 !== undefined) return this.context.factory.createNumericLiteral(num / num2);
+                        return this.context.factory.createBinaryExpression(left, ts.SyntaxKind.SlashToken, right);
                     }
                     case ts.SyntaxKind.BarBarToken: {
                         const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
                         const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const isFalseyLeft = isFalsey(left);
-                        const isFalseyRight = isFalsey(right);
-                        const isTruthyLeft = isTruthy(left);
-                        const isTruthyRight = isTruthy(right);
-                        if ( (!isFalseyLeft && !isTruthyLeft) || (!isFalseyRight && !isTruthyRight) ) return ts.visitEachChild(node, this.boundVisitor, this.context);
-                        if (!isTruthyLeft) return right;
-                        return left;
+                        const leftVal = this.getBoolFromNode(left);
+                        const rightVal = this.getBoolFromNode(right);
+                        if (leftVal === undefined || rightVal === undefined) return ts.visitEachChild(node, this.boundVisitor, this.context);
+                        if (leftVal) return left;
+                        else if (rightVal) return right;
+                        else return right;
                     }
                     case ts.SyntaxKind.AmpersandAmpersandToken: {
                         const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
                         const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const isFalseyLeft = isFalsey(left);
-                        const isFalseyRight = isFalsey(right);
-                        const isTruthyLeft = isTruthy(left);
-                        const isTruthyRight = isTruthy(right);
-                        if ( (!isFalseyLeft && !isTruthyLeft) || (!isFalseyRight && !isTruthyRight) ) return ts.visitEachChild(node, this.boundVisitor, this.context);
-                        if (isFalseyLeft) return left;
-                        if (isFalseyRight) return right;
-                        return right;
+                        const leftVal = this.getBoolFromNode(left);
+                        const rightVal = this.getBoolFromNode(right);
+                        if (leftVal === undefined || rightVal === undefined) return ts.visitEachChild(node, this.boundVisitor, this.context);
+                        if (leftVal && rightVal) return right;
+                        if (!leftVal) return left;
+                        if (!rightVal) return right;
                     }
                 }
             }
@@ -349,25 +350,58 @@ export class MacroTransformer {
         return total;
     }
 
+    getNumberFromNode(node: ts.Expression) : number|undefined {
+        if (ts.isParenthesizedExpression(node)) return this.getNumberFromNode(node.expression);
+        if (ts.isNumericLiteral(node)) return +node.text;
+        const type = this.checker.getTypeAtLocation(node);
+        if (type.isNumberLiteral()) return type.value;
+    }
+
+    getLiteralFromNode(node: ts.Expression) : unknown|undefined {
+        if (ts.isParenthesizedExpression(node)) return this.getLiteralFromNode(node.expression);
+        if (ts.isNumericLiteral(node)) return +node.text;
+        if (ts.isStringLiteral(node)) return node.text;
+        const type = this.checker.getTypeAtLocation(node);
+        if (type.isNumberLiteral()) return type.value;
+        else if (type.isStringLiteral()) return type.value;
+        //@ts-expect-error Private API
+        else if (type.value) return type.value;
+    }
+
+    getBoolFromNode(node: ts.Expression) : boolean|undefined {
+        if (node.kind === ts.SyntaxKind.FalseKeyword || node.kind === ts.SyntaxKind.NullKeyword) return false;
+        else if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+        else if (ts.isNumericLiteral(node)) {
+            if (node.text === "0") return false;
+            return true;
+        }
+        else if (ts.isStringLiteral(node)) {
+            if (node.text === "") return false;
+            return true;
+        }
+        const type = this.checker.getTypeAtLocation(node);
+        if (type.isNumberLiteral()) {
+            if (type.value === 0) return false;
+            return true;
+        }
+        else if (type.isStringLiteral()) {
+            if (type.value === "") return false;
+            return true;
+        }
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "false") return false;
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "true") return true;
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "undefined") return true;
+        return undefined;
+    }
+
 }
 
 function flattenBody(body: ts.ConciseBody) : Array<ts.Node> {
     if ("statements" in body) return [...body.statements];
     return [body];
-}
-
-function isFalsey(node: ts.Node) : boolean {
-    return node.kind === ts.SyntaxKind.FalseKeyword || node.kind === ts.SyntaxKind.NullKeyword || ts.isIdentifier(node) && node.text === "undefined" || ts.isNumericLiteral(node) && node.text === "0" || ts.isStringLiteral(node) && node.text === "";
-}
-
-function isTruthy(node: ts.Node) : boolean {
-    return node.kind === ts.SyntaxKind.TrueKeyword || ts.isStringLiteral(node) && node.text !== "" || ts.isNumericLiteral(node) && node.text !== "0";
-}
-
-function isNumericLiteral(node: ts.Expression) : ts.NumericLiteral|false {
-    if (ts.isParenthesizedExpression(node)) return isNumericLiteral(node.expression);
-    if (ts.isNumericLiteral(node)) return node;
-    return false;
 }
 
 function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>, id: number) {

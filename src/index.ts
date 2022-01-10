@@ -15,5 +15,6 @@ export declare function $$loadEnv(path?: string) : void;
 export declare function $$loadJSONAsEnv(path: string) : void;
 export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
 export declare function $$kindof(ast: unknown) : number;
+export declare function $$const(varname: string, initializer: unknown) : number;
 
 export type AsRest<T extends Array<unknown>> = T | (T & { __marker: "AsRest" });

@@ -252,7 +252,7 @@ $test!(true, 1, 2, 3); // Transpiles to: [2, 4, 6]
 $test2!(true, 1, 2, 3); // // Transpiles to: [2, 4, 6]
 
 const val = false;
-$test!(val, 1, 2, 3) // Transpiles to: [1 * (val ? 2:1), 2 * (val ? 2:1), 3 * (val ? 2:1)]
+$test!(val, 1, 2, 3) // Transpiles to: [1, 2, 3]
 ```
 
 You can also use the OR and AND operators in if statements because those get simplified as well.
@@ -291,7 +291,7 @@ function $doubleNum(number: number) : number|void {
 
 (5).$doubleNum!(); // Transpiles to: 25
 const someNum = 10;
-someNum.$doubleNum!(); // Transpiles to: someNum * someNum
+someNum.$doubleNum!(); // Transpiles to: 100
 ```
 
 ### Exporting macros
@@ -363,8 +363,6 @@ function $multiply(num: number) : number {
 
 `index.js`:
 ```js
-Object.defineProperty(exports, "__esModule", { value: true });
-const dist_1 = require("../../dist");
 require("dotenv").config();
 [3, 6, 9];
 ```
@@ -392,8 +390,6 @@ $debug!(1 + 1);
 
 `index.js`:
 ```js
-Object.defineProperty(exports, "__esModule", { value: true });
-const dist_1 = require("../../dist");
 ```
 
 #### $$kindof(ast: any) 
@@ -403,10 +399,11 @@ Expands to the `kind` of the AST node.
 `index.ts`:
 ```ts
 import {$$kindof} from "ts-macros";
+import * as ts from "typescript"
 function $doSomethingBasedOnTypeOfParam(param: unknown) {
-    if ($$kindof!(param) === 200) "Provided value is an array literal!";
-    else if ($$kindof!(param) === 210) "Provided value is an arrow function!";
-    else if ($$kindof!(param) === 204) "Provided value is a function call!";
+    if ($$kindof!(param) === ts.SyntaxKind.ArrayLiteralExpression) "Provided value is an array literal!";
+    else if ($$kindof!(param) === ts.SyntaxKind.ArrowFunction) "Provided value is an arrow function!";
+    else if ($$kindof!(param) === ts.SyntaxKind.CallExpression) "Provided value is a function call!";
 }
 $doSomethingBasedOnTypeOfParam!([1, 2, 3]);
 $doSomethingBasedOnTypeOfParam!(console.log(1));
@@ -415,8 +412,6 @@ $doSomethingBasedOnTypeOfParam!(() => 1 + 1);
 
 `index.js`:
 ```js
-Object.defineProperty(exports, "__esModule", { value: true });
-const dist_1 = require("../../dist");
 "Provided value is an array literal!";
 "Provided value is a function call!";
 "Provided value is an arrow function!";
@@ -428,7 +423,7 @@ Inlines the provided arrow function, replacing any argument occurrences with the
 
 `index.ts`:
 ```ts
-import { $$inlineFunc, $$kindof } from "../../dist";
+import { $$inlineFunc, $$kindof } from "ts-macros";
 function $map(arr: Array<number>, cb: Function) {
     if ($$kindof!(arr) === 200) var arr = arr; // Only declare a variable if the `arr` argument is an array literal
     const res = [];
@@ -442,8 +437,6 @@ console.log($map!([1, 2, 3, 4, 5], (num: number) => num * 2));
 
 `index.js`:
 ```js
-Object.defineProperty(exports, "__esModule", { value: true });
-const dist_1 = require("../../dist");
 console.log((() => {
     var arr = [1, 2, 3, 4, 5];
     const res = [];
@@ -453,4 +446,20 @@ console.log((() => {
     return res;
 })());
 
+```
+
+#### ##const(varname: string, initializer: any)
+
+Creates a const variable with the provided name and initializer. 
+
+`index.ts`:
+```ts
+import { $$const } from "../../dist";
+
+$$const!("abc", 123);
+```
+
+`index.js`:
+```js
+const abc = 123;
 ```
