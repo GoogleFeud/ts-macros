@@ -28,6 +28,8 @@ export interface MacroTransformerBuiltinProps {
     optimizeEnv?: boolean
 }
 
+const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
+
 export class MacroTransformer {
     context: ts.TransformationContext
     macroStack: Array<MacroExpand>
@@ -152,6 +154,12 @@ export class MacroTransformer {
                 return this.context.factory.createStringLiteral(value);
             } 
 
+            if (ts.isPropertyAccessExpression(node) && this.props.optimizeEnv && node.expression.getText() === "process.env") {
+                const value = process.env[node.name.text];
+                if (!value) return node;
+                return this.context.factory.createStringLiteral(value);
+            }
+
             if (ts.isVariableDeclaration(node) && node.initializer && ts.isIdentifier(node.name) && macro.params.some(p => p.name === (node.name as ts.Identifier).text)) {
                 const val = ts.visitNode(node.initializer, this.boundVisitor);
                 declaredParams.add(node.name.text);
@@ -209,7 +217,7 @@ export class MacroTransformer {
                         const right = ts.visitNode(node.right, this.boundVisitor);
                         const leftLit = this.getLiteralFromNode(left);
                         const rightLit = this.getLiteralFromNode(right);
-                        if (leftLit === undefined || rightLit === undefined) return this.context.factory.createBinaryExpression(left, node.operatorToken.kind, right);
+                        if (leftLit === NO_LIT_FOUND || rightLit === NO_LIT_FOUND) return this.context.factory.createBinaryExpression(left, node.operatorToken.kind, right);
                         return this.context.factory.createToken(leftLit === rightLit ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword);
                     }
                     case ts.SyntaxKind.PlusToken: {
@@ -363,7 +371,7 @@ export class MacroTransformer {
         if (type.isNumberLiteral()) return type.value;
     }
 
-    getLiteralFromNode(node: ts.Expression) : unknown|undefined {
+    getLiteralFromNode(node: ts.Expression) : unknown|typeof NO_LIT_FOUND {
         if (ts.isParenthesizedExpression(node)) return this.getLiteralFromNode(node.expression);
         if (ts.isNumericLiteral(node)) return +node.text;
         if (ts.isStringLiteral(node)) return node.text;
@@ -372,6 +380,15 @@ export class MacroTransformer {
         else if (type.isStringLiteral()) return type.value;
         //@ts-expect-error Private API
         else if (type.value) return type.value;
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "false") return false;
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "true") return true;
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "undefined") return undefined;
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "null") return null;
+        else return NO_LIT_FOUND;
     }
 
     getBoolFromNode(node: ts.Expression) : boolean|undefined {
@@ -399,7 +416,9 @@ export class MacroTransformer {
         //@ts-expect-error Private API
         else if (type.intrinsicName === "true") return true;
         //@ts-expect-error Private API
-        else if (type.intrinsicName === "undefined") return true;
+        else if (type.intrinsicName === "undefined") return false;
+        //@ts-expect-error Private API
+        else if (type.intrinsicName === "null") return false;
         return undefined;
     }
 

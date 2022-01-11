@@ -184,7 +184,7 @@ $random!([1, 2, 3]); // Transpiles to: [1 * Math.random() << 0, 2 * Math.random(
 
 #### `Accumulator`
 
-A parameter which increments every time the macro is called. 
+A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
 
 **Example:**
 ```ts
@@ -472,7 +472,7 @@ console.log((() => {
 
 #### $$const(varname: string, initializer: any)
 
-Creates a const variable with the provided name and initializer. 
+Creates a const variable with the provided name and initializer. This is **not** hygienic, use it when you want to create a variable and know it's name. 
 
 `index.ts`:
 ```ts
@@ -484,4 +484,64 @@ $$const!("abc", 123);
 `index.js`:
 ```js
 const abc = 123;
+```
+
+#### $$i()
+
+If this macro is called in a repetition, it's going to return the number of the current iteration. If it's called outside, it's going to return `-1`.
+
+`index.ts`
+```ts
+import { $$i } from "../../dist";
+
+function $arr(...els: Array<number>) {
+    +["[]", (els: number) => els + $$i!()];
+}
+
+$arr!(1, 2, 3);
+```
+
+`index.js`:
+```js
+[1, 3, 5]
+```
+
+#### $$length(arrLiteral: Array<any>)
+
+Gets the length of an array literal.
+
+`index.ts`
+```ts
+import { $$arr } from "../../dist";
+
+function $arr(...els: Array<number>) {
+    $$length!(els);
+}
+
+$arr!(1, 2, 3, 4, 5);
+```
+
+`index.js`
+```js
+5
+```
+
+#### $$ident(str: string)
+
+Turns a string literal into an identifier.
+
+`index.ts`
+```ts
+import { $$ident } from "../../dist";
+
+function $identifier(str: string) {
+    $$ident!(str);
+}
+
+$identifier!("Hello");
+```
+
+`index.js`
+```js
+Hello
 ```

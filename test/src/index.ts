@@ -1,22 +1,16 @@
-import { Accumulator, $$kindof, $$const } from "../../src";
+import { Accumulator, $$ident, $$i } from "../../src";
 import * as ts from "typescript";
 
-function $test2(acc: Accumulator = 0) {
-    acc;
+//@ts-expect-error 
+function $createEnum(enumName: string, ...els: Array<string>) {
+    //@ts-expect-error
+    enum enumName {};
+    +[(els: string) => {
+        $$ident!(enumName)[els] = $$i!();
+        $$ident!(enumName)[$$i!()] = els;
+    }];
 }
 
-$test2!();
-$test2!();
-$test2!();
-$test2!();$test2!();
-$test2!();$test2!();
-$test2!();$test2!();
-$test2!();$test2!();
-$test2!();$test2!();
-$test2!();$test2!();
-$test2!();$test2!();
-$test2!();$test2!();
-$test2!();
-
-const a = $test2!();
-$test2!();
+$createEnum!("VAAA", "A", "B", "C", "D");
+//@ts-expect-error
+console.log(VAAA.A);
