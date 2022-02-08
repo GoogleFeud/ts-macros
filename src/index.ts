@@ -67,3 +67,6 @@ export declare function $$ident(str: string) : any;
 
 export type AsRest<T extends Array<unknown>> = T | (T & { __marker: "AsRest" });
 export type Accumulator = number | (number & { __marker: "Accumulator" });
+
+declare const var_sym: unique symbol
+export type Var = null | undefined | string | number | {} | typeof var_sym;

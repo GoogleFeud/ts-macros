@@ -1,16 +1,15 @@
-import { Accumulator, $$ident, $$i } from "../../src";
-import * as ts from "typescript";
+import { $$kindof, Var } from "../../src";
+import { SyntaxKind } from "typescript";
 
-//@ts-expect-error 
-function $createEnum(enumName: string, ...els: Array<string>) {
-    //@ts-expect-error
-    enum enumName {};
-    +[(els: string) => {
-        $$ident!(enumName)[els] = $$i!();
-        $$ident!(enumName)[$$i!()] = els;
-    }];
-}
+function $num(name: string|number, variable?: Var)  {
+    if ($$kindof!(name) === SyntaxKind.StringLiteral || $$kindof!(name) === SyntaxKind.Identifier) variable = "Hi";
+    else variable = 10;
+    if ((variable + "e") === "Hie") 5;
+    else if (variable === 10) 10;
+    else 15;
+} 
 
-$createEnum!("VAAA", "A", "B", "C", "D");
-//@ts-expect-error
-console.log(VAAA.A);
+$num!("Hello")
+$num!(25)
+const variable = 30;
+$num!(variable);

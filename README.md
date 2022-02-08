@@ -199,6 +199,26 @@ $num!(); // 1
 $num!(); // 2
 ```
 
+#### `Var`
+
+Acts like a variable. You can save any expression into it, and when you reference it the saved expression is inserted.
+
+**Example:**
+```ts
+import { Var, $$kindof } from "ts-macros";
+import { SyntaxKind } from "typescript";
+function $num(name: string|number, variable?: Var<string|number>)  {
+    if ($$kindof!(name) === SyntaxKind.StringLiteral || $$kindof!(name) === SyntaxKind.Identifier) variable = "Hi";
+    else variable = 10;
+    name + (variable as string);
+} 
+
+$num!("Hello") // "Hello" + "Hi"
+$num!(25) // 25 + 10
+const variable = 30; 
+$num!(variable); // variable + "Hi"
+```
+
 ### Strings as identifiers
 
 If a parameter (or a repetition parameter) is a string literal, and a class / enum / function has the **exact** same name, then the name of the class is going to replaced with the contents of the string.
