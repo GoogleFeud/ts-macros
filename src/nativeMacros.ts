@@ -69,19 +69,17 @@ export default {
           transformer.context.factory.createVariableDeclaration(name.text, undefined, undefined, value)
         ], ts.NodeFlags.Const));
     },
-    "$$i": (args, transformer) => {
+    "$$i": (_, transformer) => {
       if (transformer.repeat.length) return transformer.context.factory.createNumericLiteral(transformer.repeat[transformer.repeat.length - 1]);
       else return transformer.context.factory.createNumericLiteral(-1); 
     },
-    "$$length": (args, transformer) => {
-      const arrLit = args[0];
+    "$$length": ([arrLit], transformer) => {
       if (!ts.isArrayLiteralExpression(arrLit)) throw new Error("`length` macro expects an array literal as the first parameter."); 
       return transformer.context.factory.createNumericLiteral(arrLit.elements.length);
     },
-    "$$ident": (args, transformer) => {
-      const thing = args[0];
+    "$$ident": ([thing], transformer) => {
       if (!thing) throw new Error("`ident` macro expects a string literal as the first parameter."); 
       else if (ts.isStringLiteral(thing)) return transformer.context.factory.createIdentifier(thing.text);
       else return thing;
     }
-} as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => ts.Node|undefined>
+} as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => ts.VisitResult<ts.Node>>

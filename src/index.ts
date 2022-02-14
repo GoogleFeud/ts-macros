@@ -70,3 +70,8 @@ export type Accumulator = number | (number & { __marker: "Accumulator" });
 
 declare const var_sym: unique symbol
 export type Var = null | undefined | string | number | {} | typeof var_sym;
+export type ChainParam<OR = unknown> = {
+    macroName?: string,
+    params?: Array<unknown>,
+    value?: OR
+};

@@ -1,6 +1,6 @@
 # ts-macros
 
-`ts-macros` is a typescript transformer which makes it possible to create **function** macros in typescript! The macros are very similar to rust's `macro_types!` and are just as powerful!
+`ts-macros` is a typescript transformer which makes it possible to create **function** macros in typescript! The macros are very similar to rust's `macro_types!`.
 
 All macro names must start with a dollar sign (`$`) and must be declared using the `function` keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `macro!(params)`.
 
@@ -320,6 +320,21 @@ function $add(...nums: Array<number>) {
 } 
 
 $add!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15); // Transpiles to 120
+```
+
+### Accessing object literal properties
+
+If you provide an object literal to a macro, the properties will be **directly** inlined. Example:
+
+```ts
+function $myMacro(user: Record<string, any>) {
+    user.object.personal.age + user["object"]["personal"]["age"];
+}
+
+$myMacro!({
+    object: { personal: { age: 33 }}
+});
+// Turns into 66.
 ```
 
 ### Chaining macros

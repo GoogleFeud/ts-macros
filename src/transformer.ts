@@ -8,6 +8,7 @@ export interface MacroParam {
     spread: boolean,
     asRest?: boolean,
     isAccumulator?: boolean,
+    chainParam?: boolean,
     var?: boolean,
     start: number,
     name: string,
@@ -54,7 +55,7 @@ export class MacroTransformer {
         return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
 
-    visitor(node: ts.Node): ts.Node | Array<ts.Node> | undefined {
+    visitor(node: ts.Node): ts.VisitResult<ts.Node> {
         if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
             const macroName = ts.getNameOfDeclaration(node)!.getText();
             if (MACROS.has(macroName)) throw new Error(`Macro ${macroName} is already defined.`);
@@ -67,6 +68,7 @@ export class MacroTransformer {
                     asRest: this.isValidMarker("AsRest", param),
                     isAccumulator: this.isValidMarker("Accumulator", param),
                     var: this.isValidMarker("Var", param),
+                    chainParam: this.isValidMarker("ChainParam", param),
                     start: i,
                     name: param.name.getText(),
                     defaultVal: param.initializer
@@ -85,6 +87,12 @@ export class MacroTransformer {
             let args;
             if (ts.isPropertyAccessExpression(chain.expression)) {
                 macro = MACROS.get(chain.expression.name.text); 
+                /**
+                // Check if the previous call is a macro expression ONLY if the this macro's first parameter is a ChainParam
+                if (macro.params.ts.isCallExpression(chain.expression.expression) && ts.isNonNullExpression(chain.expression.expression.expression) && MACROS.has(chain.expression.expression.expression.expression.getText())) {
+                    console.log(1);
+                }
+                */
                 const newArgs = ts.factory.createNodeArray([ts.visitNode(chain.expression.expression, this.boundVisitor), ...node.expression.arguments]);
                 args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
             } else {
@@ -150,16 +158,75 @@ export class MacroTransformer {
         if (this.macroStack.length) {
             const {macro, args, declaredParams} = this.macroStack[this.macroStack.length - 1];
 
-            if (this.props.optimizeEnv && ts.isPropertyAccessExpression(node) && node.expression.getText() === "process.env") {
-                const value = process.env[node.name.text];
-                if (!value) return node;
-                return ts.factory.createStringLiteral(value);
-            } 
+            if (ts.isPropertyAccessExpression(node)) {
+                if (this.props.optimizeEnv && node.expression.getText() === "process.env") {
+                    const value = process.env[node.name.text];
+                    if (!value) return node;
+                    return ts.factory.createStringLiteral(value);
+                }
+                else {
+                    let accessChain: ts.PropertyAccessExpression = node;
+                    let firstIdentifier: string|undefined;
+                    while (accessChain) {
+                        if (ts.isIdentifier(accessChain.expression)) {
+                            firstIdentifier = accessChain.expression.text;
+                            break;
+                        } else if (ts.isPropertyAccessExpression(accessChain.expression)) {
+                            accessChain = accessChain.expression;
+                        }
+                    }
+                    if (firstIdentifier) {
+                        const param = macro.params.find(param => param.name === firstIdentifier);
+                        if (param && !param.spread) {
+                            const arg = args[param.start];
+                            if (arg && ts.isObjectLiteralExpression(arg)) {
+                                let parent: ts.Node = accessChain;
+                                let value: ts.Node|undefined = arg;
+                                while (value && ts.isPropertyAccessExpression(parent)) {
+                                    if (ts.isObjectLiteralExpression(value)) {
+                                        value = value.properties.find(prop => prop.name?.getText() === (parent as ts.PropertyAccessExpression).name.text);
+                                        if (value && ts.isPropertyAssignment(value)) value = value.initializer;
+                                    }
+                                    parent = parent.parent;
+                                }
+                                if (value) return value;
+                            }
+                        }
+                    }
+                }
+            }
 
-            if (this.props.optimizeEnv && ts.isPropertyAccessExpression(node) && node.expression.getText() === "process.env") {
-                const value = process.env[node.name.text];
-                if (!value) return node;
-                return ts.factory.createStringLiteral(value);
+            if (ts.isElementAccessExpression(node)) {
+                let accessChain: ts.ElementAccessExpression = node;
+                let firstIdentifier: string|undefined;
+                while (accessChain) {
+                    if (ts.isIdentifier(accessChain.expression)) {
+                        firstIdentifier = accessChain.expression.text;
+                        break;
+                    } else if (ts.isElementAccessExpression(accessChain.expression)) {
+                        accessChain = accessChain.expression;
+                    }
+                }
+                if (firstIdentifier) {
+                    const param = macro.params.find(param => param.name === firstIdentifier);
+                    if (param && !param.spread) {
+                        const arg = args[param.start];
+                        if (arg && ts.isObjectLiteralExpression(arg)) {
+                            let parent: ts.Node = accessChain;
+                            let value: ts.Node|undefined = arg;
+                            while (value && ts.isElementAccessExpression(parent)) {
+                                if (ts.isObjectLiteralExpression(value)) {
+                                    let lit = ts.visitNode((parent as ts.ElementAccessExpression).argumentExpression, this.boundVisitor).getText();
+                                    if (lit.startsWith("\"")) lit = lit.slice(1, -1);
+                                    value = value.properties.find(prop => prop.name?.getText() === lit);
+                                    if (value && ts.isPropertyAssignment(value)) value = value.initializer;
+                                }
+                                parent = parent.parent;
+                            }
+                            if (value) return value;
+                        }
+                    }
+                }
             }
 
             if (ts.isVariableDeclaration(node) && node.initializer && ts.isIdentifier(node.name) && macro.params.some(p => p.name === (node.name as ts.Identifier).text)) {
