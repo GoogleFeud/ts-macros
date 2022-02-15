@@ -1,7 +1,9 @@
-import { AsRest } from "../../src";
-
-function $random(...nums: Array<number>) {
-    +["[]", (nums: number) => nums * Math.random() << 0] // The [] separator puts everything in an array
+function $add(param1: {
+    user: { name: string }
+}, arr: [number, string]) {
+    param1.user.name + arr[0] + (arr)[1];
 }
 
-$random!(1, 2, 3);
+$add!({
+    user: { name: "Google" }
+}, [22, "Feud"]);

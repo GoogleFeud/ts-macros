@@ -1,11 +1,11 @@
 ---
 name: Repetitions
-order: 2
+order: 3
 ---
 
 # Repetitions
 
-ts-macro has **repetitions** which are heavily inspired by Rust. They allow you to repeat code for every element of an array, without loops. Since ts-macros is limited by the typescript compiled, this is the syntax for repetitions:
+ts-macro has **repetitions** which are heavily inspired by Rust. They allow you to repeat code for every element of an array, without loops. Since ts-macros is limited by the typescript compiler, this is the syntax for repetitions:
 
 ```
 +[separator?, () => codeToRepeat]
@@ -16,8 +16,8 @@ The `separator` is an optional string which will separate all the expressions ge
 Repetitions only work with **rest** parameters and parmeters with the `AsRest` marker (more on that later).
 
 ```ts --Macro
-function $random(...nums: Array<number>) {
-    +["[]", (nums: number) => nums * Math.random() << 0] // The [] separator puts everything in an array
+function $random(...nums: Array<number>) : Array<number> {
+    return +["[]", (nums: number) => nums * Math.random() << 0] as unknown as Array<number>; // The [] separator puts everything in an array
 }
 ```
 ```ts --Call
@@ -62,8 +62,8 @@ ts-docs provides a built-in macro, `$$i`, if used inside a repetition, it'll ret
 ```ts --Macro
 import { $$i } from "../../dist";
 
-function $arr(...els: Array<number>) {
-    +["[]", (els: number) => els + $$i!()];
+function $arr(...els: Array<number>) : Array<number> {
+    return +["[]", (els: number) => els + $$i!()] as unknown as Array<number>;
 }
 ```
 ```ts --Call
@@ -80,9 +80,8 @@ If a parameter has the `AsRest` type, the parameter will act exactly as rest par
 ```ts --Macro
 import { AsRest } from "../../src";
 
-//@ts-expect-error
 function $addItems<T>(keys: AsRest<Array<string>>, values: AsRest<Array<unknown>>) : T {
-    Object.assign({}, +[(keys: string, values: unknown) => ({[keys]: values})])
+    return Object.assign({}, +[(keys: string, values: unknown) => ({[keys]: values})]) as unknown as T;
 }
 ```
 ```ts --Call

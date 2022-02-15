@@ -108,11 +108,15 @@ export class MacroTransformer {
                 else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
                 return ts.visitEachChild(node, visitor, this.context);
             };
-            const res = ts.visitNodes(ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements, visitor);
+            const res = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements.concat();
+            if (ts.isReturnStatement(res[res.length - 1]) && ts.isSourceFile(node.parent)) {
+                const exp = res.pop() as ts.ReturnStatement;
+                if (exp.expression) res.push(ts.factory.createExpressionStatement(exp.expression));
+            }
             const acc = macro.params.find(p => p.isAccumulator);
             if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
             this.macroStack.pop();
-            return [...res];
+            return res;
         }
 
         if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression)) {
@@ -137,7 +141,10 @@ export class MacroTransformer {
             if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
             this.macroStack.pop();
             let last = res.pop()!;
-            if (res.length === 0) return ts.isExpressionStatement(last) ? last.expression:last;
+            if (res.length === 0) {
+                if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;
+                else return last;
+            }
             if (!ts.isReturnStatement(last)) last = ts.factory.createReturnStatement(ts.isExpressionStatement(last) ? last.expression:(last as unknown as ts.Expression));
             return ts.factory.createCallExpression(
                 ts.factory.createParenthesizedExpression(
@@ -424,6 +431,7 @@ export class MacroTransformer {
             if (paramMacro.spread) return params[this.repeat[this.repeat.length - 1] + paramMacro.start];
             else if (paramMacro.asRest) return (params[paramMacro.start] as ts.ArrayLiteralExpression).elements[this.repeat[this.repeat.length - 1]];
         }
+        else return params[paramMacro.start];
     }
 
     isValidMarker(marker: string, param: ts.ParameterDeclaration) : boolean {
@@ -542,5 +550,5 @@ const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.
     "*": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AsteriskToken),
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
-    ",": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken)
+    ",": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken),
 }
