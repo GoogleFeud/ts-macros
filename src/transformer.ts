@@ -8,7 +8,6 @@ export interface MacroParam {
     spread: boolean,
     asRest?: boolean,
     isAccumulator?: boolean,
-    chainParam?: boolean,
     var?: boolean,
     start: number,
     name: string,
@@ -67,7 +66,6 @@ export class MacroTransformer {
                     asRest: this.isValidMarker("AsRest", param),
                     isAccumulator: this.isValidMarker("Accumulator", param),
                     var: this.isValidMarker("Var", param),
-                    chainParam: this.isValidMarker("ChainParam", param),
                     start: i,
                     name: param.name.getText(),
                     defaultVal: param.initializer

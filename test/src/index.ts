@@ -1,12 +1,13 @@
-import { Var, $$kindof } from "../../dist";
-import { SyntaxKind } from "typescript";
-function $num(name: string|number, variable?: Var)  {
-    if ($$kindof!(name) === SyntaxKind.StringLiteral || $$kindof!(name) === SyntaxKind.Identifier) variable = "Hi";
-    else variable = 10;
-    name + (variable as string);
-} 
+function $contains(value: unknown, ...possible: Array<unknown>) {
+    return +["||", (possible: unknown) => value === possible];
+}
 
-$num!("Hello") // "Hello" + "Hi"
-$num!(25) // 25 + 10
-const variable = 30; 
-$num!(variable); // variable + "Hi"
+interface MacroStr extends String {
+    $contains: (...vals: Array<string>) => string|false;
+}
+
+interface MacroBool extends Boolean {
+    $contains: (...vals: Array<boolean>) => boolean;
+}
+
+(("feud" as unknown as MacroStr).$contains!("google", "feud", "erwin") as unknown as MacroBool).$contains!(true, false);
