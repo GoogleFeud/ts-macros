@@ -1,10 +1,7 @@
-import { $$kindof } from "../../src";
-import { SyntaxKind } from "typescript";
+import { AsRest } from "../../src";
 
-function $myMacro(user: Record<string, any>, arr: Array<number>) {
-    user.object.personal.age + user["object"]["personal"]["age"] + arr[0];
+function $random(...nums: Array<number>) {
+    +["[]", (nums: number) => nums * Math.random() << 0] // The [] separator puts everything in an array
 }
 
-$myMacro!({
-    object: { personal: { age: 33 }}
-}, [33]);
+$random!(1, 2, 3);
