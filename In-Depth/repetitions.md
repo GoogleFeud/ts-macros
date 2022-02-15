@@ -1,6 +1,6 @@
 ---
 name: Repetitions
-order: 3
+order: 2
 ---
 
 # Repetitions
