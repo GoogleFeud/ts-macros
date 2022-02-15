@@ -14,15 +14,14 @@ Every macro **expands** into the code that it contains. How it'll expand depends
 If a macro is an `ExpressionStatement`, then it's going to be "flattened" - the macro call will literally be replaced by the macro body, but all the new declared variables will have their names changed to a unique name.
 
 ```ts --Macro
-//@ts-expect-error Get used to using ts-expect-error with macros :(
 function $map<T, R>(arr: Array<T>, cb: (el: T) => R) : Array<R> {
-   const array = arr; 
-   const res = [];
-   for (let i=0; i < array.length; i++) {
-      res.push(cb(array[i]));
-   }
-   array;
-}
+    const array = arr; 
+    const res = [];
+    for (let i=0; i < array.length; i++) {
+       res.push(cb(array[i]));
+    }
+    return res;
+ }
 ```
 ```ts --Call
 $map!([1, 2, 3], (num) => num * 2); // This is an ExpressionStatement
@@ -45,8 +44,8 @@ Expanding inside an expression can do two different things depending on the what
 If the macro expands to a single expression, then the macro call is directly replaced with the expression.
 
 ```ts --Macro
-function $rngNums( ...nums: Array<number>) {
-    +["[]", (nums: number) => nums * Math.random() << 0]
+function $rngNums( ...nums: Array<number>) : Array<number> {
+    return +["[]", (nums: number) => nums * Math.random() << 0] as Array<number>
 }
 ```
 ```ts --Call
@@ -61,8 +60,8 @@ const rngNums = [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random
 If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned.
 
 ```ts --Macro
-function $push(array: Array<number>, ...nums: Array<number>) {
-    +[(nums: number) => array.push(nums)];
+function $push(array: Array<number>, ...nums: Array<number>) : number {
+    return +[",", (nums: number) => array.push(nums)];
 }
 ```
 ```ts --Call
@@ -71,10 +70,6 @@ const newSize = $push!(arr, 1, 2, 3);
 ```
 ```js --Result
 const arr = [];
-const newSize = (() => {
-    arr.push(1)
-    arr.push(2)
-    return arr.push(3);
-})();
+const newSize = (arr.push(1), arr.push(2), arr.push(3));
 ```
 
