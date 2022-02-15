@@ -108,7 +108,7 @@ export class MacroTransformer {
                 else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
                 return ts.visitEachChild(node, visitor, this.context);
             };
-            const res = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements.concat();
+            const res = ts.visitNodes(ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements, visitor).concat();
             if (ts.isReturnStatement(res[res.length - 1]) && ts.isSourceFile(node.parent)) {
                 const exp = res.pop() as ts.ReturnStatement;
                 if (exp.expression) res.push(ts.factory.createExpressionStatement(exp.expression));
@@ -343,7 +343,7 @@ export class MacroTransformer {
                     const inner = node.expression;
                     const param = macro.params.find(p => p.name === (inner.left as ts.Identifier).text);
                     if (!param || !param.var) return ts.visitEachChild(node, this.boundVisitor, this.context);
-                    param.defaultVal = ts.visitEachChild(inner.right, this.boundVisitor, this.context);
+                    param.defaultVal = ts.visitNode(inner.right, this.boundVisitor);
                     return undefined;
                 }
                 else if (ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
@@ -426,8 +426,9 @@ export class MacroTransformer {
 
     getMacroParam(name: string, macro: Macro, params: ts.NodeArray<ts.Node>) : ts.Node|undefined {
         const index = macro.params.findIndex(p => p.name === name);
+        if (index === -1) return;
         const paramMacro = macro.params[index];
-        if (this.repeat.length && paramMacro) {
+        if (this.repeat.length) {
             if (paramMacro.spread) return params[this.repeat[this.repeat.length - 1] + paramMacro.start];
             else if (paramMacro.asRest) return (params[paramMacro.start] as ts.ArrayLiteralExpression).elements[this.repeat[this.repeat.length - 1]];
         }
@@ -469,6 +470,7 @@ export class MacroTransformer {
 
     getLiteralFromNode(node: ts.Expression) : unknown|typeof NO_LIT_FOUND {
         if (ts.isParenthesizedExpression(node)) return this.getLiteralFromNode(node.expression);
+        else if (ts.isAsExpression(node)) return this.getLiteralFromNode(node.expression);
         if (ts.isNumericLiteral(node)) return +node.text;
         if (ts.isStringLiteral(node)) return node.text;
         const type = this.checker.getTypeAtLocation(node);

@@ -21,7 +21,7 @@ function $map<T, R>(arr: Array<T>, cb: (el: T) => R) : Array<R> {
        res.push(cb(array[i]));
     }
     return res;
- }
+}
 ```
 ```ts --Call
 $map!([1, 2, 3], (num) => num * 2); // This is an ExpressionStatement
@@ -35,6 +35,8 @@ for (let i_1 = 0; i_1 < array_1.length; i_1++) {
 array_1;
 ```
 
+You may have noticed that the return statement got omitted from the final result. `return` will be removed **only** if the macro is ran in the global scope. Anywhere else and `return` will be there.
+
 ## Expression
 
 Expanding inside an expression can do two different things depending on the what the macro expands to.
@@ -42,22 +44,6 @@ Expanding inside an expression can do two different things depending on the what
 ### Single expression
 
 If the macro expands to a single expression, then the macro call is directly replaced with the expression.
-
-```ts --Macro
-function $rngNums( ...nums: Array<number>) : Array<number> {
-    return +["[]", (nums: number) => nums * Math.random() << 0] as Array<number>
-}
-```
-```ts --Call
-const rngNums = $rngNums!(1, 2, 3); // Macro call is an expression here
-```
-```js --Result
-const rngNums = [1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0];
-```
-
-### Multiple expressions
-
-If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned.
 
 ```ts --Macro
 function $push(array: Array<number>, ...nums: Array<number>) : number {
@@ -71,5 +57,29 @@ const newSize = $push!(arr, 1, 2, 3);
 ```js --Result
 const arr = [];
 const newSize = (arr.push(1), arr.push(2), arr.push(3));
+```
+
+`return` gets removed if the macro is used as an expression.
+
+### Multiple expressions
+
+If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned.
+
+```ts --Macro
+function $push(array: Array<number>, ...nums: Array<number>) : number {
+    +[(nums: number) => array.push(nums)];
+}
+```
+```ts --Call
+const arr: Array<number> = [];
+const newSize = $push!(arr, 1, 2, 3);
+```
+```js --Result
+const arr = [];
+const newSize = (() => {
+    arr.push(1)
+    arr.push(2)
+    return arr.push(3);
+})();
 ```
 

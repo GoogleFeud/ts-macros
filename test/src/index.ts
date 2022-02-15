@@ -1,9 +1,12 @@
-function $add(param1: {
-    user: { name: string }
-}, arr: [number, string]) {
-    param1.user.name + arr[0] + (arr)[1];
-}
+import { Var, $$kindof } from "../../dist";
+import { SyntaxKind } from "typescript";
+function $num(name: string|number, variable?: Var)  {
+    if ($$kindof!(name) === SyntaxKind.StringLiteral || $$kindof!(name) === SyntaxKind.Identifier) variable = "Hi";
+    else variable = 10;
+    name + (variable as string);
+} 
 
-$add!({
-    user: { name: "Google" }
-}, [22, "Feud"]);
+$num!("Hello") // "Hello" + "Hi"
+$num!(25) // 25 + 10
+const variable = 30; 
+$num!(variable); // variable + "Hi"
