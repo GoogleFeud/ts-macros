@@ -1,13 +1,7 @@
-function $contains(value: unknown, ...possible: Array<unknown>) {
-    return +["||", (possible: unknown) => value === possible];
-}
+import { $$import } from "../../dist";
+import * as ts from "typescript";
 
-interface MacroStr extends String {
-    $contains: (...vals: Array<string>) => string|false;
-}
+$$import!("../", ["A", "B"], true);
 
-interface MacroBool extends Boolean {
-    $contains: (...vals: Array<boolean>) => boolean;
-}
-
-(("feud" as unknown as MacroStr).$contains!("google", "feud", "erwin") as unknown as MacroBool).$contains!(true, false);
+//@ts-expect-error
+console.log(A, B);

@@ -15,6 +15,7 @@ export interface MacroParam {
 }
 
 export interface Macro {
+    name: string,
     params: Array<MacroParam>,
     body?: ts.FunctionBody
 }
@@ -38,6 +39,7 @@ export class MacroTransformer {
     dirname: string
     props: MacroTransformerBuiltinProps
     checker: ts.TypeChecker
+    imports: Array<ts.ImportDeclaration>
     constructor(dirname: string, context: ts.TransformationContext, checker: ts.TypeChecker) {
         this.dirname = dirname;
         this.context = context;
@@ -46,11 +48,16 @@ export class MacroTransformer {
         this.macroStack = [];
         this.props = {};
         this.checker = checker;
+        this.imports = [];
     }
 
     run(node: ts.SourceFile): ts.Node {
         if (node.isDeclarationFile) return node;
-        return ts.visitEachChild(node, this.boundVisitor, this.context);
+        const newSource = ts.visitEachChild(node, this.boundVisitor, this.context);
+        return ts.factory.updateSourceFile(newSource, [
+            ...this.imports,
+            ...newSource.statements
+        ]);
     }
 
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
@@ -72,6 +79,7 @@ export class MacroTransformer {
                 });
             }
             MACROS.set(macroName, {
+                name: macroName,
                 params,
                 body: node.body
             });
