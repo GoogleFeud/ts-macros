@@ -1,0 +1,317 @@
+<!DOCTYPE html><html lang="en-US"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><title>ts-macros</title><meta name="description" content="Documentation forts-macros v1.0.2"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous"><link id="highlightTheme" rel="stylesheet" crossorigin="anonymous"><link rel="icon" type="image/x-icon" href="/assets/media/favicon.ico"><link href="assets/css/index.css" type="text/css" rel="stylesheet"><script src="assets/js/index.js"></script><script>window.depth="";window.ab=false;</script></head><body><nav class="container-fluid navi"><div class="row"><div class="col-4"><input class="form-control search" id="search" type="search" placeholder="Search..." aria-label="Search"></div><div class="col-8"><div class="row float-end row-cols-auto" style="margin-top:5px"><div class="col clickable-icon" id="theme-icon"></div><div class="col"><a href="https://github.com/GoogleFeud/ts-macros/tree/main" class="clickable-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-github" viewbox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg></a></div><div class="col"><span style="font-size: 1.2em">v1.0.2</span></div></div></div></div></nav><div class="container-fluid"><div class="row"><div class="col-lg-auto sidebar" id="sidebar"><h1 class="lib-name text-center"><a href="index.html">ts-macros</a></h1><p class="current-thing text-center">module <span class="module">ts-macros</span></p><div class="sidebar-members"><div class="sidebar-member"><div class="collapsible-trigger"><span class="collapsible-arrow open"></span><span class="sidebar-category">In-Depth</span></div><div class="collapsible-body open"><span class="sidebar-category-member"><a href="./pages/In-Depth/Expanding macros.html">Expanding macros</a></span></div></div><div class="sidebar-member"><div class="collapsible-trigger"><span class="collapsible-arrow open"></span><span class="sidebar-category">Functions</span></div><div class="collapsible-body open"><span class="sidebar-category-member"><a href="function/$$loadEnv.html">$$loadEnv</a></span><span class="sidebar-category-member"><a href="function/$$loadJSONAsEnv.html">$$loadJSONAsEnv</a></span><span class="sidebar-category-member"><a href="function/$$inlineFunc.html">$$inlineFunc</a></span><span class="sidebar-category-member"><a href="function/$$kindof.html">$$kindof</a></span><span class="sidebar-category-member"><a href="function/$$const.html">$$const</a></span><span class="sidebar-category-member"><a href="function/$$i.html">$$i</a></span><span class="sidebar-category-member"><a href="function/$$length.html">$$length</a></span><span class="sidebar-category-member"><a href="function/$$ident.html">$$ident</a></span></div></div><div class="sidebar-member"><div class="collapsible-trigger"><span class="collapsible-arrow open"></span><span class="sidebar-category">Types</span></div><div class="collapsible-body open"><span class="sidebar-category-member"><a href="type/AsRest.html">AsRest</a></span><span class="sidebar-category-member"><a href="type/Accumulator.html">Accumulator</a></span><span class="sidebar-category-member"><a href="type/Var.html">Var</a></span><span class="sidebar-category-member"><a href="type/ChainParam.html">ChainParam</a></span></div></div><div class="sidebar-member"><div class="collapsible-trigger"><span class="collapsible-arrow open"></span><span class="sidebar-category">Constants</span></div><div class="collapsible-body open"><span class="sidebar-category-member"><a href="constant/var_sym.html">var_sym</a></span></div></div></div></div><div id="content" class="col content"><div class="d-none" id="search-menu"><h1>Search results</h1><div class="row" style="margin-top: 20px;margin-bottom: 20px"><div class="col-md-4"><p class="mini-header">Types</p><div><input type="checkbox" class="c-checkbox" id="search-option-classes" checked><span>Classes</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-interfaces" checked><span>Interfaces</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-enums" checked><span>Enums</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-functions" checked><span>Functions</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-types" checked><span>Type aliases</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-constants"><span>Constants</span></div></div><div class="col-md-4"><p class="mini-header">Members</p><div><div><input type="checkbox" class="c-checkbox" id="search-option-properties" checked><span>Properties</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-methods" checked><span>Methods</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-getters" checked><span>Getters</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-setters" checked><span>Setters</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-enum-members"><span>Enum members</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-privates"><span>Show privates</span></div></div></div><div class="col-md-4"><p class="mini-header">Other</p><div><div><input type="checkbox" class="c-checkbox" id="search-option-this-module-only"><span>In this module only</span></div></div></div></div><div id="search-result-list"></div></div><div id="content-main" class="d-none"><div><h1>Module <span class="referenceLink module">ts-macros</span><a class="float-end sourceCode" href="https://github.com/GoogleFeud/ts-macros/tree/main/src">[src]</a></h1><h1 id="ts-macros" class="section-header">ts-macros</h1><p><code>ts-macros</code> is a typescript transformer which makes it possible to create <strong>function</strong> macros in typescript! The macros are very similar to rust&#39;s <code>macro_types!</code>.</p>
+<p>All macro names must start with a dollar sign (<code>$</code>) and must be declared using the <code>function</code> keyword. Macros can then be called just like a normal function, but with a <code>!</code> after it&#39;s name: <code>macro!(params)</code>.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$contains</span>(<span class="hljs-params">value: unknown, ...possible: <span class="hljs-built_in">Array</span>&lt;unknown&gt;</span>) {
+    +[<span class="hljs-string">&quot;||&quot;</span>, <span class="hljs-function">(<span class="hljs-params">possible: unknown</span>) =&gt;</span> value === possible];
+}
+
+<span class="hljs-keyword">const</span> searchItem = <span class="hljs-string">&quot;google&quot;</span>;
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>($contains!(searchItem, <span class="hljs-string">&quot;erwin&quot;</span>, <span class="hljs-string">&quot;tj&quot;</span>)); 
+<span class="hljs-comment">// Transpiles to: console.log(searchItem === &quot;erwin&quot; || searchItem === &quot;tj&quot;)</span></code></pre><h2 id="usage" class="section-header">Usage</h2><h3 id="install" class="section-header">Install</h3><pre><code class="hljs">npm i ts-macros</code></pre><p>You must use the <code>ttypescript</code> package in order to use this. </p>
+<pre><code class="hljs">npm i ttypescript</code></pre><p>After that put this in your tsconfig.json:</p>
+<pre><code class="hljs"><span class="hljs-string">&quot;compilerOptions&quot;</span>: {
+<span class="hljs-comment">//... other options</span>
+<span class="hljs-string">&quot;plugins&quot;</span>: [
+        { <span class="hljs-string">&quot;transform&quot;</span>: <span class="hljs-string">&quot;ts-macros&quot;</span> }
+]
+}</code></pre><p>Then transpile your code with <code>ttsc</code>.</p>
+<h2 id="ts-macros-in-depth" class="section-header">ts-macros in depth</h2><h3 id="repetitions" class="section-header">Repetitions</h3><p><em>Syntax:</em> <code>+[separator?, () =&gt; codeToRepeat]</code></p>
+<p>Repetitions without separators cannot be used as <code>Expressions</code>. If a <strong>rest parameter</strong> is used in a repetition, it gets replaced by the value at the current repetition index, but if it&#39;s used outside of a repetition, then it&#39;s replaced by an array literal containing all the values. It&#39;s also possible to have repetitions inside repetitions.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$random</span>(<span class="hljs-params">...nums</span>) {
+    +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">() =&gt;</span> nums * Math.<span class="hljs-title function_">random</span>() &lt;&lt; <span class="hljs-number">0</span>] <span class="hljs-comment">// The [] separator puts everything in an array</span>
+}
+
+$random!(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>); <span class="hljs-comment">// Transpiles to: [1 * Math.random() &lt;&lt; 0, 2 * Math.random() &lt;&lt; 0, 3 * Math.random() &lt;&lt; 0]</span></code></pre><h4 id="available-separators" class="section-header">Available separators</h4><ul>
+<li><code>[]</code> - Puts all the values in an array</li>
+<li><code>+</code> - Adds all the values</li>
+<li><code>-</code> - Subtracts all the values</li>
+<li><code>*</code> - Multiplies all the values</li>
+<li><code>,</code> - Separates all expressions with a <code>,</code></li>
+<li><code>||</code> </li>
+<li><code>&amp;&amp;</code></li>
+</ul>
+<h3 id="macro-parameters" class="section-header">Macro parameters</h3><p>Initially, all parameters are <strong>literally</strong> replaced, for example, when you pass an array literal (<code>[1, 2, 3]</code>) to a macro, all uses of that parameter will be replaced with that EXACT array literal:</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$loop</span>(<span class="hljs-params">arr: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;, cb: (element: <span class="hljs-built_in">number</span>) =&gt; <span class="hljs-built_in">void</span></span>) {
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i=<span class="hljs-number">0</span>; i &lt; arr.<span class="hljs-property">length</span>; i++) {
+        <span class="hljs-title function_">cb</span>(arr[i]);
+    }
+}
+
+$loop!([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>], <span class="hljs-function">(<span class="hljs-params">el</span>) =&gt;</span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(el)); 
+<span class="hljs-comment">//Transpiles to:</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>].<span class="hljs-property">length</span>; i++) {
+    (<span class="hljs-function">(<span class="hljs-params">el</span>) =&gt;</span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(el))([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>][i]);
+}</code></pre><p>To avoid this, you can do something called parameter overwriting: (you can use let and const as well!)</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$loop</span>(<span class="hljs-params">arr: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;, cb: (element: <span class="hljs-built_in">number</span>) =&gt; <span class="hljs-built_in">void</span></span>) {
+    <span class="hljs-keyword">var</span> arr = arr;
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i=<span class="hljs-number">0</span>; i &lt; arr.<span class="hljs-property">length</span>; i++) {
+        <span class="hljs-title function_">cb</span>(arr[i]);
+    }
+}
+
+$loop!([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>], <span class="hljs-function">(<span class="hljs-params">el</span>) =&gt;</span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(el)); 
+<span class="hljs-comment">//Transpiles to:</span>
+<span class="hljs-keyword">var</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>];
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; arr.<span class="hljs-property">length</span>; i++) {
+    (<span class="hljs-function">(<span class="hljs-params">el</span>) =&gt;</span> <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(el))(arr[i]);
+}</code></pre><h3 id="hygiene" class="section-header">Hygiene</h3><p>The macros are <strong>always</strong> hygienic!</p>
+<p>Javascript has 3 main constructs: <code>Expression</code>, <code>ExpressionStatement</code> and <code>Statement</code>. Macro calls can never be <code>Statement</code>s, but:</p>
+<p><strong>If a macro call is a <code>ExpressionStatement</code>, then it&#39;s going to get &quot;flattened&quot; - the macro call will literally be replaced by the macro body, but all the new declared variables will have their names changed to a unique name.</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$map</span>(<span class="hljs-params">arr, cb</span>) {
+   <span class="hljs-keyword">const</span> array = arr; 
+   <span class="hljs-keyword">const</span> res = [];
+   <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i=<span class="hljs-number">0</span>; i &lt; array.<span class="hljs-property">length</span>; i++) {
+      res.<span class="hljs-title function_">push</span>(<span class="hljs-title function_">cb</span>(array[i]);
+   }
+}
+
+$map!([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>], <span class="hljs-function">(<span class="hljs-params">num</span>) =&gt;</span> num * <span class="hljs-number">2</span>); <span class="hljs-comment">// This is an ExpressionStatement</span>
+
+<span class="hljs-comment">// Transpiles to:</span>
+<span class="hljs-keyword">const</span> array_1 = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>];
+<span class="hljs-keyword">const</span> res_1 = [];
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i_1 = <span class="hljs-number">0</span>; i_1 &lt; array_1.<span class="hljs-property">length</span>; i_1++) {
+    res.<span class="hljs-title function_">push</span>((<span class="hljs-function">(<span class="hljs-params">item</span>) =&gt;</span> item * <span class="hljs-number">2</span>)(array_1[i_1], i_1));
+}</code></pre><p><strong>If a macro call is in an <code>Expression</code> and it&#39;s body expands to a single expression then the call is replaced by the expression.</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$push</span>(<span class="hljs-params"> ...nums: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;</span>) {
+    +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">(<span class="hljs-params">nums: <span class="hljs-built_in">number</span></span>) =&gt;</span> nums * Math.<span class="hljs-title function_">random</span>() &lt;&lt; <span class="hljs-number">0</span>]
+}
+
+<span class="hljs-keyword">const</span> rngNums = $push!(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>); <span class="hljs-comment">// Macro call is an expression here</span>
+<span class="hljs-comment">// Transpiles to:</span>
+<span class="hljs-keyword">const</span> rngNums = [<span class="hljs-number">1</span> * Math.<span class="hljs-title function_">random</span>() &lt;&lt; <span class="hljs-number">0</span>, <span class="hljs-number">2</span> * Math.<span class="hljs-title function_">random</span>() &lt;&lt; <span class="hljs-number">0</span>, <span class="hljs-number">3</span> * Math.<span class="hljs-title function_">random</span>() &lt;&lt; <span class="hljs-number">0</span>];</code></pre><p><strong>If a macro call is in an <code>Expression</code> and it&#39;s body contains <strong>more</strong> than a single expression, or contains a <code>Statement</code>, then the body is wrapped in an IIFE, and the last expression will be returned.</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$push</span>(<span class="hljs-params">array: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;, ...nums: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;</span>) {
+    +[<span class="hljs-function">(<span class="hljs-params">nums: <span class="hljs-built_in">number</span></span>) =&gt;</span> array.<span class="hljs-title function_">push</span>(nums)];
+}
+
+<span class="hljs-keyword">const</span> <span class="hljs-attr">arr</span>: Array&lt;<span class="hljs-built_in">number</span>&gt; = [];
+<span class="hljs-keyword">const</span> newSize = $push!(arr, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>);
+<span class="hljs-comment">// Transpiles to:</span>
+<span class="hljs-keyword">const</span> arr = [];
+<span class="hljs-keyword">const</span> newSize = (<span class="hljs-function">() =&gt;</span> {
+    arr.<span class="hljs-title function_">push</span>(<span class="hljs-number">1</span>)
+    arr.<span class="hljs-title function_">push</span>(<span class="hljs-number">2</span>)
+    <span class="hljs-keyword">return</span> arr.<span class="hljs-title function_">push</span>(<span class="hljs-number">3</span>);
+})();</code></pre><h3 id="markers" class="section-header">Markers</h3><p><code>Markers</code> make macro parameters behave differently. They don&#39;t alter the parameter&#39;s type, but it&#39;s <strong>behaviour</strong>. </p>
+<h4 id="asrest" class="section-header"><code>AsRest</code></h4><p>You can mark a parameter with the <code>AsRest</code> marker. The parameter will act exactly like a rest parameter, but instead of separating all values of the parameter with a comma, you put them all in an array. This way you can have multiple repetition arguments. </p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { <span><span class="c-tooltip"><a class="reference-link object" href="type/AsRest.html">AsRest</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">AsRest</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">AsRest</span></span></span></span></span> } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;ts-macros&quot;</span>
+
+<span class="hljs-comment">// This wouldn&#x27;t work if the type was just Array&lt;number&gt;</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$random</span>(<span class="hljs-params">nums: AsRest&lt;<span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;&gt;</span>) : Array&lt;<span class="hljs-built_in">number</span>&gt; {
+    +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">() =&gt;</span> nums * Math.<span class="hljs-title function_">random</span>() &lt;&lt; <span class="hljs-number">0</span>]
+} 
+
+$random!([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>]); <span class="hljs-comment">// Transpiles to: [1 * Math.random() &lt;&lt; 0, 2 * Math.random() &lt;&lt; 0, 3 * Math.random() &lt;&lt; 0]</span></code></pre><h4 id="accumulator" class="section-header"><code>Accumulator</code></h4><p>A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { <span><span class="c-tooltip"><a class="reference-link object" href="type/Accumulator.html">Accumulator</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">Accumulator</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">Accumulator</span></span></span></span></span> } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;ts-macros&quot;</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$num</span>(<span class="hljs-params">acc: Accumulator = <span class="hljs-number">0</span></span>) : Array&lt;<span class="hljs-built_in">number</span>&gt; {
+    acc;
+} 
+
+$num!(); <span class="hljs-comment">// 0</span>
+$num!(); <span class="hljs-comment">// 1</span>
+$num!(); <span class="hljs-comment">// 2</span></code></pre><h4 id="var" class="section-header"><code>Var</code></h4><p>Acts like a variable. You can save any expression into it, and when you reference it the saved expression is inserted.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { <span><span class="c-tooltip"><a class="reference-link object" href="type/Var.html">Var</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">Var</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">Var</span></span></span></span></span>, $$kindof } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;ts-macros&quot;</span>;
+<span class="hljs-keyword">import</span> { SyntaxKind } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;typescript&quot;</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$num</span>(<span class="hljs-params">name: <span class="hljs-built_in">string</span>|<span class="hljs-built_in">number</span>, variable?: Var&lt;<span class="hljs-built_in">string</span>|<span class="hljs-built_in">number</span>&gt;</span>)  {
+    <span class="hljs-keyword">if</span> ($$kindof!(name) === SyntaxKind.<span class="hljs-property">StringLiteral</span> || $$kindof!(name) === SyntaxKind.<span class="hljs-property">Identifier</span>) variable = <span class="hljs-string">&quot;Hi&quot;</span>;
+    <span class="hljs-keyword">else</span> variable = <span class="hljs-number">10</span>;
+    name + (variable <span class="hljs-keyword">as</span> <span class="hljs-built_in">string</span>);
+} 
+
+$num!(<span class="hljs-string">&quot;Hello&quot;</span>) <span class="hljs-comment">// &quot;Hello&quot; + &quot;Hi&quot;</span>
+$num!(<span class="hljs-number">25</span>) <span class="hljs-comment">// 25 + 10</span>
+<span class="hljs-keyword">const</span> variable = <span class="hljs-number">30</span>; 
+$num!(variable); <span class="hljs-comment">// variable + &quot;Hi&quot;</span></code></pre><h3 id="strings-as-identifiers" class="section-header">Strings as identifiers</h3><p>If a parameter (or a repetition parameter) is a string literal, and a class / enum / function has the <strong>exact</strong> same name, then the name of the class is going to replaced with the contents of the string.</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$createClasses</span>(<span class="hljs-params">values: AsRest&lt;<span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;&gt;, ...names: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">string</span>&gt;</span>) {
+    +[<span class="hljs-function">() =&gt;</span> {
+        <span class="hljs-keyword">class</span> names {
+            <span class="hljs-keyword">static</span> value = values
+        }
+    }]
+}
+
+$createClasses!([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>], <span class="hljs-string">&quot;A&quot;</span>, <span class="hljs-string">&quot;B&quot;</span>); 
+<span class="hljs-comment">// Transpiles to:</span>
+<span class="hljs-comment">/*
+class A {
+}
+A.value = 1;
+class B {
+}
+B.value = 2;
+*/</span></code></pre><h3 id="return-in-macros" class="section-header">Return in macros</h3><p><code>return</code> is allowed in macros, but you should only call the macro in functions so javascript doesn&#39;t throw an error.</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$sendAndReturn</span>(<span class="hljs-params">message</span>) {
+    ctx.<span class="hljs-title function_">send</span>(message);
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">handle</span>(<span class="hljs-params">ctx</span>) {
+    <span class="hljs-comment">// Some other code</span>
+    $sendAndReturn!();
+}</code></pre><h3 id="calling-other-macros-inside-macros" class="section-header">Calling other macros inside macros</h3><p>Calling other macros is possible!</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$doubleNum</span>(<span class="hljs-params">num</span>) {
+    num * <span class="hljs-number">2</span>
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$doubleAll</span>(<span class="hljs-params">...nums</span>) {
+    +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">() =&gt;</span> $doubleNum!(nums)];
+}
+
+$doubleAll!(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>); <span class="hljs-comment">// Transpiles to [2, 4, 6, 8, 10];</span></code></pre><h3 id="if-statements-and-ternary-operators-in-macros" class="section-header">If statements and ternary operators in macros</h3><p>If the condition of a ternary operator / if statement inside a macro is one of the macro parameters, or an expression which can be simplified to a literal value, the entire ternary operation / if statement is going to be replaced:</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$test</span>(<span class="hljs-params">double, ...nums</span>) {
+    +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">() =&gt;</span> nums * (double ? <span class="hljs-number">2</span>:<span class="hljs-number">1</span>)]
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$test2</span>(<span class="hljs-params">double, ...nums</span>) {
+    <span class="hljs-keyword">if</span> (double) +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">() =&gt;</span> nums * <span class="hljs-number">2</span>];
+    <span class="hljs-keyword">else</span> +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">() =&gt;</span> nums];
+}
+
+$test!(<span class="hljs-literal">true</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>); <span class="hljs-comment">// Transpiles to: [2, 4, 6]</span>
+$test2!(<span class="hljs-literal">true</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>); <span class="hljs-comment">// // Transpiles to: [2, 4, 6]</span>
+
+<span class="hljs-keyword">const</span> val = <span class="hljs-literal">false</span>;
+$test!(val, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>) <span class="hljs-comment">// Transpiles to: [1, 2, 3]</span></code></pre><p>You can also use the OR and AND operators in if statements because those get simplified as well.</p>
+<h3 id="comparing-literals" class="section-header">Comparing literals</h3><pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$cmp</span>(<span class="hljs-params">a</span>) {
+    a === <span class="hljs-string">&quot;google&quot;</span>;
+}
+
+$cmp!(<span class="hljs-string">&quot;google&quot;</span>); <span class="hljs-comment">// Transpiles to: true</span>
+$cmp!(<span class="hljs-string">&quot;tj&quot;</span>); <span class="hljs-comment">// Transpiles to: false</span></code></pre><h3 id="adding--subtracting--multiplying--dividing-literals" class="section-header">Adding / subtracting / multiplying / dividing literals</h3><p>Number literals will automatically be added / subtracted / multiplied / divided.</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$add</span>(<span class="hljs-params">...nums: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;</span>) {
+    +[<span class="hljs-string">&quot;+&quot;</span>, <span class="hljs-function">(<span class="hljs-params">nums: <span class="hljs-built_in">number</span></span>) =&gt;</span> nums];
+} 
+
+$add!(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>, <span class="hljs-number">7</span>, <span class="hljs-number">8</span>, <span class="hljs-number">9</span>, <span class="hljs-number">10</span>, <span class="hljs-number">11</span>, <span class="hljs-number">12</span>, <span class="hljs-number">13</span>, <span class="hljs-number">14</span>, <span class="hljs-number">15</span>); <span class="hljs-comment">// Transpiles to 120</span></code></pre><h3 id="accessing-object-literal-properties" class="section-header">Accessing object literal properties</h3><p>If you provide an object literal to a macro, the properties will be <strong>directly</strong> inlined. Example:</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$myMacro</span>(<span class="hljs-params">user: Record&lt;<span class="hljs-built_in">string</span>, <span class="hljs-built_in">any</span>&gt;</span>) {
+    user.<span class="hljs-property">object</span>.<span class="hljs-property">personal</span>.<span class="hljs-property">age</span> + user[<span class="hljs-string">&quot;object&quot;</span>][<span class="hljs-string">&quot;personal&quot;</span>][<span class="hljs-string">&quot;age&quot;</span>];
+}
+
+$myMacro!({
+    <span class="hljs-attr">object</span>: { <span class="hljs-attr">personal</span>: { <span class="hljs-attr">age</span>: <span class="hljs-number">33</span> }}
+});
+<span class="hljs-comment">// Turns into 66.</span></code></pre><h3 id="chaining-macros" class="section-header">Chaining macros</h3><p>It&#39;s possible to chain macros with any javascript object you want.</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$doubleNum</span>(<span class="hljs-params"><span class="hljs-built_in">number</span>: <span class="hljs-built_in">number</span></span>) : <span class="hljs-built_in">number</span>|<span class="hljs-built_in">void</span> {
+    <span class="hljs-built_in">number</span> * <span class="hljs-built_in">number</span>
+}
+
+(<span class="hljs-number">5</span>).<span class="hljs-property">$doubleNum</span>!(); <span class="hljs-comment">// Transpiles to: 25</span>
+<span class="hljs-keyword">const</span> someNum = <span class="hljs-number">10</span>;
+someNum.<span class="hljs-property">$doubleNum</span>!(); <span class="hljs-comment">// Transpiles to: 100</span></code></pre><h3 id="exporting-macros" class="section-header">Exporting macros</h3><p>You don&#39;t have to export macros in order to use them but it&#39;s recommended to do so to please the typescript compiler. Macro names are unqiue and if you have two macros with the same name inside your project, you&#39;ll get an &quot;Macro X is already defined&quot; error.</p>
+<pre><code class="hljs"><span class="hljs-comment">// Inside macros.ts</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">$calc</span>(<span class="hljs-params"><span class="hljs-keyword">type</span>: <span class="hljs-built_in">string</span>, ...nums: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;</span>) : <span class="hljs-built_in">number</span>|<span class="hljs-built_in">void</span> {
+    <span class="hljs-keyword">type</span> === <span class="hljs-string">&quot;+&quot;</span> ? +[<span class="hljs-string">&quot;+&quot;</span>, <span class="hljs-function">(<span class="hljs-params">nums: <span class="hljs-built_in">number</span></span>) =&gt;</span> nums] :
+    <span class="hljs-keyword">type</span> === <span class="hljs-string">&quot;-&quot;</span> ? +[<span class="hljs-string">&quot;-&quot;</span>, <span class="hljs-function">(<span class="hljs-params">nums: <span class="hljs-built_in">number</span></span>) =&gt;</span> nums] : 
+    <span class="hljs-keyword">type</span> === <span class="hljs-string">&quot;*&quot;</span> ? +[<span class="hljs-string">&quot;*&quot;</span>, <span class="hljs-function">(<span class="hljs-params">nums: <span class="hljs-built_in">number</span></span>) =&gt;</span> nums] : <span class="hljs-number">0</span>;
+}</code></pre><pre><code class="hljs"><span class="hljs-comment">// Inside index.ts</span>
+<span class="hljs-keyword">import</span> {$calc} <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;./macros&quot;</span>;
+
+<span class="hljs-keyword">const</span> num = $calc!(<span class="hljs-string">&quot;*&quot;</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>); 
+<span class="hljs-comment">// Transpiles to: </span>
+<span class="hljs-keyword">const</span> num = <span class="hljs-number">120</span>;</code></pre><h3 id="macros-inside-macros" class="section-header">Macros inside macros</h3><p>Not recommended, but possible. The inner-macros don&#39;t have access to any previous arguments, and you can call the macros even outside the macro it&#39;s defined in.</p>
+<pre><code class="hljs"><span class="hljs-keyword">function</span> <span class="hljs-title function_">$contains</span>(<span class="hljs-params">value: <span class="hljs-built_in">number</span>, ...possible: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;</span>) {
+    <span class="hljs-keyword">function</span> <span class="hljs-title function_">$inc</span>(<span class="hljs-params">value: <span class="hljs-built_in">number</span></span>) {
+        value + <span class="hljs-number">1</span>;
+    }
+    +[<span class="hljs-string">&quot;||&quot;</span>, <span class="hljs-function">(<span class="hljs-params">possible: unknown</span>) =&gt;</span> $inc!(value) === possible];
+}
+
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>($contains!(<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>, <span class="hljs-number">7</span>, <span class="hljs-number">8</span>)); 
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>($inc!(<span class="hljs-number">4</span>));</code></pre><h3 id="built-in-macros" class="section-header">Built-in macros</h3><p>This library has a few built-in macros which utilize the lib&#39;s optimizing capabilities. </p>
+<p><strong>Important:</strong> Built-in macros cannot be used with the dot notation <code>.</code>.</p>
+<h4 id="loadenvpath-string" class="section-header">$$loadEnv(path?: string)</h4><p>Loads an <code>env</code> file from the provided path, or from the base directory of your project (aka where <code>package.json</code> is). The macro loads the enviourment variables in the output AND while typescript is transpiling your code. This means expressions like <code>process.env.SOME_CONFIG_OPTION</code> in macro bodies will be replaced with the literal value of the enviourment variable.</p>
+<p><strong>This macro requires you have the <code>dotenv</code> module installed. It doesn&#39;t come with the library by default.</strong></p>
+<p><code>.env</code>:</p>
+<pre><code class="hljs">TRIPLE=yes</code></pre><p><code>index.ts</code>:</p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { $$loadEnv } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;ts-macros&quot;</span>;
+$$loadEnv!();
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$multiply</span>(<span class="hljs-params">num: <span class="hljs-built_in">number</span></span>) : <span class="hljs-built_in">number</span> {
+    process.<span class="hljs-property">env</span>.<span class="hljs-property">TRIPLE</span> === <span class="hljs-string">&quot;yes&quot;</span> ? num * <span class="hljs-number">3</span> : num * <span class="hljs-number">2</span>;
+}
+
+[$multiply!(<span class="hljs-number">1</span>), $multiply!(<span class="hljs-number">2</span>), (<span class="hljs-number">3</span>).<span class="hljs-property">$multiply</span>!()];</code></pre><p><code>index.js</code>:</p>
+<pre><code class="hljs"><span class="hljs-built_in">require</span>(<span class="hljs-string">&quot;dotenv&quot;</span>).<span class="hljs-title function_">config</span>();
+[<span class="hljs-number">3</span>, <span class="hljs-number">6</span>, <span class="hljs-number">9</span>];</code></pre><h4 id="loadjsonasenvpath-string" class="section-header">$$loadJSONAsEnv(path: string)</h4><p>Loads a JSON object and puts all properties in the <code>process.env</code> object. Since that object can only contain strings, it&#39;s not recommended to put arrays or other complex objects inside the JSON. Works the same way as <code>$$loadEnv</code>. This macro only loads the properties inside the JSON during the transpilation process - you won&#39;t find the properties if you run the transpiled code.</p>
+<p><code>config.json</code>:</p>
+<pre><code class="hljs">{ debug: false }</code></pre><p><code>index.ts</code>:</p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { $$loadJSONAsEnv } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;ts-macros&quot;</span>;
+$$loadJSONAsEnv!(<span class="hljs-string">&quot;config.json&quot;</span>);
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$debug</span>(<span class="hljs-params">exp: unknown</span>) : <span class="hljs-built_in">void</span> {
+    <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">debug</span> === <span class="hljs-string">&quot;true&quot;</span>) <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(exp);
+}
+
+$debug!(<span class="hljs-number">1</span> + <span class="hljs-number">1</span>);</code></pre><p><code>index.js</code>:</p>
+<pre><code class="hljs"></code></pre><h4 id="kindofast-any" class="section-header">$$kindof(ast: any)</h4><p>Expands to the <code>kind</code> of the AST node.</p>
+<p><code>index.ts</code>:</p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> {$$kindof} <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;ts-macros&quot;</span>;
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> ts <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;typescript&quot;</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$doSomethingBasedOnTypeOfParam</span>(<span class="hljs-params">param: unknown</span>) {
+    <span class="hljs-keyword">if</span> ($$kindof!(param) === ts.<span class="hljs-property">SyntaxKind</span>.<span class="hljs-property">ArrayLiteralExpression</span>) <span class="hljs-string">&quot;Provided value is an array literal!&quot;</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ($$kindof!(param) === ts.<span class="hljs-property">SyntaxKind</span>.<span class="hljs-property">ArrowFunction</span>) <span class="hljs-string">&quot;Provided value is an arrow function!&quot;</span>;
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ($$kindof!(param) === ts.<span class="hljs-property">SyntaxKind</span>.<span class="hljs-property">CallExpression</span>) <span class="hljs-string">&quot;Provided value is a function call!&quot;</span>;
+}
+$doSomethingBasedOnTypeOfParam!([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>]);
+$doSomethingBasedOnTypeOfParam!(<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-number">1</span>));
+$doSomethingBasedOnTypeOfParam!(<span class="hljs-function">() =&gt;</span> <span class="hljs-number">1</span> + <span class="hljs-number">1</span>);</code></pre><p><code>index.js</code>:</p>
+<pre><code class="hljs"><span class="hljs-string">&quot;Provided value is an array literal!&quot;</span>;
+<span class="hljs-string">&quot;Provided value is a function call!&quot;</span>;
+<span class="hljs-string">&quot;Provided value is an arrow function!&quot;</span>;</code></pre><h4 id="inlinefuncfunc-arrowfunction-argreplacements-array" class="section-header">$$inlineFunc(func: ArrowFunction, ...argReplacements: Array<any>)</h4><p>Inlines the provided arrow function, replacing any argument occurrences with the corresponding values inside the <code>argReplacements</code> array.</p>
+<p><code>index.ts</code>:</p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { $$inlineFunc, $$kindof } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;ts-macros&quot;</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$map</span>(<span class="hljs-params">arr: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;, cb: <span class="hljs-built_in">Function</span></span>) {
+    <span class="hljs-keyword">if</span> ($$kindof!(arr) === <span class="hljs-number">200</span>) <span class="hljs-keyword">var</span> arr = arr; <span class="hljs-comment">// Only declare a variable if the `arr` argument is an array literal</span>
+    <span class="hljs-keyword">const</span> res = [];
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i=<span class="hljs-number">0</span>; i &lt; arr.<span class="hljs-property">length</span>; i++) {
+       res.<span class="hljs-title function_">push</span>($$inlineFunc!(cb, arr[i]));
+    }
+    res
+}
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>($map!([<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>], <span class="hljs-function">(<span class="hljs-params">num: <span class="hljs-built_in">number</span></span>) =&gt;</span> num * <span class="hljs-number">2</span>));</code></pre><p><code>index.js</code>:</p>
+<pre><code class="hljs"><span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>((<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">var</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>];
+    <span class="hljs-keyword">const</span> res = [];
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>; i &lt; arr.<span class="hljs-property">length</span>; i++) {
+        res.<span class="hljs-title function_">push</span>(arr[i] * <span class="hljs-number">2</span>);
+    }
+    <span class="hljs-keyword">return</span> res;
+})());
+</code></pre><h4 id="constvarname-string-initializer-any" class="section-header">$$const(varname: string, initializer: any)</h4><p>Creates a const variable with the provided name and initializer. This is <strong>not</strong> hygienic, use it when you want to create a variable and know it&#39;s name. </p>
+<p><code>index.ts</code>:</p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { $$const } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;../../dist&quot;</span>;
+
+$$const!(<span class="hljs-string">&quot;abc&quot;</span>, <span class="hljs-number">123</span>);</code></pre><p><code>index.js</code>:</p>
+<pre><code class="hljs"><span class="hljs-keyword">const</span> abc = <span class="hljs-number">123</span>;</code></pre><h4 id="i" class="section-header">$$i()</h4><p>If this macro is called in a repetition, it&#39;s going to return the number of the current iteration. If it&#39;s called outside, it&#39;s going to return <code>-1</code>.</p>
+<p><code>index.ts</code></p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { $$i } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;../../dist&quot;</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$arr</span>(<span class="hljs-params">...els: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;</span>) {
+    +[<span class="hljs-string">&quot;[]&quot;</span>, <span class="hljs-function">(<span class="hljs-params">els: <span class="hljs-built_in">number</span></span>) =&gt;</span> els + $$i!()];
+}
+
+$arr!(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>);</code></pre><p><code>index.js</code>:</p>
+<pre><code class="hljs">[<span class="hljs-number">1</span>, <span class="hljs-number">3</span>, <span class="hljs-number">5</span>]</code></pre><h4 id="lengtharrliteral-array" class="section-header">$$length(arrLiteral: Array<any>)</h4><p>Gets the length of an array literal.</p>
+<p><code>index.ts</code></p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { $$arr } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;../../dist&quot;</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$arr</span>(<span class="hljs-params">...els: <span class="hljs-built_in">Array</span>&lt;<span class="hljs-built_in">number</span>&gt;</span>) {
+    $$length!(els);
+}
+
+$arr!(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>);</code></pre><p><code>index.js</code></p>
+<pre><code class="hljs"><span class="hljs-number">5</span></code></pre><h4 id="identstr-string" class="section-header">$$ident(str: string)</h4><p>Turns a string literal into an identifier.</p>
+<p><code>index.ts</code></p>
+<pre><code class="hljs"><span class="hljs-keyword">import</span> { $$ident } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;../../dist&quot;</span>;
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$identifier</span>(<span class="hljs-params">str: <span class="hljs-built_in">string</span></span>) {
+    $$ident!(str);
+}
+
+$identifier!(<span class="hljs-string">&quot;Hello&quot;</span>);</code></pre><p><code>index.js</code></p>
+<pre><code class="hljs">Hello</code></pre><div class="row"><div class="col"><h2>Exports</h2><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$loadEnv.html">$$loadEnv</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$loadEnv</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$loadEnv</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$loadJSONAsEnv.html">$$loadJSONAsEnv</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$loadJSONAsEnv</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$loadJSONAsEnv</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$inlineFunc.html">$$inlineFunc</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$inlineFunc</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$inlineFunc</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$kindof.html">$$kindof</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$kindof</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$kindof</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$const.html">$$const</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$const</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$const</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$i.html">$$i</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$i</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$i</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$length.html">$$length</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$length</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$length</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link method-name" href="function/$$ident.html">$$ident</a><span class="c-tooltip-content"><span class="keyword">function </span><span class="item-name method-name">$$ident</span><span style="display:block" class="monospace fw-bold"><span class="item-name method-name">$$ident</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link object" href="type/AsRest.html">AsRest</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">AsRest</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">AsRest</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link object" href="type/Accumulator.html">Accumulator</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">Accumulator</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">Accumulator</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link object" href="type/Var.html">Var</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">Var</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">Var</span></span></span></span></span></span></div><div><span><span><span class="c-tooltip"><a class="reference-link object" href="type/ChainParam.html">ChainParam</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">ChainParam</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">ChainParam</span></span></span></span></span></span></div></div></div></div></div></div></div></div><div id="to-top" class="btn-to-top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-up" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"></path></svg></div><div id="sidebar-arrow" class="sidebar-arrow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-right" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"></path></svg></div></body></html>
