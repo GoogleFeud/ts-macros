@@ -24,7 +24,7 @@ export declare function $$loadJSONAsEnv(path: string) : void;
  * import { $$inlineFunc } from "ts-macros";
  * 
  * $$inlineFunc!((a, b) => a + b, 5, 10 + 5);
- * // Transpiles to 5 + 10 + 5
+ * // Transpiles to 20
  * ``` 
  */
 export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
@@ -70,6 +70,7 @@ export type Accumulator = number | (number & { __marker: "Accumulator" });
 
 declare const var_sym: unique symbol
 export type Var = null | undefined | string | number | {} | typeof var_sym;
+
 export type ChainParam<OR = unknown> = {
     macroName?: string,
     params?: Array<unknown>,

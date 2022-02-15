@@ -186,8 +186,8 @@ export class MacroTransformer {
                                     if (ts.isObjectLiteralExpression(value)) {
                                         value = value.properties.find(prop => prop.name?.getText() === (parent as ts.PropertyAccessExpression).name.text);
                                         if (value && ts.isPropertyAssignment(value)) value = value.initializer;
-                                    }
-                                    parent = parent.parent;
+                                        parent = parent.parent;
+                                    } else break;
                                 }
                                 if (value) return value;
                             }
@@ -211,7 +211,7 @@ export class MacroTransformer {
                     const param = macro.params.find(param => param.name === firstIdentifier);
                     if (param && !param.spread) {
                         const arg = args[param.start];
-                        if (arg && ts.isObjectLiteralExpression(arg)) {
+                        if (arg && (ts.isObjectLiteralExpression(arg) || ts.isArrayLiteralExpression(arg))) {
                             let parent: ts.Node = accessChain;
                             let value: ts.Node|undefined = arg;
                             while (value && ts.isElementAccessExpression(parent)) {
@@ -220,8 +220,13 @@ export class MacroTransformer {
                                     if (lit.startsWith("\"")) lit = lit.slice(1, -1);
                                     value = value.properties.find(prop => prop.name?.getText() === lit);
                                     if (value && ts.isPropertyAssignment(value)) value = value.initializer;
-                                }
-                                parent = parent.parent;
+                                    parent = parent.parent;
+                                } else if (ts.isArrayLiteralExpression(value)) {
+                                    const lit = +ts.visitNode((parent as ts.ElementAccessExpression).argumentExpression, this.boundVisitor).getText();
+                                    if (isNaN(lit)) break;
+                                    value = value.elements[lit];
+                                    parent = parent.parent;
+                                } else break;
                             }
                             if (value) return value;
                         }

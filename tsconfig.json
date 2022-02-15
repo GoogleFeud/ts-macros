@@ -9,5 +9,10 @@
     "removeComments": true,
     "strict": true
   },
+  "tsdocsOptions": {
+    "entryPoints": ["./src/index.ts"],
+    "name": "ts-macros",
+    "customPages": "./docs"
+  },
   "exclude": ["./test", "./dist", "./node_modules"]
 }
