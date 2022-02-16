@@ -116,7 +116,7 @@ export declare function $$ident(str: string) : any;
 /**
  * Throws an error during transpilation.
  */
-export declare function $$panic(str: string) : void;
+export declare function $$err(str: string) : void;
 
 /**
  * Adds an import at the beginning of the file.
