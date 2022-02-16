@@ -172,7 +172,7 @@ const Hello = "World";
 console.log(Hello);
 ```
 
-## $$panic
+## $$err
 
 Throws an error during transpilation.
 
@@ -181,7 +181,7 @@ import { $$panic, $$kindof } from "ts-macros";
 import * as ts from "typescript";
 
 function $$send<T>(msg: string, obj: T) {
-    if ($$kindof!(msg) !== ts.SyntaxKind.StringLiteral) $$panic!("Expected string literal, found something else.");
+    if ($$kindof!(msg) !== ts.SyntaxKind.StringLiteral) $$err!("Expected string literal, found something else.");
     // Other stuff
 } 
 ```

@@ -75,7 +75,7 @@ $arr!(1, 2, 3);
 
 ## AsRest marker
 
-If a parameter has the `AsRest` type, the parameter will act exactly as rest parameter. This allows you to use repetitions with multiple macro parameters.
+If a parameter has the `AsRest` type, the parameter will act exactly as a rest parameter. This allows you to use repetitions with multiple macro parameters.
 
 ```ts --Macro
 import { AsRest } from "../../src";

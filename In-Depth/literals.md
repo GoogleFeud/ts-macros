@@ -65,3 +65,30 @@ $add!({
 "Google22Feud";
 ```
 
+## String parameters as identifiers
+
+If a **string literal** parameter is used as a class / function / enum declaration, then the parameter name will be repalced with the contents inside the literal.
+
+```ts --Macro
+function $createClasses(values: AsRest<Array<string>>, ...names: Array<string>) {
+    +[() => {
+        class names {
+            static value = values
+        }
+    }]
+}
+```
+```ts --Call
+$createClasses!(["A", "B", "C"], "A", "B", "C")
+```
+```js --Result
+class A {
+}
+A.value = "A";
+class B {
+}
+B.value = "B";
+class C {
+}
+C.value = "C";
+```
