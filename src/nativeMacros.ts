@@ -82,8 +82,8 @@ export default {
       else if (ts.isStringLiteral(thing)) return transformer.context.factory.createIdentifier(thing.text);
       else return thing;
     },
-    "$$panic": ([msg], transformer) => {
-      if (!msg || !ts.isStringLiteral(msg)) throw new Error("`panic` macro expects a string literal as the first parameter."); 
+    "$$err": ([msg], transformer) => {
+      if (!msg || !ts.isStringLiteral(msg)) throw new Error("`err` macro expects a string literal as the first parameter."); 
       const lastMacro = transformer.macroStack.pop();
       throw new Error(`${lastMacro ? `In macro ${lastMacro.macro.name}: ` : ""}${msg.text}`);
     },
@@ -96,7 +96,7 @@ export default {
       } else if (ts.isArrayLiteralExpression(imports)) {
          const names = [];
          for (const el of imports.elements) {
-            if (!ts.isStringLiteral(el)) throw new Error("`impot` macro expects all import names to be string literals.");
+            if (!ts.isStringLiteral(el)) throw new Error("`import` macro expects all import names to be string literals.");
             names.push(ts.factory.createImportSpecifier(false, undefined, ts.factory.createIdentifier(el.text)));
          }
          imported = ts.factory.createImportClause(false, undefined, ts.factory.createNamedImports(names));

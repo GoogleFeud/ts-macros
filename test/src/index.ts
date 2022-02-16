@@ -1,7 +1,11 @@
-import { $$import } from "../../dist";
-import * as ts from "typescript";
+import { AsRest } from "../../dist";
 
-$$import!("../", ["A", "B"], true);
+function $createClasses(values: AsRest<Array<string>>, ...names: Array<string>) {
+    +[() => {
+        class names {
+            static value = values
+        }
+    }]
+}
 
-//@ts-expect-error
-console.log(A, B);
+$createClasses!(["A", "B", "C"], "A", "B", "C")
