@@ -234,7 +234,7 @@ export class MacroTransformer {
             }
 
             if (ts.isIdentifier(node) && !ts.isParameter(node.parent) && macro.params.some(p => p.name === node.text)) {
-                const index = macro.params.findIndex(p => p.name === node.text);
+                const index = macro.params.findIndex(p => p.name === node.text)
                 const paramMacro = macro.params[index];
                 if (this.repeat.length && paramMacro.spread) {
                     const arg = args[this.repeat[this.repeat.length - 1] + paramMacro.start];

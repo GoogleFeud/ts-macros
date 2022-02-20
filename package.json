@@ -4,8 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "devDependencies": {
-    "@ts-docs/default-docs-structure": "^0.3.0",
-    "@ts-docs/ts-docs": "^0.3.1",
+    "@ts-docs/default-docs-structure": "^0.3.2",
+    "@ts-docs/ts-docs": "^0.3.2",
     "@types/node": "^16.3.3",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
