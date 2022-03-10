@@ -75,3 +75,19 @@ const variable = 30;
 "30Hi";
 ```
 
+## Param
+
+The default behaviour of every macro parameter is to replace every parameter occurance with the provided expression. This marker makes it so the expression is saved **only** if it's not an identifier.
+
+```ts --Macro
+import { Param, $$inlineFunc() } from "ts-macros";
+
+function $assure<V, R>(val: Param<V|undefined>, cb: (val: V) => R) : R {
+    if (val !== undefined) {
+        $$inlineFunc!(val);
+    }
+} 
+```
+```ts --Call
+$assure(undefined, (value) => value + 1);
+```

@@ -42,7 +42,8 @@ export default {
     "$$inlineFunc": (args, transformer) => {
       const argsArr = [...args].reverse();
       const fn = argsArr.pop();
-      if (!fn || !ts.isArrowFunction(fn)) throw new Error("`unwrapFunc` macro expects an arrow function as the first parameter.");
+      if (!fn) throw new Error("`unwrapFunc` macro expects an arrow function as the first parameter.");
+      if (!ts.isArrowFunction(fn)) return ts.factory.createCallExpression(fn, undefined, args);
       if (!fn.parameters.length) return fn.body;
       const replacements = new Map();
       for (const param of fn.parameters) {
@@ -87,21 +88,18 @@ export default {
       const lastMacro = transformer.macroStack.pop();
       throw new Error(`${lastMacro ? `In macro ${lastMacro.macro.name}: ` : ""}${msg.text}`);
     },
-    "$$import": ([source, imports, star], transformer) => {
-      if (!source || !ts.isStringLiteral(source)) throw new Error("`import` macro expects a string literal as the second parameter.");
-      let imported;
-      if (ts.isStringLiteral(imports)) {
-        if (star && star.kind === ts.SyntaxKind.TrueKeyword) imported = ts.factory.createImportClause(false, undefined, ts.factory.createNamespaceImport(ts.factory.createIdentifier(imports.text)));
-        else imported = ts.factory.createImportClause(false, ts.factory.createIdentifier(imports.text), undefined);
-      } else if (ts.isArrayLiteralExpression(imports)) {
-         const names = [];
-         for (const el of imports.elements) {
-            if (!ts.isStringLiteral(el)) throw new Error("`import` macro expects all import names to be string literals.");
-            names.push(ts.factory.createImportSpecifier(false, undefined, ts.factory.createIdentifier(el.text)));
+    "$$parentKind": (args, transformer) => {
+      const parentKind = args.length && transformer.getNumberFromNode(args[0]);
+      const lastCall = transformer.macroStack[transformer.macroStack.length - 1];
+      if (!lastCall) throw new Error("`$$parentKind` macro can only be used inside macros.");
+      if (parentKind) {
+         let parent = lastCall.callNode;
+         while (!ts.isSourceFile(parent)) {
+           if (parent.kind === parentKind) return ts.factory.createTrue();
+           parent = parent.parent;
          }
-         imported = ts.factory.createImportClause(false, undefined, ts.factory.createNamedImports(names));
+         return ts.factory.createFalse();
       }
-      transformer.imports.push(ts.factory.createImportDeclaration(undefined, undefined, imported, source, undefined));
-      return undefined;
+      else return ts.factory.createNumericLiteral(lastCall.callNode.kind);
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => ts.VisitResult<ts.Node>>

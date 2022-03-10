@@ -77,6 +77,36 @@ $doSomethingBasedOnTypeOfParam!(() => 1 + 1);
 "Provided value is an arrow function!";
 ```
 
+## $$parentKind
+
+Gets the `kind` of the macro call's parent. If a `kind` is provided, the macro will instead expand to a boolean, `true` if the parent tree contains the kind of parent, `false` otherwise.Useful to know in what context the macro is used.
+
+```ts --Macro
+function $isMacroCalledInsideFunction() {
+    $$parentKind!(ts.SyntaxKind.FunctionDeclaration) || $$parentKind!(ts.SyntaxKind.ArrowFunction)
+}
+```
+```ts --Call
+(() => {
+    $isMacroCalledInsideFunction!();
+})();
+
+$isMacroCalledInsideFunction!();
+
+function test() {
+    return [$isMacroCalledInsideFunction!(), 2, 3];
+}
+```
+```ts --Result
+(() => {
+    true;
+})();
+false;
+function test() {
+    return [true, 2, 3];
+}
+```
+
 ## $$inlineFunc
 
 Inlines the provided arrow function, replacing any argument occurrences with the corresponding values inside the `argReplacements` array.

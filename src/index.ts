@@ -119,12 +119,14 @@ export declare function $$ident(str: string) : any;
 export declare function $$err(str: string) : void;
 
 /**
- * Adds an import at the beginning of the file.
+ * Gets the `kind` of the macro call's parent. If a `kind` is provided, the macro will instead
+ * expand to a boolean, `true` if the parent tree contains the kind of parent, `false` otherwise.
  */
-export declare function $$import(source: string, items: undefined|string|Array<string>, star?: boolean) : void;
+export declare function $$parentKind(kind?: ts.SyntaxKind) : number | boolean;
 
 export type AsRest<T extends Array<unknown>> = T | (T & { __marker: "AsRest" });
 export type Accumulator = number | (number & { __marker: "Accumulator" });
 
 declare const var_sym: unique symbol
 export type Var = null | undefined | string | number | {} | typeof var_sym;
+export type Param<T> = T | (T & { __marker: "Param" });

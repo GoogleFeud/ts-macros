@@ -1,11 +1,18 @@
-import { AsRest } from "../../dist";
+import ts = require("typescript");
+import { $$parentKind } from "../../dist";
 
-function $createClasses(values: AsRest<Array<string>>, ...names: Array<string>) {
-    +[() => {
-        class names {
-            static value = values
-        }
-    }]
+//$$parentKind!();
+
+function $isMacroCalledInsideFunction() {
+    $$parentKind!(ts.SyntaxKind.FunctionDeclaration) || $$parentKind!(ts.SyntaxKind.ArrowFunction)
 }
 
-$createClasses!(["A", "B", "C"], "A", "B", "C")
+(() => {
+    $isMacroCalledInsideFunction!();
+})();
+
+$isMacroCalledInsideFunction!();
+
+function test() {
+    return [$isMacroCalledInsideFunction!(), 2, 3];
+}
