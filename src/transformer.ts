@@ -278,7 +278,7 @@ export class MacroTransformer {
                 else if (ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
                     const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
                     return this.execRepetition(fn, args, macro, literals, separator);
-                }
+                } 
             } 
 
             else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {

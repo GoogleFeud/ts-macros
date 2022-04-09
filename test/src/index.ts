@@ -1,8 +1,6 @@
-import { } from "../../dist";
+import { $$includes } from "../../dist";
 
-function $add(calls: Array<Function>) {
-   +["()", [calls], (callFn: Function) => callFn()];
-}
 
-const fnA = () => console.log(1);
-$add!([fnA, () => console.log("B")]);
+$$includes!([1, 2, 3, 4, 5], 3);
+
+$$includes!([1, 2, "abc", 4, "de"], 123);

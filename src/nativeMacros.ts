@@ -86,5 +86,12 @@ export default {
       if (!msg || !ts.isStringLiteral(msg)) throw new Error("`err` macro expects a string literal as the first parameter."); 
       const lastMacro = transformer.macroStack.pop();
       throw new Error(`${lastMacro ? `In macro ${lastMacro.macro.name}: ` : ""}${msg.text}`);
+    },
+    "$$includes": ([array, item], transformer) => {
+      if (!array || !ts.isArrayLiteralExpression(array)) throw new Error("`includes` macro expects an array literal as the first parameter.");
+      if (!item) throw new Error("`includes` macro expects a second parameter.");
+      const valItem = transformer.getLiteralFromNode(item);
+      const normalArr = array.elements.map(el => transformer.getLiteralFromNode(ts.visitNode(el, transformer.boundVisitor)));
+      return normalArr.includes(valItem) ? ts.factory.createTrue() : ts.factory.createFalse();
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer) => ts.VisitResult<ts.Node>>

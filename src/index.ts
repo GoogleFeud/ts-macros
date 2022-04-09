@@ -118,8 +118,11 @@ export declare function $$ident(str: string) : any;
  */
 export declare function $$err(str: string) : void;
 
-export type AsRest<T extends Array<unknown>> = T  & { __marker?: "AsRest" };
-export type Accumulator = number & { __marker?: "Accumulator" };
+/**
+ * Checks if `val` is included in the array literal.
+ */
+export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
 
+export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol
 export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
