@@ -452,15 +452,13 @@ export class MacroTransformer {
 }
 
 const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>) => ts.Expression> = {
-    "[]": (_transformer, body) => {
-        return ts.factory.createArrayLiteralExpression(body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression)));
-    },
+    "[]": (_transformer, body) => ts.factory.createArrayLiteralExpression(body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression))),
     "+": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.PlusToken),
     "-": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.MinusToken),
     "*": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AsteriskToken),
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
-    ",": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken),
+    "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken))
 }
 
 const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
