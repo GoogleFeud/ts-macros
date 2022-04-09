@@ -70,7 +70,7 @@ export default {
         ], ts.NodeFlags.Const));
     },
     "$$i": (_, transformer) => {
-      if (transformer.repeat.length) return transformer.context.factory.createNumericLiteral(transformer.repeat[transformer.repeat.length - 1]);
+      if (transformer.repeat.length) return transformer.context.factory.createNumericLiteral(transformer.repeat[transformer.repeat.length - 1].index);
       else return transformer.context.factory.createNumericLiteral(-1); 
     },
     "$$length": ([arrLit], transformer) => {
