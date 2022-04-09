@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import { MacroTransformer } from "./transformer";
 
@@ -13,7 +14,7 @@ export function wrapExpressions(exprs: Array<ts.Statement>) : ts.Expression {
     return ts.factory.createImmediatelyInvokedArrowFunction([...exprs, last as ts.Statement]);
 } 
 
-export function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>, id: number) {
+export function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>, id: number) : ts.Expression {
     let last;
     for (const element of body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression))) {
         if (!last) last = element;
@@ -44,4 +45,22 @@ export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
 
     if (!res.function) throw new Error("Repetition must include arrow function.");
     return res as ReturnType<typeof getRepetitionParams>;
+}
+
+export class MacroError {
+    constructor(callSite: ts.Node, msg: string) {
+        console.error(ts.formatDiagnosticsWithColorAndContext([{
+            category: ts.DiagnosticCategory.Error,
+            code: 8000,
+            file: callSite.getSourceFile(),
+            start: callSite.pos,
+            length: callSite.end - callSite.pos,
+            messageText: msg
+        }], {
+            getNewLine: () => "\r\n",
+            getCurrentDirectory: ts.sys.getCurrentDirectory,
+            getCanonicalFileName: (fileName) => fileName
+        }));
+        process.exit();
+    }
 }

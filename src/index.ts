@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as ts from "typescript";
 import { MacroTransformer } from "./transformer";
@@ -75,6 +76,7 @@ export declare function $$loadJSONAsEnv(path: string) : void;
  * // Transpiles to 20
  * ``` 
  */
+// eslint-disable-next-line @typescript-eslint/ban-types
 export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
 /**
  * Returns the `kind` of the expression.
@@ -124,5 +126,6 @@ export declare function $$err(str: string) : void;
 export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
 
 export type Accumulator = number & { __marker?: "Accumulator" };
-declare const var_sym: unique symbol
+declare const var_sym: unique symbol;
+// eslint-disable-next-line @typescript-eslint/ban-types
 export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };

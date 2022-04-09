@@ -1,6 +1,8 @@
-import { $$includes } from "../../dist";
+import { $$includes, $$err } from "../../dist";
 
 
-$$includes!([1, 2, 3, 4, 5], 3);
+///console.log($$includes!(123, 3));
 
 $$includes!([1, 2, "abc", 4, "de"], 123);
+
+$$err!("Test");

@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams } from "./utils";
+import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError } from "./utils";
 
 const MACROS = new Map<string, Macro>();
 
@@ -69,11 +70,11 @@ export class MacroTransformer {
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
         if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
             const macroName = ts.getNameOfDeclaration(node)!.getText();
-            if (MACROS.has(macroName)) throw new Error(`Macro ${macroName} is already defined.`);
+            if (MACROS.has(macroName)) throw new MacroError(node, `Macro ${macroName} is already defined.`);
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
-                if (!ts.isIdentifier(param.name)) throw new Error("You cannot use deconstruction patterns in macros.");
+                if (!ts.isIdentifier(param.name)) throw new MacroError(param, "You cannot use deconstruction patterns in macros.");
                 params.push({
                     spread: Boolean(param.dotDotDotToken),
                     isAccumulator: this.isValidMarker("Accumulator", param),
@@ -100,7 +101,7 @@ export class MacroTransformer {
                 const newArgs = ts.factory.createNodeArray([ts.visitNode(chain.expression.expression, this.boundVisitor), ...node.expression.arguments]);
                 args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
             } else {
-                if (nativeMacros[chain.expression.getText()]) return nativeMacros[chain.expression.getText()](ts.visitNodes(node.expression.arguments, this.boundVisitor), this);
+                if (nativeMacros[chain.expression.getText()]) return nativeMacros[chain.expression.getText()](ts.visitNodes(node.expression.arguments, this.boundVisitor), this, node.expression);
                 macro = MACROS.get(chain.expression.getText());
                 args = this.macroStack.length ? ts.visitNodes(node.expression.arguments, this.boundVisitor) : node.expression.arguments;
             }
@@ -108,7 +109,7 @@ export class MacroTransformer {
             this.macroStack.push({
                 macro,
                 args
-            })
+            });
             const defined = new Map<string, ts.Identifier>();
             const visitor = (node: ts.Node) : ts.Node => {
                 if (ts.isVariableDeclaration(node) && node.pos !== -1) {
@@ -138,7 +139,7 @@ export class MacroTransformer {
                 const newArgs = ts.factory.createNodeArray([ts.visitNode(node.expression.expression.expression, this.boundVisitor), ...node.arguments]);
                 args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
             } else {
-                if (nativeMacros[node.expression.expression.getText()]) return nativeMacros[node.expression.expression.getText()](ts.visitNodes(node.arguments, this.boundVisitor), this);
+                if (nativeMacros[node.expression.expression.getText()]) return nativeMacros[node.expression.expression.getText()](ts.visitNodes(node.arguments, this.boundVisitor), this, node);
                 macro = MACROS.get(node.expression.expression.getText());
                 args = this.macroStack.length ? ts.visitNodes(node.arguments, this.boundVisitor) : node.arguments;
             }
@@ -161,7 +162,7 @@ export class MacroTransformer {
                 ts.factory.createParenthesizedExpression(
                     ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...res, last], true))
                 ),
-                undefined, undefined)
+                undefined, undefined);
         }
 
         // If this is true then we're in the context of a macro call
@@ -201,13 +202,13 @@ export class MacroTransformer {
                                 if (ts.isObjectLiteralExpression(value)) {
                                     value = value.properties.find(prop => prop.name?.getText() === parentVal);
                                     if (value && ts.isPropertyAssignment(value)) value = value.initializer;
-                                    else return ts.visitEachChild(arg, this.boundVisitor, this.context);;
+                                    else return ts.visitEachChild(arg, this.boundVisitor, this.context);
                                     parent = parent.parent;
                                 } else if (ts.isArrayLiteralExpression(value)) {
                                     value = value.elements[parentVal as number];
                                     parent = parent.parent;
                                 } 
-                                else return ts.visitEachChild(arg, this.boundVisitor, this.context);;
+                                else return ts.visitEachChild(arg, this.boundVisitor, this.context);
                             }
                             if (value) return value;
                         }
@@ -283,7 +284,7 @@ export class MacroTransformer {
 
             else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.operand);
-                if (!separator) throw new Error("Repetition separator must be included if a repetition is used as an expression.");
+                if (!separator) throw new MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
                 return this.execRepetition(fn, args, macro, literals, separator, true);
             } 
             else if (ts.isCallExpression(node)) {
@@ -383,7 +384,7 @@ export class MacroTransformer {
                 return node;
             }
             else return ts.visitEachChild(node, cb, this.context);
-        }
+        };
         for (const stmt of statements) {
             cb(stmt);
         }
@@ -459,7 +460,7 @@ const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
     "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken))
-}
+};
 
 const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
     [ts.SyntaxKind.MinusToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left + right),
@@ -473,7 +474,7 @@ const binaryNumberActions: Record<number, (left: number, right: number) => ts.Ex
     [ts.SyntaxKind.BarToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left | right),
     [ts.SyntaxKind.CaretToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left ^ right),
     [ts.SyntaxKind.PercentToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left % right)
-}
+};
 
 const binaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => ts.Expression|undefined> = {
     [ts.SyntaxKind.PlusToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => {
@@ -492,7 +493,7 @@ const binaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expr
         else if (right) return origRight;
         else return origRight;
     }
-}
+};
 
 const unaryActions: Record<number, (val: unknown) => ts.Expression|undefined> = {
     [ts.SyntaxKind.ExclamationToken]: (val: unknown) => !val ? ts.factory.createTrue() : ts.factory.createFalse(),
@@ -504,4 +505,4 @@ const unaryActions: Record<number, (val: unknown) => ts.Expression|undefined> = 
         if (typeof val !== "number") return;
         return ts.factory.createNumericLiteral(~val);
     }
-}
+};
