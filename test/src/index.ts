@@ -1,9 +1,16 @@
-import { $$includes } from "../../dist";
+import { $$ts } from "../../dist";
 
-function $test(a: number, b: Array<number>) {
-    +[[b], (num: number) => num * a];
+function $createClasses(strings: Array<string>) : void {
+    //@ts-expect-error Purposeful
+    +[[strings], (className: string) => {
+        //@ts-expect-error Purposeful
+        class className {
+
+            test() {
+                return 1 + 1;
+            }
+        }
+    }];
 }
-///console.log($$includes!(123, 3));
 
-console.log($test!(2, [1, 2, 3]));
-$test!(2, [1, 2, 3]);
+$createClasses!(["A", "B", "C"]);

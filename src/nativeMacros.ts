@@ -95,5 +95,18 @@ export default {
         const valItem = transformer.getLiteralFromNode(item);
         const normalArr = array.elements.map(el => transformer.getLiteralFromNode(ts.visitNode(el, transformer.boundVisitor)));
         return normalArr.includes(valItem) ? ts.factory.createTrue() : ts.factory.createFalse();
+    },
+    "$$ts": ([code], transformer, callSite) => {
+        if (!code) throw new MacroError(callSite, "`ts` macro expects a string as it's first parameter.");
+        const str = transformer.getLiteralFromNode(ts.visitNode(code, transformer.boundVisitor));
+        if (!str || typeof str !== "string") throw new MacroError(callSite, "`ts` macro expects a string as it's first parameter.");
+        const result = ts.createSourceFile("expr", str, ts.ScriptTarget.ESNext, false, ts.ScriptKind.JS);
+        const visitor = (node: ts.Node): ts.Node => {
+            if (ts.isIdentifier(node)) {
+                return ts.factory.createIdentifier(node.text);
+            }
+            return ts.visitEachChild(node, visitor, transformer.context);
+        };
+        return ts.visitNodes(result.statements, visitor) as unknown as Array<ts.Statement>;
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.Node) => ts.VisitResult<ts.Node>>;

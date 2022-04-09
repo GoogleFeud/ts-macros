@@ -125,6 +125,11 @@ export declare function $$err(str: string) : void;
  */
 export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
 
+/**
+ * Turns the string to code.
+ */
+export declare function $$ts<T = unknown>(code: string) : T;
+
 export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types

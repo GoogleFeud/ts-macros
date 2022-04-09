@@ -320,7 +320,12 @@ export class MacroTransformer {
             const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...args]);
             normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
         } else {
-            if (nativeMacros[name.getText()]) return [ts.factory.createExpressionStatement(nativeMacros[name.getText()](ts.visitNodes(args, this.boundVisitor), this, call) as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
+            if (nativeMacros[name.getText()]) {
+                const macroResult = nativeMacros[name.getText()](ts.visitNodes(args, this.boundVisitor), this, call);
+                if (!macroResult) return undefined;
+                if (Array.isArray(macroResult)) return macroResult as unknown as ts.NodeArray<ts.Statement>;
+                return [ts.factory.createExpressionStatement(macroResult as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
+            }
             macro = MACROS.get(name.getText());
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
