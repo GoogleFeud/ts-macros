@@ -118,8 +118,8 @@ export declare function $$ident(str: string) : any;
  */
 export declare function $$err(str: string) : void;
 
-export type AsRest<T extends Array<unknown>> = T | (T & { __marker: "AsRest" });
-export type Accumulator = number | (number & { __marker: "Accumulator" });
+export type AsRest<T extends Array<unknown>> = T  & { __marker?: "AsRest" };
+export type Accumulator = number & { __marker?: "Accumulator" };
 
 declare const var_sym: unique symbol
-export type Var = null | undefined | string | number | {} | typeof var_sym;
+export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };

@@ -116,7 +116,7 @@ export class MacroTransformer {
                 return ts.visitEachChild(node, visitor, this.context);
             };
             const res = ts.visitNodes(ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements, visitor).concat();
-            if (ts.isReturnStatement(res[res.length - 1]) && ts.isSourceFile(node.parent)) {
+            if (res.length && ts.isReturnStatement(res[res.length - 1]) && ts.isSourceFile(node.parent)) {
                 const exp = res.pop() as ts.ReturnStatement;
                 if (exp.expression) res.push(ts.factory.createExpressionStatement(exp.expression));
             }
@@ -191,19 +191,19 @@ export class MacroTransformer {
                                 if (ts.isPropertyAccessExpression(parent)) parentVal = parent.name.text;
                                 else if (ts.isElementAccessExpression(parent)) {
                                     const num = this.getNumberFromNode(parent.argumentExpression);
-                                    if (num === undefined) break;
+                                    if (num === undefined) return arg;
                                     parentVal = num;
                                 }
                                 if (ts.isObjectLiteralExpression(value)) {
                                     value = value.properties.find(prop => prop.name?.getText() === parentVal);
                                     if (value && ts.isPropertyAssignment(value)) value = value.initializer;
-                                    else break;
+                                    else return arg;
                                     parent = parent.parent;
                                 } else if (ts.isArrayLiteralExpression(value)) {
                                     value = value.elements[parentVal as number];
                                     parent = parent.parent;
                                 } 
-                                else break;
+                                else return arg;
                             }
                             if (value) return value;
                         }
@@ -379,9 +379,11 @@ export class MacroTransformer {
 
     isValidMarker(marker: string, param: ts.ParameterDeclaration) : boolean {
         if (!param.type) return false;
-        const symbol = this.checker.getTypeAtLocation(param.type).aliasSymbol;
-        if (!symbol || symbol.name !== marker || !symbol.declarations || !symbol.declarations.length) return false;
-        return symbol.declarations[0].getSourceFile().fileName.includes("ts-macros");
+        const type = this.checker.getTypeAtLocation(param.type).getProperty("__marker");
+        if (!type) return false;
+        //@ts-expect-error Internal API
+        const typeOfMarker = (this.checker.getTypeOfSymbol(type) as ts.Type).getNonNullableType();
+        return typeOfMarker.isStringLiteral() && typeOfMarker.value === marker; 
     }
 
     getTotalLoops(statements: Array<ts.Node>, args: ts.NodeArray<ts.Node>, params: Array<MacroParam>) : number {

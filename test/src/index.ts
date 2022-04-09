@@ -1,9 +1,8 @@
 import { AsRest } from "../../dist";
 
-function $doSmth(obj: any) : number {
-    return obj.something[0].laugh;
+function $doSmth(obj: AsRest<Array<number>>) {
+    +["+", () => obj]
 }
 
-$doSmth!({
-    something: [{laugh: true }]
-});
+const a = 44;
+$doSmth!([1, 2, 3, 4, 5, a]);
