@@ -118,11 +118,6 @@ export declare function $$ident(str: string) : any;
  */
 export declare function $$err(str: string) : void;
 
-/**
- * Adds an import at the beginning of the file.
- */
-export declare function $$import(source: string, items: undefined|string|Array<string>, star?: boolean) : void;
-
 export type AsRest<T extends Array<unknown>> = T | (T & { __marker: "AsRest" });
 export type Accumulator = number | (number & { __marker: "Accumulator" });
 
