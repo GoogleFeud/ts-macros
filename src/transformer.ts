@@ -320,7 +320,7 @@ export class MacroTransformer {
             repeatName: fn.parameters[0]?.name.getText()
         }) - 1;
 
-        const totalLoopsNeeded = this.getTotalLoops(flattenBody(fn.body), args, macro.params) + finalElements.length;
+        const totalLoopsNeeded = this.getTotalLoops(flattenBody(fn.body), args, macro.params, finalElements);
         for (; this.repeat[ind].index < totalLoopsNeeded; this.repeat[ind].index++) {
             if ("statements" in fn.body) {
                 if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor))));
@@ -346,20 +346,20 @@ export class MacroTransformer {
             const lastRepeat = this.repeat[this.repeat.length - 1];
             if (lastRepeat && lastRepeat.elements.length) {
                 if (lastRepeat.repeatName === name) {
-                    if (lastRepeat.elements.length < lastRepeat.index) return;
+                    if (lastRepeat.elements.length <= lastRepeat.index) return ts.factory.createNull();
                     return lastRepeat.elements[lastRepeat.index]; 
                 }
             }
             return;
         }
         const paramMacro = macro.params[index];
-        if (this.repeat.length) {
-            if (paramMacro.spread) return params[this.repeat[this.repeat.length - 1].index + paramMacro.start];
-        } else {
-            if (paramMacro.spread) return ts.factory.createArrayLiteralExpression(params.slice(paramMacro.start) as Array<ts.Expression>);
-            return params[paramMacro.start] || paramMacro.defaultVal;
+        if (this.repeat.length && paramMacro.spread) {
+            const paramInd = this.repeat[this.repeat.length - 1].index + paramMacro.start;
+            if (paramInd >= params.length) return ts.factory.createNull();
+            return params[paramInd];
         }
-        return;
+        if (paramMacro.spread) return ts.factory.createArrayLiteralExpression(params.slice(paramMacro.start) as Array<ts.Expression>);
+        return params[paramMacro.start] || paramMacro.defaultVal;
     }
 
     isValidMarker(marker: string, param: ts.ParameterDeclaration) : boolean {
@@ -371,14 +371,15 @@ export class MacroTransformer {
         return typeOfMarker.isStringLiteral() && typeOfMarker.value === marker; 
     }
 
-    getTotalLoops(statements: Array<ts.Node>, args: ts.NodeArray<ts.Node>, params: Array<MacroParam>) : number {
-        let total = 0;
+    getTotalLoops(statements: Array<ts.Node>, args: ts.NodeArray<ts.Node>, params: Array<MacroParam>, literals: Array<ts.Expression>) : number {
+        let total = literals.length;
         const cb = (node: ts.Node): ts.Node|undefined => {
             if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) return node;
             else if (ts.isIdentifier(node)) {
                 const param = params.find(p => p.name === node.text);
-                if (!param) return node;
-                else if (param.spread) total += Math.abs(total - (args.length - param.start));
+                if (!param || !param.spread) return node;
+                const amount = args.length - param.start;
+                if (amount > total) total += amount - total;
                 return node;
             }
             else return ts.visitEachChild(node, cb, this.context);

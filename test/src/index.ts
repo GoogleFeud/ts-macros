@@ -1,19 +1,10 @@
-import { $$i, AsRest } from "../../dist";
+import { } from "../../dist";
 
-function $doSmth(obj: Array<number>) {
-    console.log(+["+", [obj], (thing: number) => thing]);
-    console.log(+[[obj], (thing: number) => thing]);
-    +[[obj, ["A", "B", "C"]], (thing: number) => {
-        const a = thing + $$i!();
-    }]
-}
-
-function $doSmth2(...obj: Array<number>) {
-    //console.log(+["+", [obj], (thing: number) => thing]);
-    //console.log(+[[obj], (thing: number) => thing])
-    const a = +["+", () => obj]
+function $doSmth3(obj: { a: { b: [{c: Array<string>}] }}, ...nums: Array<number>) {
+    +[[obj.a.b[0].c], (str: string) => str + nums];
 }
 
 const a = 44;
-$doSmth!([1, 2, 3, 4, 5, a]);
-$doSmth2!(1, 2, 3, 4, 5, a);
+
+
+$doSmth3!({a: { b: [{c: ["A", "B", "C", "D", "E"]}]}}, 1, 2, 3, 4)
