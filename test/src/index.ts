@@ -1,11 +1,9 @@
 import { AsRest } from "../../dist";
 
-function $createClasses(values: AsRest<Array<string>>, ...names: Array<string>) {
-    +[() => {
-        class names {
-            static value = values
-        }
-    }]
+function $doSmth(obj: any) : number {
+    return obj.something[0].laugh;
 }
 
-$createClasses!(["A", "B", "C"], "A", "B", "C")
+$doSmth!({
+    something: [{laugh: true }]
+});
