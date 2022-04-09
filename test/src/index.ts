@@ -1,8 +1,9 @@
-import { $$includes, $$err } from "../../dist";
+import { $$includes } from "../../dist";
 
-
+function $test(a: number, b: Array<number>) {
+    +[[b], (num: number) => num * a];
+}
 ///console.log($$includes!(123, 3));
 
-$$includes!([1, 2, "abc", 4, "de"], 123);
-
-$$err!("Test");
+console.log($test!(2, [1, 2, 3]));
+$test!(2, [1, 2, 3]);

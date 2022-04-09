@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
 import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError } from "./utils";
@@ -46,7 +45,6 @@ export class MacroTransformer {
     dirname: string
     props: MacroTransformerBuiltinProps
     checker: ts.TypeChecker
-    imports: Array<ts.ImportDeclaration>
     constructor(dirname: string, context: ts.TransformationContext, checker: ts.TypeChecker) {
         this.dirname = dirname;
         this.context = context;
@@ -55,16 +53,11 @@ export class MacroTransformer {
         this.macroStack = [];
         this.props = {};
         this.checker = checker;
-        this.imports = [];
     }
 
     run(node: ts.SourceFile): ts.Node {
         if (node.isDeclarationFile) return node;
-        const newSource = ts.visitEachChild(node, this.boundVisitor, this.context);
-        return ts.factory.updateSourceFile(newSource, [
-            ...this.imports,
-            ...newSource.statements
-        ]);
+        return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
 
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
@@ -92,75 +85,32 @@ export class MacroTransformer {
             return undefined;
         }
 
-        if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
-            const chain = node.expression.expression as ts.NonNullExpression;
-            let macro;
-            let args;
-            if (ts.isPropertyAccessExpression(chain.expression)) {
-                macro = MACROS.get(chain.expression.name.text); 
-                const newArgs = ts.factory.createNodeArray([ts.visitNode(chain.expression.expression, this.boundVisitor), ...node.expression.arguments]);
-                args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
-            } else {
-                if (nativeMacros[chain.expression.getText()]) return nativeMacros[chain.expression.getText()](ts.visitNodes(node.expression.arguments, this.boundVisitor), this, node.expression);
-                macro = MACROS.get(chain.expression.getText());
-                args = this.macroStack.length ? ts.visitNodes(node.expression.arguments, this.boundVisitor) : node.expression.arguments;
-            }
-            if (!macro || !macro.body) return ts.factory.createNull();
-            this.macroStack.push({
-                macro,
-                args
-            });
-            const defined = new Map<string, ts.Identifier>();
-            const visitor = (node: ts.Node) : ts.Node => {
-                if (ts.isVariableDeclaration(node) && node.pos !== -1) {
-                    const newName = ts.factory.createUniqueName(node.name.getText());
-                    defined.set(node.name.getText(), newName);
-                    return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, node.initializer);
+        if (ts.isExpressionStatement(node)) {
+            // Macro calls which just get inlined
+            if (ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
+                const statements = this.runMacro(node.expression, node.expression.expression.expression);
+                if (!statements) return ts.factory.createNull();
+                const prepared = this.makeHygienic(statements) as unknown as Array<ts.Statement>;
+                if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
+                    const exp = prepared.pop() as ts.ReturnStatement;
+                    if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
                 }
-                else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
-                return ts.visitEachChild(node, visitor, this.context);
-            };
-            const res = ts.visitNodes(ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements, visitor).concat();
-            if (res.length && ts.isReturnStatement(res[res.length - 1]) && ts.isSourceFile(node.parent)) {
-                const exp = res.pop() as ts.ReturnStatement;
-                if (exp.expression) res.push(ts.factory.createExpressionStatement(exp.expression));
+                return prepared;
+            // Macro calls which get wrapped in an IIFE (if necessary)
             }
-            const acc = macro.params.find(p => p.isAccumulator);
-            if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
-            this.macroStack.pop();
-            return res;
         }
 
         if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression)) {
-            let macro;
-            let args;
-            if (ts.isPropertyAccessExpression(node.expression.expression)) {
-                macro = MACROS.get(node.expression.expression.name.text); 
-                const newArgs = ts.factory.createNodeArray([ts.visitNode(node.expression.expression.expression, this.boundVisitor), ...node.arguments]);
-                args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
-            } else {
-                if (nativeMacros[node.expression.expression.getText()]) return nativeMacros[node.expression.expression.getText()](ts.visitNodes(node.arguments, this.boundVisitor), this, node);
-                macro = MACROS.get(node.expression.expression.getText());
-                args = this.macroStack.length ? ts.visitNodes(node.arguments, this.boundVisitor) : node.arguments;
-            }
-            if (!macro || !macro.body) return ts.factory.createNull();
-            this.macroStack.push({
-                macro,
-                args
-            });
-            const res = [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
-            const acc = macro.params.find(p => p.isAccumulator);
-            if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
-            this.macroStack.pop();
-            let last = res.pop()!;
-            if (res.length === 0) {
+            const statements = this.runMacro(node, node.expression.expression) as unknown as Array<ts.Statement>; 
+            let last = statements.pop()!;
+            if (statements.length === 0) {
                 if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;
                 else return last;
             }
             if (!ts.isReturnStatement(last)) last = ts.factory.createReturnStatement(ts.isExpressionStatement(last) ? last.expression:(last as unknown as ts.Expression));
             return ts.factory.createCallExpression(
                 ts.factory.createParenthesizedExpression(
-                    ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...res, last], true))
+                    ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...statements, last], true))
                 ),
                 undefined, undefined);
         }
@@ -281,7 +231,6 @@ export class MacroTransformer {
                     return this.execRepetition(fn, args, macro, literals, separator);
                 } 
             } 
-
             else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.operand);
                 if (!separator) throw new MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
@@ -361,6 +310,44 @@ export class MacroTransformer {
         }
         if (paramMacro.spread) return ts.factory.createArrayLiteralExpression(params.slice(paramMacro.start) as Array<ts.Expression>);
         return params[paramMacro.start] || paramMacro.defaultVal;
+    }
+
+    runMacro(call: ts.CallExpression, name: ts.Expression) : ts.NodeArray<ts.Statement>|undefined {
+        const args = call.arguments;
+        let macro, normalArgs;
+        if (ts.isPropertyAccessExpression(name)) {
+            macro = MACROS.get(name.name.text); 
+            const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...args]);
+            normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
+        } else {
+            if (nativeMacros[name.getText()]) return [ts.factory.createExpressionStatement(nativeMacros[name.getText()](ts.visitNodes(args, this.boundVisitor), this, call) as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
+            macro = MACROS.get(name.getText());
+            normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
+        }
+        if (!macro || !macro.body) return;
+        this.macroStack.push({
+            macro,
+            args: normalArgs
+        });
+        const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
+        const acc = macro.params.find(p => p.isAccumulator);
+        if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
+        this.macroStack.pop();
+        return result;
+    }
+
+    makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
+        const defined = new Map<string, ts.Identifier>();
+        const visitor = (node: ts.Node) : ts.Node => {
+            if (ts.isVariableDeclaration(node) && node.pos !== -1) {
+                const newName = ts.factory.createUniqueName(node.name.getText());
+                defined.set(node.name.getText(), newName);
+                return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, node.initializer);
+            }
+            else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
+            return ts.visitEachChild(node, visitor, this.context);
+        };
+        return ts.visitNodes(statements, visitor);
     }
 
     isValidMarker(marker: string, param: ts.ParameterDeclaration) : boolean {
