@@ -62,7 +62,6 @@ export class MacroTransformer {
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
         if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
             const macroName = ts.getNameOfDeclaration(node)!.getText();
-            console.log(this.macros);
             if (this.macros.shallowHas(macroName)) throw new MacroError(node, `Macro ${macroName} is already defined.`);
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
@@ -391,13 +390,23 @@ export class MacroTransformer {
         if (ts.isNumericLiteral(node)) return +node.text;
         const type = this.checker.getTypeAtLocation(node);
         if (type.isNumberLiteral()) return type.value;
+        //@ts-expect-error Private API
+        if (type.intrinsicName === "null") return 0;
     }
 
-    getLiteralFromNode(node: ts.Expression) : unknown|typeof NO_LIT_FOUND {
+    getLiteralFromNode(node: ts.Expression, handleTemplates = false) : string|number|undefined|true|false|typeof NO_LIT_FOUND {
         if (ts.isParenthesizedExpression(node)) return this.getLiteralFromNode(node.expression);
         else if (ts.isAsExpression(node)) return this.getLiteralFromNode(node.expression);
         if (ts.isNumericLiteral(node)) return +node.text;
         if (ts.isStringLiteral(node)) return node.text;
+        if (handleTemplates && ts.isTemplateExpression(node)) {
+            let res = node.head.text;
+            for (const span of node.templateSpans) {
+                const lit = this.getLiteralFromNode(ts.visitNode(span.expression, this.boundVisitor));
+                res += (lit || "").toString() + span.literal.text;
+            }
+            return res;
+        }
         const type = this.checker.getTypeAtLocation(node);
         if (type.isNumberLiteral()) return type.value;
         else if (type.isStringLiteral()) return type.value;

@@ -47,7 +47,7 @@ If the macro expands to a single expression, then the macro call is directly rep
 
 ```ts --Macro
 function $push(array: Array<number>, ...nums: Array<number>) : number {
-    return +[",", (nums: number) => array.push(nums)];
+    return +["()", (nums: number) => array.push(nums)];
 }
 ```
 ```ts --Call
@@ -63,7 +63,7 @@ const newSize = (arr.push(1), arr.push(2), arr.push(3));
 
 ### Multiple expressions
 
-If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned.
+If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned automatically.
 
 ```ts --Macro
 function $push(array: Array<number>, ...nums: Array<number>) : number {

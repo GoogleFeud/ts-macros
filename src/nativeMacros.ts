@@ -98,7 +98,7 @@ export default {
     },
     "$$ts": ([code], transformer, callSite) => {
         if (!code) throw new MacroError(callSite, "`ts` macro expects a string as it's first parameter.");
-        const str = transformer.getLiteralFromNode(ts.visitNode(code, transformer.boundVisitor));
+        const str = transformer.getLiteralFromNode(ts.visitNode(code, transformer.boundVisitor), true);
         if (!str || typeof str !== "string") throw new MacroError(callSite, "`ts` macro expects a string as it's first parameter.");
         const result = ts.createSourceFile("expr", str, ts.ScriptTarget.ESNext, false, ts.ScriptKind.JS);
         const visitor = (node: ts.Node): ts.Node => {

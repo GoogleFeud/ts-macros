@@ -191,3 +191,38 @@ $$send!(123, {});
 ``` --Result
 Error: In macro $$send: Expected string literal, found something else.
 ```
+
+## $$ts
+
+Turns the provided string into code. You should use this only when you can't accomplish something with other macros.
+
+```ts --Macro
+type ClassInfo = { name: string, value: string };
+
+export function $makeClasses(...info: Array<ClassInfo>) {
+    +[(info: ClassInfo) => {
+        $$ts!(`
+            class ${info.name} {
+                constructor() {
+                    this.value = ${info.value}
+                }
+            }
+        `);
+    }];
+}
+```
+```ts --Call
+$makeClasses!({name: "ClassA", value: "1"}, {name: "ClassB", value: "2"})
+```
+```ts --Result
+class ClassA {
+    constructor() {
+        this.value = 1;
+    }
+}
+class ClassB {
+    constructor() {
+        this.value = 2;
+    }
+}
+```

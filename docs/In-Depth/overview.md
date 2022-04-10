@@ -18,12 +18,10 @@ function $contains(value: unknown, ...possible: Array<unknown>) {
 }
 ```
 ```ts --Call
-const searchItem = "google";
 console.log($contains!(searchItem, "erwin", "tj")); 
 ```
 ```ts --Result
-const searchItem = "google";
-console.log(false);
+console.log(searchItem === "erwin" || searchItem === "tj");
 ```
 
 Macros can also be **chained** with any javascript expression.

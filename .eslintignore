@@ -1,3 +1,4 @@
 tests/dist
 tests/snapshots/artifacts
 dist/
+test/
