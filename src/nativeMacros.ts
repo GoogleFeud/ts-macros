@@ -12,7 +12,7 @@ export default {
         } catch {
             throw new MacroError(callSite, "`loadEnv` macro called but `dotenv` module is not installed.");
         }
-        if (extraPath) dotenv.config({path: path.join(transformer.dirname, extraPath)});
+        if (extraPath) dotenv.config({path: path.join(ts.sys.getCurrentDirectory(), extraPath)});
         else dotenv.config();
         transformer.props.optimizeEnv = true;
         return transformer.context.factory.createCallExpression(
@@ -36,7 +36,7 @@ export default {
         const extraPath = ts.isStringLiteral(args[0]) ? args[0].text:undefined;
         if (!extraPath) throw new MacroError(callSite, "`loadJSONAsEnv` macro expects a path to the JSON file.");
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const json = require(path.join(transformer.dirname, extraPath));
+        const json = require(path.join(ts.sys.getCurrentDirectory(), extraPath));
         Object.assign(process.env, json);
         transformer.props.optimizeEnv = true;
         return undefined;

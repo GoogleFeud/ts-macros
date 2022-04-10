@@ -64,3 +64,11 @@ export class MacroError {
         process.exit();
     }
 }
+
+export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
+    if (ts.isIdentifier(obj)) return obj.text;
+    else if (ts.isStringLiteral(obj)) return obj.text;
+    else if (ts.isPrivateIdentifier(obj)) return obj.text;
+    else if (ts.isNumericLiteral(obj)) return obj.text;
+    else return undefined;
+}

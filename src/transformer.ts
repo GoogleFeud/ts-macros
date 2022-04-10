@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
+import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
-import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError } from "./utils";
-
-const MACROS = new Map<string, Macro>();
+import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty } from "./utils";
 
 export interface MacroParam {
     spread: boolean,
@@ -42,17 +41,17 @@ export class MacroTransformer {
     macroStack: Array<MacroExpand>
     repeat: Array<MacroRepeat>
     boundVisitor: ts.Visitor
-    dirname: string
     props: MacroTransformerBuiltinProps
     checker: ts.TypeChecker
-    constructor(dirname: string, context: ts.TransformationContext, checker: ts.TypeChecker) {
-        this.dirname = dirname;
+    macros: MacroMap;
+    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.repeat = [];
         this.macroStack = [];
         this.props = {};
         this.checker = checker;
+        this.macros = macroMap;
     }
 
     run(node: ts.SourceFile): ts.Node {
@@ -63,7 +62,8 @@ export class MacroTransformer {
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
         if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
             const macroName = ts.getNameOfDeclaration(node)!.getText();
-            if (MACROS.has(macroName)) throw new MacroError(node, `Macro ${macroName} is already defined.`);
+            console.log(this.macros);
+            if (this.macros.shallowHas(macroName)) throw new MacroError(node, `Macro ${macroName} is already defined.`);
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
@@ -77,7 +77,7 @@ export class MacroTransformer {
                     defaultVal: param.initializer
                 });
             }
-            MACROS.set(macroName, {
+            this.macros.set({
                 name: macroName,
                 params,
                 body: node.body
@@ -85,19 +85,22 @@ export class MacroTransformer {
             return undefined;
         }
 
-        if (ts.isExpressionStatement(node)) {
-            // Macro calls which just get inlined
-            if (ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
-                const statements = this.runMacro(node.expression, node.expression.expression.expression);
-                if (!statements) return ts.factory.createNull();
-                const prepared = this.makeHygienic(statements) as unknown as Array<ts.Statement>;
-                if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
-                    const exp = prepared.pop() as ts.ReturnStatement;
-                    if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
-                }
-                return prepared;
-            // Macro calls which get wrapped in an IIFE (if necessary)
+        if (ts.isBlock(node)) {
+            this.macros = this.macros.extend();
+            const newNode = ts.visitEachChild(node, this.boundVisitor, this.context);
+            this.macros = this.macros.getParent();
+            return newNode;
+        }
+
+        if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
+            const statements = this.runMacro(node.expression, node.expression.expression.expression);
+            if (!statements) return ts.factory.createNull();
+            const prepared = this.makeHygienic(statements) as unknown as Array<ts.Statement>;
+            if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
+                const exp = prepared.pop() as ts.ReturnStatement;
+                if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
             }
+            return prepared;
         }
 
         if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression)) {
@@ -150,7 +153,7 @@ export class MacroTransformer {
                                     parentVal = num;
                                 }
                                 if (ts.isObjectLiteralExpression(value)) {
-                                    value = value.properties.find(prop => prop.name?.getText() === parentVal);
+                                    value = value.properties.find(prop => prop.name && (getNameFromProperty(prop.name) === parentVal));
                                     if (value && ts.isPropertyAssignment(value)) value = value.initializer;
                                     else return ts.visitEachChild(arg, this.boundVisitor, this.context);
                                     parent = parent.parent;
@@ -316,7 +319,7 @@ export class MacroTransformer {
         const args = call.arguments;
         let macro, normalArgs;
         if (ts.isPropertyAccessExpression(name)) {
-            macro = MACROS.get(name.name.text); 
+            macro = this.macros.get(name.name.text); 
             const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...args]);
             normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
         } else {
@@ -326,10 +329,10 @@ export class MacroTransformer {
                 if (Array.isArray(macroResult)) return macroResult as unknown as ts.NodeArray<ts.Statement>;
                 return [ts.factory.createExpressionStatement(macroResult as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
             }
-            macro = MACROS.get(name.getText());
+            macro = this.macros.get(name.getText());
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
-        if (!macro || !macro.body) return;
+        if (!macro || !macro.body || !normalArgs) return;
         this.macroStack.push({
             macro,
             args: normalArgs

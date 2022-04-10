@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as ts from "typescript";
+import { MacroMap } from "./macroMap";
 import { MacroTransformer } from "./transformer";
 
+const macros = new MacroMap();
+
 export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
-    const dir = program.getCurrentDirectory();
     const typeChecker = program.getTypeChecker();
+    const transformer = new MacroTransformer(ctx, typeChecker, macros);
     return firstNode => {
-        return new MacroTransformer(dir, ctx, typeChecker).run(firstNode as ts.SourceFile);
+        return transformer.run(firstNode as ts.SourceFile);
     };
 };
 
