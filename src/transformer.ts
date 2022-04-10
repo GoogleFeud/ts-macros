@@ -4,10 +4,15 @@ import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
 import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty } from "./utils";
 
+export const enum MacroParamMarkers {
+    None,
+    Accumulator,
+    Var
+}
+
 export interface MacroParam {
     spread: boolean,
-    isAccumulator?: boolean,
-    var?: boolean,
+    marker: MacroParamMarkers,
     start: number,
     name: string,
     defaultVal?: ts.Expression
@@ -69,8 +74,7 @@ export class MacroTransformer {
                 if (!ts.isIdentifier(param.name)) throw new MacroError(param, "You cannot use deconstruction patterns in macros.");
                 params.push({
                     spread: Boolean(param.dotDotDotToken),
-                    isAccumulator: this.isValidMarker("Accumulator", param),
-                    var: this.isValidMarker("Var", param),
+                    marker: this.getMarker(param),
                     start: i,
                     name: param.name.getText(),
                     defaultVal: param.initializer
@@ -224,7 +228,7 @@ export class MacroTransformer {
                 if (ts.isBinaryExpression(node.expression) && node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.expression.left)) {
                     const inner = node.expression;
                     const param = macro.params.find(p => p.name === (inner.left as ts.Identifier).text);
-                    if (!param || !param.var) return ts.visitEachChild(node, this.boundVisitor, this.context);
+                    if (!param || param.marker !== MacroParamMarkers.Var) return ts.visitEachChild(node, this.boundVisitor, this.context);
                     param.defaultVal = ts.visitNode(inner.right, this.boundVisitor);
                     return undefined;
                 }
@@ -337,7 +341,7 @@ export class MacroTransformer {
             args: normalArgs
         });
         const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
-        const acc = macro.params.find(p => p.isAccumulator);
+        const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
         this.macroStack.pop();
         return result;
@@ -357,13 +361,18 @@ export class MacroTransformer {
         return ts.visitNodes(statements, visitor);
     }
 
-    isValidMarker(marker: string, param: ts.ParameterDeclaration) : boolean {
-        if (!param.type) return false;
+    getMarker(param: ts.ParameterDeclaration) : MacroParamMarkers {
+        if (!param.type) return MacroParamMarkers.None;
         const type = this.checker.getTypeAtLocation(param.type).getProperty("__marker");
-        if (!type) return false;
+        if (!type) return MacroParamMarkers.None;
         //@ts-expect-error Internal API
         const typeOfMarker = (this.checker.getTypeOfSymbol(type) as ts.Type).getNonNullableType();
-        return typeOfMarker.isStringLiteral() && typeOfMarker.value === marker; 
+        if (!typeOfMarker.isStringLiteral()) return MacroParamMarkers.None;
+        switch(typeOfMarker.value) {
+        case "Accumulator": return MacroParamMarkers.Accumulator;
+        case "Var": return MacroParamMarkers.Var;
+        default: return MacroParamMarkers.None;
+        }
     }
 
     getTotalLoops(statements: Array<ts.Node>, args: ts.NodeArray<ts.Node>, params: Array<MacroParam>, literals: Array<ts.Expression>) : number {
