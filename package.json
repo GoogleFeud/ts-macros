@@ -19,7 +19,8 @@
     "typescript": "^4.6.2"
   },
   "scripts": {
-    "test": "tsc && ttsc test/src/index.ts",
+    "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
+    "manual": "tsc && ttsc test/src/index.ts",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"
   },
