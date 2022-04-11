@@ -23,8 +23,6 @@ for (let i = 0; i < [1, 2, 3, 4, 5].length; i++) {
 }
 ```
 
-## The fix
-
 To avoid this, you can assign the literal to a variable.
 
 ```ts --Macro

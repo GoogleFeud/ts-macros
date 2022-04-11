@@ -7,25 +7,6 @@ order: 6
 
 `Markers` make macro parameters behave differently. They don't alter the parameter's type, but it's behaviour.
 
-## AsRest
-
-You can mark a parameter with the AsRest marker. The parameter will act exactly like a rest parameter, but instead of separating all values of the parameter with a comma, you put them all in an array. This way you can have multiple repetition arguments.
-
-```ts --Macro
-import { AsRest } from "ts-macros"
-
-// This wouldn't work if the type was just Array<number>
-function $random(nums: AsRest<Array<number>>) : Array<number> {
-    +["[]", () => nums * Math.random() << 0]
-} 
-```
-```ts --Call
-$random!([1, 2, 3]);
-```
-```ts --Result
-[1 * Math.random() << 0, 2 * Math.random() << 0, 3 * Math.random() << 0]
-```
-
 ## Accumulator
 
 A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
