@@ -1,28 +1,42 @@
-
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
+import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
+import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement } from "./utils";
 
-const MACROS = new Map<string, Macro>();
+export const enum MacroParamMarkers {
+    None,
+    Accumulator,
+    Var,
+    Save
+}
 
 export interface MacroParam {
     spread: boolean,
-    asRest?: boolean,
-    isAccumulator?: boolean,
-    var?: boolean,
+    marker: MacroParamMarkers,
     start: number,
     name: string,
-    defaultVal?: ts.Expression
+    defaultVal?: ts.Expression,
+    realName?: ts.Identifier
 }
 
 export interface Macro {
     name: string,
     params: Array<MacroParam>,
+    typeParams: Array<ts.TypeParameterDeclaration>,
     body?: ts.FunctionBody
 }
 
 export interface MacroExpand {
     macro: Macro,
-    args: ts.NodeArray<ts.Expression>
+    args: ts.NodeArray<ts.Expression>,
+    typeArgs: ts.NodeArray<ts.TypeNode>
+}
+
+export interface MacroRepeat {
+    index: number,
+    repeatName?: string,
+    elements: Array<ts.Expression>
 }
 
 export interface MacroTransformerBuiltinProps {
@@ -32,165 +46,141 @@ export interface MacroTransformerBuiltinProps {
 const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
 
 export class MacroTransformer {
-    context: ts.TransformationContext
-    macroStack: Array<MacroExpand>
-    repeat: Array<number>
-    boundVisitor: ts.Visitor
-    dirname: string
-    props: MacroTransformerBuiltinProps
-    checker: ts.TypeChecker
-    imports: Array<ts.ImportDeclaration>
-    constructor(dirname: string, context: ts.TransformationContext, checker: ts.TypeChecker) {
-        this.dirname = dirname;
+    context: ts.TransformationContext;
+    macroStack: Array<MacroExpand>;
+    repeat: Array<MacroRepeat>;
+    boundVisitor: ts.Visitor;
+    props: MacroTransformerBuiltinProps;
+    checker: ts.TypeChecker;
+    macros: MacroMap;
+    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.repeat = [];
         this.macroStack = [];
         this.props = {};
         this.checker = checker;
-        this.imports = [];
+        this.macros = macroMap;
     }
 
     run(node: ts.SourceFile): ts.Node {
         if (node.isDeclarationFile) return node;
-        const newSource = ts.visitEachChild(node, this.boundVisitor, this.context);
-        return ts.factory.updateSourceFile(newSource, [
-            ...this.imports,
-            ...newSource.statements
-        ]);
+        return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
 
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
         if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
             const macroName = ts.getNameOfDeclaration(node)!.getText();
-            if (MACROS.has(macroName)) throw new Error(`Macro ${macroName} is already defined.`);
+            if (this.macros.shallowHas(macroName)) throw new MacroError(node, `Macro ${macroName} is already defined.`);
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
-                if (!ts.isIdentifier(param.name)) throw new Error("You cannot use deconstruction patterns in macros.");
+                if (!ts.isIdentifier(param.name)) throw new MacroError(param, "You cannot use deconstruction patterns in macros.");
+                const marker = this.getMarker(param);
                 params.push({
                     spread: Boolean(param.dotDotDotToken),
-                    asRest: this.isValidMarker("AsRest", param),
-                    isAccumulator: this.isValidMarker("Accumulator", param),
-                    var: this.isValidMarker("Var", param),
+                    marker,
                     start: i,
                     name: param.name.getText(),
                     defaultVal: param.initializer
                 });
             }
-            MACROS.set(macroName, {
+            this.macros.set({
                 name: macroName,
                 params,
-                body: node.body
+                body: node.body,
+                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
             });
-            return undefined;
+            return;
+        }
+
+        if (ts.isBlock(node)) {
+            this.macros = this.macros.extend();
+            const statements: Array<ts.Statement> = [];
+            for (const stmt of node.statements) {
+                const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
+                this.macros.concatEscaped(statements);
+                if (res) {
+                    if (Array.isArray(res)) statements.push(...res);
+                    else statements.push(res);
+                }
+            }
+            this.macros = this.macros.getParent();
+            return ts.factory.updateBlock(node, statements);
         }
 
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
-            const chain = node.expression.expression as ts.NonNullExpression;
-            let macro;
-            let args;
-            if (ts.isPropertyAccessExpression(chain.expression)) {
-                macro = MACROS.get(chain.expression.name.text); 
-                const newArgs = ts.factory.createNodeArray([ts.visitNode(chain.expression.expression, this.boundVisitor), ...node.expression.arguments]);
-                args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
-            } else {
-                if (nativeMacros[chain.expression.getText()]) return nativeMacros[chain.expression.getText()](ts.visitNodes(node.expression.arguments, this.boundVisitor), this);
-                macro = MACROS.get(chain.expression.getText());
-                args = this.macroStack.length ? ts.visitNodes(node.expression.arguments, this.boundVisitor) : node.expression.arguments;
+            const statements = this.runMacro(node.expression, node.expression.expression.expression);
+            if (!statements) return;
+            const prepared = this.makeHygienic(statements) as unknown as Array<ts.Statement>;
+            if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
+                const exp = prepared.pop() as ts.ReturnStatement;
+                if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
             }
-            if (!macro || !macro.body) return ts.factory.createNull();
-            this.macroStack.push({
-                macro,
-                args
-            })
-            const defined = new Map<string, ts.Identifier>();
-            const visitor = (node: ts.Node) : ts.Node => {
-                if (ts.isVariableDeclaration(node) && node.pos !== -1) {
-                    const newName = ts.factory.createUniqueName(node.name.getText());
-                    defined.set(node.name.getText(), newName);
-                    return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, node.initializer);
-                }
-                else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
-                return ts.visitEachChild(node, visitor, this.context);
-            };
-            const res = ts.visitNodes(ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements, visitor).concat();
-            if (ts.isReturnStatement(res[res.length - 1]) && ts.isSourceFile(node.parent)) {
-                const exp = res.pop() as ts.ReturnStatement;
-                if (exp.expression) res.push(ts.factory.createExpressionStatement(exp.expression));
-            }
-            const acc = macro.params.find(p => p.isAccumulator);
-            if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
-            this.macroStack.pop();
-            return res;
+            return prepared;
         }
 
         if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression)) {
-            let macro;
-            let args;
-            if (ts.isPropertyAccessExpression(node.expression.expression)) {
-                macro = MACROS.get(node.expression.expression.name.text); 
-                const newArgs = ts.factory.createNodeArray([ts.visitNode(node.expression.expression.expression, this.boundVisitor), ...node.arguments]);
-                args = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
-            } else {
-                if (nativeMacros[node.expression.expression.getText()]) return nativeMacros[node.expression.expression.getText()](ts.visitNodes(node.arguments, this.boundVisitor), this);
-                macro = MACROS.get(node.expression.expression.getText());
-                args = this.macroStack.length ? ts.visitNodes(node.arguments, this.boundVisitor) : node.arguments;
-            }
-            if (!macro || !macro.body) return ts.factory.createNull();
-            this.macroStack.push({
-                macro,
-                args
-            });
-            const res = [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
-            const acc = macro.params.find(p => p.isAccumulator);
-            if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
-            this.macroStack.pop();
-            let last = res.pop()!;
-            if (res.length === 0) {
+            const statements = this.runMacro(node, node.expression.expression) as unknown as Array<ts.Statement>|undefined;
+            if (!statements || !statements.length) return ts.factory.createNull(); 
+            let last = statements.pop()!;
+            if (statements.length === 0) {
                 if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;
-                else return last;
+                else if (!isStatement(last)) return last;
             }
-            if (!ts.isReturnStatement(last)) last = ts.factory.createReturnStatement(ts.isExpressionStatement(last) ? last.expression:(last as unknown as ts.Expression));
+            if (ts.isExpressionStatement(last)) last = ts.factory.createReturnStatement(last.expression);
+            else if (!isStatement(last)) last = ts.factory.createReturnStatement(last);
             return ts.factory.createCallExpression(
                 ts.factory.createParenthesizedExpression(
-                    ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...res, last], true))
+                    ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...statements, last], true))
                 ),
-                undefined, undefined)
+                undefined, undefined);
         }
 
+        // If this is true then we're in the context of a macro call
         if (this.macroStack.length) {
             const {macro, args } = this.macroStack[this.macroStack.length - 1];
 
-            if (ts.isPropertyAccessExpression(node)) {
-                if (this.props.optimizeEnv && node.expression.getText() === "process.env") {
+            // Detects property / element access and tries to remvoe it if possible
+            if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+                if (ts.isPropertyAccessExpression(node) && this.props.optimizeEnv && node.expression.getText() === "process.env") {
                     const value = process.env[node.name.text];
                     if (!value) return node;
                     return ts.factory.createStringLiteral(value);
-                }
-                else {
-                    let accessChain: ts.PropertyAccessExpression = node;
+                } else {
+                    let accessChain: ts.PropertyAccessExpression|ts.ElementAccessExpression = node;
                     let firstIdentifier: string|undefined;
                     while (accessChain) {
                         if (ts.isIdentifier(accessChain.expression)) {
                             firstIdentifier = accessChain.expression.text;
                             break;
-                        } else if (ts.isPropertyAccessExpression(accessChain.expression)) {
+                        } else if (ts.isPropertyAccessExpression(accessChain.expression) || ts.isElementAccessExpression(accessChain.expression)) {
                             accessChain = accessChain.expression;
                         } else break;
                     }
                     if (firstIdentifier) {
                         const arg = this.getMacroParam(firstIdentifier, macro, args);
-                        if (arg && ts.isObjectLiteralExpression(arg)) {
+                        if (arg && (ts.isObjectLiteralExpression(arg) || ts.isArrayLiteralExpression(arg))) {
                             let parent: ts.Node = accessChain;
                             let value: ts.Node | undefined = arg;
-                            while (value && ts.isPropertyAccessExpression(parent)) {
+                            while (value && (ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent))) {
+                                let parentVal: string|number = "";
+                                if (ts.isPropertyAccessExpression(parent)) parentVal = parent.name.text;
+                                else if (ts.isElementAccessExpression(parent)) {
+                                    const num = this.getNumberFromNode(parent.argumentExpression);
+                                    if (num === undefined) return ts.visitEachChild(arg, this.boundVisitor, this.context);
+                                    parentVal = num;
+                                }
                                 if (ts.isObjectLiteralExpression(value)) {
-                                    value = value.properties.find(prop => prop.name?.getText() === (parent as ts.PropertyAccessExpression).name.text);
+                                    value = value.properties.find(prop => prop.name && (getNameFromProperty(prop.name) === parentVal));
                                     if (value && ts.isPropertyAssignment(value)) value = value.initializer;
-                                    else break;
+                                    else return ts.visitEachChild(arg, this.boundVisitor, this.context);
                                     parent = parent.parent;
-                                } else break;
+                                } else if (ts.isArrayLiteralExpression(value)) {
+                                    value = value.elements[parentVal as number];
+                                    parent = parent.parent;
+                                } 
+                                else return ts.visitEachChild(arg, this.boundVisitor, this.context);
                             }
                             if (value) return value;
                         }
@@ -198,64 +188,16 @@ export class MacroTransformer {
                 }
             }
 
-            if (ts.isElementAccessExpression(node)) {
-                let accessChain: ts.ElementAccessExpression = node;
-                let firstIdentifier: string|undefined;
-                while (accessChain) {
-                    if (ts.isIdentifier(accessChain.expression)) {
-                        firstIdentifier = accessChain.expression.text;
-                        break;
-                    } else if (ts.isElementAccessExpression(accessChain.expression)) {
-                        accessChain = accessChain.expression;
-                    } else break;
-                }
-                if (firstIdentifier) {
-                    const arg = this.getMacroParam(firstIdentifier, macro, args);
-                    if (arg && (ts.isObjectLiteralExpression(arg) || ts.isArrayLiteralExpression(arg))) {
-                        let parent: ts.Node = accessChain;
-                        let value: ts.Node | undefined = arg;
-                        while (value && ts.isElementAccessExpression(parent)) {
-                            if (ts.isObjectLiteralExpression(value)) {
-                                let lit = ts.visitNode((parent as ts.ElementAccessExpression).argumentExpression, this.boundVisitor).getText();
-                                if (lit.startsWith("\"")) lit = lit.slice(1, -1);
-                                value = value.properties.find(prop => prop.name?.getText() === lit);
-                                if (value && ts.isPropertyAssignment(value)) value = value.initializer;
-                                parent = parent.parent;
-                            } else if (ts.isArrayLiteralExpression(value)) {
-                                const lit = +ts.visitNode((parent as ts.ElementAccessExpression).argumentExpression, this.boundVisitor).getText();
-                                if (isNaN(lit)) break;
-                                value = value.elements[lit];
-                                parent = parent.parent;
-                            } else break;
-                        }
-                        if (value) return value;
-                    }
-                }
+            // Detects use of a macro parameter and replaces it with a literal
+            else if (ts.isIdentifier(node) && !ts.isParameter(node.parent)) {
+                const paramMacro = this.getMacroParam(node.text, macro, args);
+                if (!paramMacro) return node;
+                if (ts.isStringLiteral(paramMacro) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(paramMacro.text);
+                if (ts.isIdentifier(paramMacro)) return paramMacro;
+                return ts.visitNode(paramMacro, this.boundVisitor);
             }
 
-            if (ts.isIdentifier(node) && !ts.isParameter(node.parent) && macro.params.some(p => p.name === node.text)) {
-                const index = macro.params.findIndex(p => p.name === node.text)
-                const paramMacro = macro.params[index];
-                if (this.repeat.length && paramMacro.spread) {
-                    const arg = args[this.repeat[this.repeat.length - 1] + paramMacro.start];
-                    if (!arg) return ts.factory.createNull();
-                    if (ts.isStringLiteral(arg) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(arg.text);
-                    return arg;
-                }
-                else if (this.repeat.length && paramMacro.asRest) {
-                    const arg = (args[paramMacro.start] as ts.ArrayLiteralExpression).elements[this.repeat[this.repeat.length - 1]];
-                    if (!arg) return undefined;
-                    if (ts.isStringLiteral(arg) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(arg.text);
-                    return arg;
-                }
-                if (paramMacro.spread) return ts.factory.createArrayLiteralExpression(args.slice(paramMacro.start));
-                if (args[index]) {
-                    if (ts.isStringLiteral(args[index]) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier((args[index] as ts.StringLiteral).text);
-                    if (ts.isIdentifier(args[index])) return args[index];
-                    return ts.visitNode(args[index], this.boundVisitor);
-                } else return macro!.params[index].defaultVal || ts.factory.createNull();
-            }
-
+            // Detects a ternary expression and tries to remove it if possible
             else if (ts.isConditionalExpression(node)) {
                 const param = ts.visitNode(node.condition, this.boundVisitor);
                 const res = this.getBoolFromNode(param);
@@ -264,6 +206,7 @@ export class MacroTransformer {
                 else return ts.factory.createConditionalExpression(param, undefined, ts.visitNode(node.whenTrue, this.boundVisitor), undefined, ts.visitNode(node.whenFalse, this.boundVisitor));
             }
 
+            // Detects an if statement and tries to remove it if possible
             else if (ts.isIfStatement(node)) {
                 const condition = ts.visitNode(node.expression, this.boundVisitor);
                 const res = this.getBoolFromNode(condition);
@@ -275,143 +218,89 @@ export class MacroTransformer {
                 else return ts.factory.createIfStatement(condition, ts.visitNode(node.thenStatement, this.boundVisitor), ts.visitNode(node.elseStatement, this.boundVisitor));
             }
 
+            // Detects a binary operation and tries to remove it if possible
             else if (ts.isBinaryExpression(node)) {
-                switch (node.operatorToken.kind) {
-                    case ts.SyntaxKind.EqualsEqualsEqualsToken: 
-                    case ts.SyntaxKind.EqualsEqualsToken:  {
-                        const left = ts.visitNode(node.left, this.boundVisitor);
-                        const right = ts.visitNode(node.right, this.boundVisitor);
-                        const leftLit = this.getLiteralFromNode(left);
-                        const rightLit = this.getLiteralFromNode(right);
-                        if (leftLit === NO_LIT_FOUND || rightLit === NO_LIT_FOUND) return ts.factory.createBinaryExpression(left, node.operatorToken.kind, right);
-                        return ts.factory.createToken(leftLit === rightLit ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword);
-                    }
-                    case ts.SyntaxKind.PlusToken: {
-                        const left = ts.visitNode(node.left, this.boundVisitor);
-                        const right = ts.visitNode(node.right, this.boundVisitor);
-                        const num = this.getLiteralFromNode(left);
-                        const num2 = this.getLiteralFromNode(right);
-                        if (num === NO_LIT_FOUND || num2 === NO_LIT_FOUND) return ts.factory.createBinaryExpression(left, ts.SyntaxKind.PlusToken, right);
-                        //@ts-expect-error Literals
-                        if (typeof num === "string" || typeof num2 === "string") return ts.factory.createStringLiteral(num + num2);
-                        //@ts-expect-error Literals
-                        return ts.factory.createNumericLiteral(num + num2)
-                    }
-                    case ts.SyntaxKind.AsteriskToken: {
-                        const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
-                        const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const num = this.getNumberFromNode(left);
-                        const num2 = this.getNumberFromNode(right);
-                        if (num !== undefined && num2 !== undefined) return ts.factory.createNumericLiteral(num * num2);
-                        return ts.factory.createBinaryExpression(left, ts.SyntaxKind.AsteriskToken, right);
-                    }
-                    case ts.SyntaxKind.MinusToken: {
-                        const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
-                        const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const num = this.getNumberFromNode(left);
-                        const num2 = this.getNumberFromNode(right);
-                        if (num !== undefined && num2 !== undefined) return ts.factory.createNumericLiteral(num - num2);
-                        return ts.factory.createBinaryExpression(left, ts.SyntaxKind.MinusToken, right);
-                    }
-                    case ts.SyntaxKind.SlashToken: {
-                        const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
-                        const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const num = this.getNumberFromNode(left);
-                        const num2 = this.getNumberFromNode(right);
-                        if (num !== undefined && num2 !== undefined) return ts.factory.createNumericLiteral(num / num2);
-                        return ts.factory.createBinaryExpression(left, ts.SyntaxKind.SlashToken, right);
-                    }
-                    case ts.SyntaxKind.BarBarToken: {
-                        const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
-                        const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const leftVal = this.getBoolFromNode(left);
-                        const rightVal = this.getBoolFromNode(right);
-                        if (leftVal === undefined || rightVal === undefined) return ts.visitEachChild(node, this.boundVisitor, this.context);
-                        if (leftVal) return left;
-                        else if (rightVal) return right;
-                        else return right;
-                    }
-                    case ts.SyntaxKind.AmpersandAmpersandToken: {
-                        const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
-                        const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
-                        const leftVal = this.getBoolFromNode(left);
-                        const rightVal = this.getBoolFromNode(right);
-                        if (leftVal === undefined || rightVal === undefined) return ts.visitEachChild(node, this.boundVisitor, this.context);
-                        if (leftVal && rightVal) return right;
-                        if (!leftVal) return left;
-                        if (!rightVal) return right;
-                    }
-                }
+                const op = node.operatorToken.kind;
+                const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
+                const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
+                const leftVal = this.getLiteralFromNode(left);
+                const rightVal = this.getLiteralFromNode(right);
+                if (leftVal === NO_LIT_FOUND || rightVal === NO_LIT_FOUND) return ts.factory.createBinaryExpression(left, op, right);
+                if (binaryNumberActions[op] && typeof leftVal === "number" && typeof rightVal === "number") return binaryNumberActions[op](leftVal, rightVal);
+                else return binaryActions[op]?.(left, right, leftVal, rightVal) || ts.factory.createBinaryExpression(left, op, right);
             }
 
+            // Detects a unary expression and tries to remove it if possible
+            else if (ts.isPrefixUnaryExpression(node) && node.operator !== 39) {
+                const op = node.operator;
+                const value: ts.Expression = ts.visitNode(node.operand, this.boundVisitor);
+                const val = this.getLiteralFromNode(value);
+                if (val === NO_LIT_FOUND) return node;
+                return unaryActions[op]?.(val) || value;
+            }
+
+            // Detects a typeof expression and tries to remove it if possible
+            else if (ts.isTypeOfExpression(node)) {
+                const val = this.getLiteralFromNode(ts.visitNode(node.expression, this.boundVisitor));
+                if (val === NO_LIT_FOUND) return node;
+                return ts.factory.createStringLiteral(typeof val);
+            }
+
+            // Detects a repetition
             else if (ts.isExpressionStatement(node)) {
                 if (ts.isBinaryExpression(node.expression) && node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.expression.left)) {
                     const inner = node.expression;
                     const param = macro.params.find(p => p.name === (inner.left as ts.Identifier).text);
-                    if (!param || !param.var) return ts.visitEachChild(node, this.boundVisitor, this.context);
+                    if (!param || param.marker !== MacroParamMarkers.Var) return ts.visitEachChild(node, this.boundVisitor, this.context);
                     param.defaultVal = ts.visitNode(inner.right, this.boundVisitor);
                     return undefined;
                 }
                 else if (ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
-                    let separator;
-                    let fn: ts.ArrowFunction;
-                    if (node.expression.operand.elements.length) {
-                        separator = node.expression.operand.elements[0];
-                        if (!ts.isStringLiteral(separator)) {
-                            fn = separator as ts.ArrowFunction;
-                            separator = undefined;
-                        } else {
-                            separator = separator.text;
-                            fn = node.expression.operand.elements[1] as ts.ArrowFunction;
-                        }
-                    } else throw new Error("Missing code to repeat");
-                    if (!ts.isArrowFunction(fn) || !fn.body) throw new Error("Missing repeat function");
-                    return this.execRepetition(fn, args, macro, separator);
-                }
-            } else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
-                let separator: string | ts.Expression = node.operand.elements[0];
-                if (!separator || !ts.isStringLiteral(separator)) throw new Error("Repetition separator must be a string literal.");
-                separator = separator.text;
-                const fn = node.operand.elements[1];
-                if (!fn || !ts.isArrowFunction(fn) || !fn.body) throw new Error("Missing repeat function.");
-                return this.execRepetition(fn, args, macro, separator, true);
-            } else if (ts.isCallExpression(node) && node.arguments.some(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === 39 && ts.isArrayLiteralExpression(arg.operand))) {
+                    const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
+                    return this.execRepetition(fn, args, macro, literals, separator);
+                } 
+            } 
+            else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
+                const { separator, function: fn, literals} = getRepetitionParams(node.operand);
+                if (!separator) throw new MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
+                return this.execRepetition(fn, args, macro, literals, separator, true);
+            } 
+            else if (ts.isCallExpression(node)) {
                 const repNodeIndex = node.arguments.findIndex(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === 39 && ts.isArrayLiteralExpression(arg.operand));
-                const repNode = (node.arguments[repNodeIndex] as ts.PrefixUnaryExpression).operand as ts.ArrayLiteralExpression;
-                let separator;
-                let fn: ts.ArrowFunction;
-                if (repNode.elements.length) {
-                    separator = repNode.elements[0];
-                    if (!ts.isStringLiteral(separator)) {
-                        fn = separator as ts.ArrowFunction;
-                        separator = undefined;
-                    } else {
-                        separator = separator.text;
-                        fn = repNode.elements[1] as ts.ArrowFunction;
+                if (repNodeIndex !== -1) {
+                    const repNode = (node.arguments[repNodeIndex] as ts.PrefixUnaryExpression).operand as ts.ArrayLiteralExpression;
+                    const { separator, function: fn, literals} = getRepetitionParams(repNode);
+                    if (!separator) {
+                        const newBod = this.execRepetition(fn, args, macro, literals, separator, true);
+                        const finalArgs = [];
+                        for (let i=0; i < node.arguments.length; i++) {
+                            if (i === repNodeIndex) finalArgs.push(...newBod);
+                            else finalArgs.push(node.arguments[i]);
+                        }
+                        return ts.visitNode(ts.factory.createCallExpression(node.expression, node.typeArguments, finalArgs as Array<ts.Expression>), this.boundVisitor);
                     }
-                } else throw new Error("Missing code to repeat");
-                if (!ts.isArrowFunction(fn) || !fn.body) throw new Error("Missing repeat function");
-                const newBod = this.execRepetition(fn, args, macro, separator, true);
-                if (!separator) {
-                    const finalArgs = [];
-                    for (let i=0; i < node.arguments.length; i++) {
-                        if (i === repNodeIndex) finalArgs.push(...newBod);
-                        else finalArgs.push(node.arguments[i]);
-                    }
-                    return ts.visitNode(ts.factory.createCallExpression(node.expression, node.typeArguments, finalArgs as Array<ts.Expression>), this.boundVisitor);
                 }
-                else return newBod;
             }
             return ts.visitEachChild(node, this.boundVisitor, this.context);
         }
         return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
 
-    execRepetition(fn: ts.ArrowFunction, args: ts.NodeArray<ts.Node>, macro: Macro, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
+    execRepetition(fn: ts.ArrowFunction, args: ts.NodeArray<ts.Node>, macro: Macro, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
         const newBod = [];
-        const ind = this.repeat.push(0) - 1;
-        const totalLoopsNeeded = this.getTotalLoops(flattenBody(fn.body), args, macro.params);
-        for (; this.repeat[ind] < totalLoopsNeeded; this.repeat[ind]++) {
+        const finalElements = [];
+        for (const lit of elements) {
+            const resolved = ts.visitNode(lit, this.boundVisitor);
+            if (ts.isArrayLiteralExpression(resolved)) finalElements.push(...resolved.elements); 
+        }
+        const ind = this.repeat.push({
+            index: 0,
+            elements: finalElements,
+            repeatName: fn.parameters[0]?.name.getText()
+        }) - 1;
+
+        const totalLoopsNeeded = this.getTotalLoops(flattenBody(fn.body), args, macro.params, finalElements);
+        for (; this.repeat[ind].index < totalLoopsNeeded; this.repeat[ind].index++) {
             if ("statements" in fn.body) {
                 if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor))));
                 else {
@@ -432,35 +321,109 @@ export class MacroTransformer {
 
     getMacroParam(name: string, macro: Macro, params: ts.NodeArray<ts.Node>) : ts.Node|undefined {
         const index = macro.params.findIndex(p => p.name === name);
-        if (index === -1) return;
-        const paramMacro = macro.params[index];
-        if (this.repeat.length) {
-            if (paramMacro.spread) return params[this.repeat[this.repeat.length - 1] + paramMacro.start];
-            else if (paramMacro.asRest) return (params[paramMacro.start] as ts.ArrayLiteralExpression).elements[this.repeat[this.repeat.length - 1]];
+        if (index === -1) {
+            const lastRepeat = this.repeat[this.repeat.length - 1];
+            if (lastRepeat && lastRepeat.elements.length) {
+                if (lastRepeat.repeatName === name) {
+                    if (lastRepeat.elements.length <= lastRepeat.index) return ts.factory.createNull();
+                    return lastRepeat.elements[lastRepeat.index]; 
+                }
+            }
+            return;
         }
-        else return params[paramMacro.start];
+        const paramMacro = macro.params[index];
+        if (paramMacro.realName) return paramMacro.realName;
+        if (this.repeat.length && paramMacro.spread) {
+            const paramInd = this.repeat[this.repeat.length - 1].index + paramMacro.start;
+            if (paramInd >= params.length) return ts.factory.createNull();
+            return params[paramInd];
+        }
+        if (paramMacro.spread) return ts.factory.createArrayLiteralExpression(params.slice(paramMacro.start) as Array<ts.Expression>);
+        return params[paramMacro.start] || paramMacro.defaultVal;
     }
 
-    isValidMarker(marker: string, param: ts.ParameterDeclaration) : boolean {
-        if (!param.type) return false;
-        const symbol = this.checker.getTypeAtLocation(param.type).aliasSymbol;
-        if (!symbol || symbol.name !== marker || !symbol.declarations || !symbol.declarations.length) return false;
-        return symbol.declarations[0].getSourceFile().fileName.includes("ts-macros");
+    runMacro(call: ts.CallExpression, name: ts.Expression) : ts.NodeArray<ts.Statement>|undefined {
+        const args = call.arguments;
+        let macro, normalArgs;
+        if (ts.isPropertyAccessExpression(name)) {
+            macro = this.macros.get(name.name.text); 
+            const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...call.arguments]);
+            normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
+        } else {
+            if (nativeMacros[name.getText()]) {
+                const macroResult = nativeMacros[name.getText()](ts.visitNodes(args, this.boundVisitor), this, call);
+                if (!macroResult) return undefined;
+                if (Array.isArray(macroResult)) return macroResult as unknown as ts.NodeArray<ts.Statement>;
+                return [ts.factory.createExpressionStatement(macroResult as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
+            }
+            macro = this.macros.get(name.getText());
+            normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
+        }
+        if (!macro || !macro.body) return;
+        this.macroStack.push({
+            macro,
+            args: normalArgs,
+            typeArgs: call.typeArguments || ts.factory.createNodeArray()
+        });
+        const pre = [];
+        for (const param of macro.params) {
+            if (param.marker === MacroParamMarkers.Save) {
+                param.realName = ts.factory.createUniqueName(param.name);
+                pre.push(ts.factory.createVariableDeclaration(param.realName, undefined, undefined,
+                    param.spread ? ts.factory.createArrayLiteralExpression(normalArgs.slice(param.start)) : normalArgs[param.start] || param.defaultVal
+                ));
+            }
+        }
+        if (pre.length) this.macros.escaped.push(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
+        const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
+        const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
+        if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
+        this.macroStack.pop();
+        return result;
     }
 
-    getTotalLoops(statements: Array<ts.Node>, args: ts.NodeArray<ts.Node>, params: Array<MacroParam>) : number {
-        let total = 0;
+    makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
+        const defined = new Map<string, ts.Identifier>();
+        const visitor = (node: ts.Node) : ts.Node => {
+            if (ts.isVariableDeclaration(node) && node.pos !== -1) {
+                const newName = ts.factory.createUniqueName(node.name.getText());
+                defined.set(node.name.getText(), newName);
+                return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, node.initializer);
+            }
+            else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
+            return ts.visitEachChild(node, visitor, this.context);
+        };
+        return ts.visitNodes(statements, visitor);
+    }
+
+    getMarker(param: ts.ParameterDeclaration) : MacroParamMarkers {
+        if (!param.type) return MacroParamMarkers.None;
+        const type = this.checker.getTypeAtLocation(param.type).getProperty("__marker");
+        if (!type) return MacroParamMarkers.None;
+        //@ts-expect-error Internal API
+        const typeOfMarker = (this.checker.getTypeOfSymbol(type) as ts.Type).getNonNullableType();
+        if (!typeOfMarker.isStringLiteral()) return MacroParamMarkers.None;
+        switch(typeOfMarker.value) {
+        case "Accumulator": return MacroParamMarkers.Accumulator;
+        case "Var": return MacroParamMarkers.Var;
+        case "Save": return MacroParamMarkers.Save;
+        default: return MacroParamMarkers.None;
+        }
+    }
+
+    getTotalLoops(statements: Array<ts.Node>, args: ts.NodeArray<ts.Node>, params: Array<MacroParam>, literals: Array<ts.Expression>) : number {
+        let total = literals.length;
         const cb = (node: ts.Node): ts.Node|undefined => {
             if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) return node;
             else if (ts.isIdentifier(node)) {
                 const param = params.find(p => p.name === node.text);
-                if (!param) return node;
-                if (param.asRest) total += Math.abs(total - (args[param.start] as ts.ArrayLiteralExpression).elements.length);
-                else if (param.spread) total += Math.abs(total - (args.length - param.start));
+                if (!param || !param.spread) return node;
+                const amount = args.length - param.start;
+                if (amount > total) total += amount - total;
                 return node;
             }
             else return ts.visitEachChild(node, cb, this.context);
-        }
+        };
         for (const stmt of statements) {
             cb(stmt);
         }
@@ -472,13 +435,23 @@ export class MacroTransformer {
         if (ts.isNumericLiteral(node)) return +node.text;
         const type = this.checker.getTypeAtLocation(node);
         if (type.isNumberLiteral()) return type.value;
+        //@ts-expect-error Private API
+        if (type.intrinsicName === "null") return 0;
     }
 
-    getLiteralFromNode(node: ts.Expression) : unknown|typeof NO_LIT_FOUND {
+    getLiteralFromNode(node: ts.Expression, handleTemplates = false) : string|number|undefined|true|false|typeof NO_LIT_FOUND {
         if (ts.isParenthesizedExpression(node)) return this.getLiteralFromNode(node.expression);
         else if (ts.isAsExpression(node)) return this.getLiteralFromNode(node.expression);
         if (ts.isNumericLiteral(node)) return +node.text;
         if (ts.isStringLiteral(node)) return node.text;
+        if (handleTemplates && ts.isTemplateExpression(node)) {
+            let res = node.head.text;
+            for (const span of node.templateSpans) {
+                const lit = this.getLiteralFromNode(ts.visitNode(span.expression, this.boundVisitor));
+                res += (lit || "").toString() + span.literal.text;
+            }
+            return res;
+        }
         const type = this.checker.getTypeAtLocation(node);
         if (type.isNumberLiteral()) return type.value;
         else if (type.isStringLiteral()) return type.value;
@@ -515,6 +488,7 @@ export class MacroTransformer {
             if (type.value === "") return false;
             return true;
         }
+        else if (type.getCallSignatures().length || type.getProperties().length) return true;
         //@ts-expect-error Private API
         else if (type.intrinsicName === "false") return false;
         //@ts-expect-error Private API
@@ -526,37 +500,71 @@ export class MacroTransformer {
         return undefined;
     }
 
-}
-
-function flattenBody(body: ts.ConciseBody) : Array<ts.Node> {
-    if ("statements" in body) return [...body.statements];
-    return [body];
-}
-
-function wrapExpressions(exprs: Array<ts.Statement>) : ts.Expression {
-    let last = exprs.pop()!;
-    if (ts.isExpressionStatement(last)) last = ts.factory.createReturnStatement(last.expression);
-    else if (!(last.kind > ts.SyntaxKind.EmptyStatement && last.kind < ts.SyntaxKind.DebuggerStatement)) last = ts.factory.createReturnStatement(last as unknown as ts.Expression);
-    return ts.factory.createImmediatelyInvokedArrowFunction([...exprs, last as ts.Statement]);
-} 
-
-function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>, id: number) {
-    let last;
-    for (const element of body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression))) {
-        if (!last) last = element;
-        else last = transformer.context.factory.createBinaryExpression(last, id, element);
+    getTypeParam(type: ts.Type) : ts.Type | undefined {
+        const lastMacroCall = this.macroStack[this.macroStack.length - 1];
+        if (!lastMacroCall) return;
+        const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
+        if (resolvedTypeParameterIndex === -1) return;
+        const resolvedTypeParam = lastMacroCall.typeArgs[resolvedTypeParameterIndex];
+        if (!resolvedTypeParam) return;
+        return this.checker.getTypeAtLocation(resolvedTypeParam);
     }
-    return ts.visitNode(last, transformer.boundVisitor) as ts.Expression;
+
 }
 
 const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>) => ts.Expression> = {
-    "[]": (transformer, body) => {
-        return transformer.context.factory.createArrayLiteralExpression(body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression)));
-    },
+    "[]": (_transformer, body) => ts.factory.createArrayLiteralExpression(body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression))),
     "+": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.PlusToken),
     "-": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.MinusToken),
     "*": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AsteriskToken),
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
-    ",": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken),
-}
+    "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken))
+};
+
+const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
+    [ts.SyntaxKind.MinusToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left + right),
+    [ts.SyntaxKind.AsteriskToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left * right),
+    [ts.SyntaxKind.SlashToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left / right),
+    [ts.SyntaxKind.LessThanToken]: (left: number, right: number) => left < right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.LessThanEqualsToken]: (left: number, right: number) => left <= right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.GreaterThanToken]: (left: number, right: number) => left > right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.GreaterThanEqualsToken]: (left: number, right: number) => left >= right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.AmpersandToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left & right),
+    [ts.SyntaxKind.BarToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left | right),
+    [ts.SyntaxKind.CaretToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left ^ right),
+    [ts.SyntaxKind.PercentToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left % right)
+};
+
+const binaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => ts.Expression|undefined> = {
+    [ts.SyntaxKind.PlusToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => {
+        if (typeof left === "string" || typeof right === "string") return ts.factory.createStringLiteral(left as string + right);
+        else if (typeof left === "number" || typeof right === "number") return ts.factory.createNumericLiteral(left as number + (right as number));
+    },
+    [ts.SyntaxKind.EqualsEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left === right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.EqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left == right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.ExclamationEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left !== right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.ExclamationEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left != right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.AmpersandAmpersandToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => {
+        if (left && right) return origRight;
+        if (!left) return origLeft;
+        if (!right) return origRight;
+    },
+    [ts.SyntaxKind.BarBarToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => {
+        if (left) return origLeft;
+        else if (right) return origRight;
+        else return origRight;
+    }
+};
+
+const unaryActions: Record<number, (val: unknown) => ts.Expression|undefined> = {
+    [ts.SyntaxKind.ExclamationToken]: (val: unknown) => !val ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.MinusToken]: (val: unknown) => {
+        if (typeof val !== "number") return;
+        return ts.factory.createNumericLiteral(-val);
+    },
+    [ts.SyntaxKind.TildeToken]: (val: unknown) => {
+        if (typeof val !== "number") return;
+        return ts.factory.createNumericLiteral(~val);
+    }
+};

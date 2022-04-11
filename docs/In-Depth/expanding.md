@@ -5,7 +5,7 @@ order: 2
 
 # Expanding macros
 
-Every macro **expands** into the code that it contains. How it'll expand depends entirely on how the macro is used. This page covers all the ways a macro can be expanded. Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Since macro calls are plain function calls, macros can never be used as a statement, but...
+Every macro **expands** into the code that it contains. How it'll expand depends entirely on how the macro is used. Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Since macro calls are plain function calls, macros can never be used as a statement, but...
 
 |> Expanded macros are **always** hygienic!
 
@@ -47,7 +47,7 @@ If the macro expands to a single expression, then the macro call is directly rep
 
 ```ts --Macro
 function $push(array: Array<number>, ...nums: Array<number>) : number {
-    return +[",", (nums: number) => array.push(nums)];
+    return +["()", (nums: number) => array.push(nums)];
 }
 ```
 ```ts --Call
@@ -63,7 +63,7 @@ const newSize = (arr.push(1), arr.push(2), arr.push(3));
 
 ### Multiple expressions
 
-If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned.
+If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned automatically.
 
 ```ts --Macro
 function $push(array: Array<number>, ...nums: Array<number>) : number {
@@ -80,5 +80,64 @@ const newSize = (() => {
     arr.push(1)
     arr.push(2)
     return arr.push(3);
+})();
+```
+
+#### Escaping the IIFE
+
+If you want part of the code to be ran **outside** of the IIFE (for example you want to `return`, or `yield`, etc.) you can use the [[$$escape]] built-in macro. For example, here's a fully working macro which expands to a completely normal if statement, but it can be used as an expression:
+
+```ts --Macro
+function $if<T>(comparison: any, then: () => T, _else?: () => T) {
+   $$escape!(() => {
+    var val;
+    if (_else) {
+        if (comparison) {
+            val = $$inlineFunc!(then);
+        } else {
+            val = $$inlineFunc!(_else);
+        }
+    } else {
+        if (comparison) {
+            val = $$inlineFunc!(then);
+        }
+    }
+   });
+   return $$ident!("val");
+}
+```
+```ts --Call
+(() => {
+    const variable: number = 54;
+    console.log($if!<string>(1 === variable, () => {
+        // Do something...
+        console.log("1 === variable");
+        return "A";
+    }, () => {
+        // Do something...
+        console.log("1 !== variable");
+        return "B";
+    }));
+})();
+```
+```ts --Result
+(() => {
+    const variable = 54;
+    var val;
+    {
+        if (1 === variable) {
+            val = (() => {
+                console.log("1 === variable");
+                return "A";
+            })();
+        }
+        else {
+            val = (() => {
+                console.log("1 !== variable");
+                return "B";
+            })();
+        }
+    }
+    console.log(val);
 })();
 ```

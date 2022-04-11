@@ -191,3 +191,108 @@ $$send!(123, {});
 ``` --Result
 Error: In macro $$send: Expected string literal, found something else.
 ```
+
+## $$includes
+
+Checks if `val` is included in the array literal.
+
+```ts --Call
+$$includes!([1, 2, 3], 2);
+$$includes!([1, 2, 3], 4);
+```
+```ts --Result
+true;
+false;
+```
+
+## $$ts
+
+Turns the provided string into code. You should use this only when you can't accomplish something with other macros.
+
+```ts --Macro
+type ClassInfo = { name: string, value: string };
+
+export function $makeClasses(...info: Array<ClassInfo>) {
+    +[(info: ClassInfo) => {
+        $$ts!(`
+            class ${info.name} {
+                constructor() {
+                    this.value = ${info.value}
+                }
+            }
+        `);
+    }];
+}
+```
+```ts --Call
+$makeClasses!({name: "ClassA", value: "1"}, {name: "ClassB", value: "2"})
+```
+```ts --Result
+class ClassA {
+    constructor() {
+        this.value = 1;
+    }
+}
+class ClassB {
+    constructor() {
+        this.value = 2;
+    }
+}
+```
+
+## $$escape
+
+"Escapes" the code inside the arrow function by placing it in the parent block. This macro **cannot** be used outside any blocks.
+
+```ts --Macro
+function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
+    $$escape!(() => {
+        if (resultObj.is_err()) {
+            return resultObj;
+        }
+    });
+    return resultObj.value;
+}
+```
+```ts --Call
+(() => {
+    const a = $try!({ value: 123, is_err: () => false });
+    $try!({is_err: () => true });
+});
+```
+```ts --Result
+(() => {
+    let resultObj_1 = { value: 123, is_err: () => false };
+    if (resultObj_1.is_err()) {
+        return resultObj_1;
+    }
+    const a = resultObj_1.value;
+    let resultObj_2 = { is_err: () => true };
+    if (resultObj_2.is_err()) {
+        return resultObj_2;
+    }
+    return resultObj_2.value;
+})();
+```
+
+## $$propsOfType
+
+Expands to an array with all the properties of a type.
+
+```ts --Call
+console.log($$propsOfType!<{a: string, b: number}>());
+```
+```ts --Result
+console.log(["a", "b"]);
+```
+
+## $$typeToString
+
+Turns a type to a string literal.
+
+```ts --Call
+
+```
+```ts --Result
+
+```

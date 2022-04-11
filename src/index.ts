@@ -1,12 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as ts from "typescript";
+import { MacroMap } from "./macroMap";
 import { MacroTransformer } from "./transformer";
 
+const macros = new MacroMap();
+
 export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
-    const dir = program.getCurrentDirectory();
     const typeChecker = program.getTypeChecker();
+    const transformer = new MacroTransformer(ctx, typeChecker, macros);
     return firstNode => {
-        return new MacroTransformer(dir, ctx, typeChecker).run(firstNode as ts.SourceFile);
+        return transformer.run(firstNode as ts.SourceFile);
     };
 };
 
@@ -75,6 +79,7 @@ export declare function $$loadJSONAsEnv(path: string) : void;
  * // Transpiles to 20
  * ``` 
  */
+// eslint-disable-next-line @typescript-eslint/ban-types
 export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
 /**
  * Returns the `kind` of the expression.
@@ -119,12 +124,66 @@ export declare function $$ident(str: string) : any;
 export declare function $$err(str: string) : void;
 
 /**
- * Adds an import at the beginning of the file.
+ * Checks if `val` is included in the array literal, OR checks if a substring is a string.
  */
-export declare function $$import(source: string, items: undefined|string|Array<string>, star?: boolean) : void;
+export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
+export declare function $$includes(arr: string, val: string) : boolean;
 
-export type AsRest<T extends Array<unknown>> = T | (T & { __marker: "AsRest" });
-export type Accumulator = number | (number & { __marker: "Accumulator" });
+/**
+ * Slices a string literal OR an array literal.
+ */
+export declare function $$slice<T>(str: Array<T>, start?: number, end?: number) : Array<T>;
+export declare function $$slice(str: string, start?: number, end?: number) : string;
 
-declare const var_sym: unique symbol
-export type Var = null | undefined | string | number | {} | typeof var_sym;
+/**
+ * Turns the string to code.
+ */
+export declare function $$ts<T = unknown>(code: string) : T;
+
+/**
+ * "Escapes" the code inside the arrow function by placing it in the parent block. This macro **cannot** be used outside any blocks.
+ * 
+ * @example
+ * ```ts --Macro
+ * function $try(resultObj: any) {
+ *   $$escape!(() => {
+ *       const res = resultObj;
+ *       if (res.is_err()) {
+ *           return res;
+ *       }
+ *   });
+ *   return $$ident!("res").result;
+ * }
+ * 
+ * {
+ *   const result = $try!({ value: 123 });
+ * }
+ * ```
+ * ```ts --Result
+ *  const res = { value: 123 };
+ *  if (res.is_err()) {
+ *       return res;
+ *  }
+ *  const a = res.result;
+ * ```
+ */
+export declare function $$escape(code: () => void) : any;
+
+
+/**
+ * Returns the name of all properties of the type in an array.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare function $$propsOfType<T>() : Array<string>;
+
+/**
+ * Turns the type into a string.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare function $$typeToString<T>() : string;
+
+export type Accumulator = number & { __marker?: "Accumulator" };
+declare const var_sym: unique symbol;
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
+export type Save<T> = T & { __marker?: "Save" }

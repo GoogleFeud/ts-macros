@@ -1,19 +1,28 @@
 {
   "name": "ts-macros",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "",
   "main": "dist/index.js",
   "devDependencies": {
     "@ts-docs/default-docs-structure": "^0.3.2",
     "@ts-docs/ts-docs": "^0.3.2",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.1.0",
     "@types/node": "^16.3.3",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
+    "chai": "^4.3.6",
+    "diff": "^5.0.0",
     "eslint": "^7.30.0",
-    "typescript": "^4.5.5"
+    "mocha": "^9.2.2",
+    "ttypescript": "^1.5.13",
+    "typescript": "^4.6.2"
   },
   "scripts": {
-    "test": "tsc && ttsc test/src/index.ts",
+    "build": "tsc",
+    "lint": "npx eslint",
+    "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
+    "manual": "tsc && ttsc test/src/index.ts",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"
   },
@@ -30,5 +39,5 @@
   "bugs": {
     "url": "https://github.com/GoogleFeud/ts-macros/issues"
   },
-  "homepage": "https://github.com/GoogleFeud/ts-macros#readme"
+  "homepage": "https://googlefeud.github.io/ts-macros/"
 }
