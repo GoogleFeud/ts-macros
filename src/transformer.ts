@@ -80,8 +80,7 @@ export class MacroTransformer {
                     marker,
                     start: i,
                     name: param.name.getText(),
-                    defaultVal: param.initializer,
-                    realName: marker === MacroParamMarkers.Save ? ts.factory.createUniqueName(param.name.getText()) : undefined
+                    defaultVal: param.initializer
                 });
             }
             this.macros.set({
@@ -337,7 +336,7 @@ export class MacroTransformer {
         let macro, normalArgs;
         if (ts.isPropertyAccessExpression(name)) {
             macro = this.macros.get(name.name.text); 
-            const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...args]);
+            const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...call.arguments]);
             normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
         } else {
             if (nativeMacros[name.getText()]) {
@@ -349,14 +348,15 @@ export class MacroTransformer {
             macro = this.macros.get(name.getText());
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
-        if (!macro || !macro.body || !normalArgs) return;
+        if (!macro || !macro.body) return;
         this.macroStack.push({
             macro,
             args: normalArgs
         });
         const pre = [];
         for (const param of macro.params) {
-            if (param.realName) {
+            if (param.marker === MacroParamMarkers.Save) {
+                param.realName = ts.factory.createUniqueName(param.name);
                 pre.push(ts.factory.createVariableDeclaration(param.realName, undefined, undefined,
                     param.spread ? ts.factory.createArrayLiteralExpression(normalArgs.slice(param.start)) : normalArgs[param.start] || param.defaultVal
                 ));
