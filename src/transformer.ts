@@ -42,12 +42,12 @@ export interface MacroTransformerBuiltinProps {
 const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
 
 export class MacroTransformer {
-    context: ts.TransformationContext
-    macroStack: Array<MacroExpand>
-    repeat: Array<MacroRepeat>
-    boundVisitor: ts.Visitor
-    props: MacroTransformerBuiltinProps
-    checker: ts.TypeChecker
+    context: ts.TransformationContext;
+    macroStack: Array<MacroExpand>;
+    repeat: Array<MacroRepeat>;
+    boundVisitor: ts.Visitor;
+    props: MacroTransformerBuiltinProps;
+    checker: ts.TypeChecker;
     macros: MacroMap;
     constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap) {
         this.context = context;

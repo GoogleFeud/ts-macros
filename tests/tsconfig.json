@@ -7,8 +7,8 @@
       "esModuleInterop": true,
       "strictNullChecks": true, 
       "plugins": [
-        { "transform": "../dist/index.js" }
-    ]
+        { "transform": "../dist" }
+      ]
     },
     "include": ["./integrated", "./snapshots/index.ts"]
 }

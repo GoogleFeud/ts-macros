@@ -17,4 +17,8 @@ describe("Macro expand", () => {
         arr.push(3);
         (0, chai_1.expect)(arr).to.be.deep.equal([1, 2, 3, 1, 2, 3]);
     });
+    it("Inlined in expressions", () => {
+        const arr = [1, 2, 3];
+        (0, chai_1.expect)((arr.push(4), arr.push(5), arr.push(6))).to.be.equal(6);
+    });
 });
