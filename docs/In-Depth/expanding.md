@@ -82,3 +82,62 @@ const newSize = (() => {
     return arr.push(3);
 })();
 ```
+
+#### Escaping the IIFE
+
+If you want part of the code to be ran **outside** of the IIFE (for example you want to `return`, or `yield`, etc.) you can use the [[$$escape]] built-in macro. For example, here's a fully working macro which expands to a completely normal if statement, but it can be used as an expression:
+
+```ts --Macro
+function $if<T>(comparison: any, then: () => T, _else?: () => T) {
+   $$escape!(() => {
+    var val;
+    if (_else) {
+        if (comparison) {
+            val = $$inlineFunc!(then);
+        } else {
+            val = $$inlineFunc!(_else);
+        }
+    } else {
+        if (comparison) {
+            val = $$inlineFunc!(then);
+        }
+    }
+   });
+   return $$ident!("val");
+}
+```
+```ts --Call
+(() => {
+    const variable: number = 54;
+    console.log($if!<string>(1 === variable, () => {
+        // Do something...
+        console.log("1 === variable");
+        return "A";
+    }, () => {
+        // Do something...
+        console.log("1 !== variable");
+        return "B";
+    }));
+})();
+```
+```ts --Result
+(() => {
+    const variable = 54;
+    var val;
+    {
+        if (1 === variable) {
+            val = (() => {
+                console.log("1 === variable");
+                return "A";
+            })();
+        }
+        else {
+            val = (() => {
+                console.log("1 !== variable");
+                return "B";
+            })();
+        }
+    }
+    console.log(val);
+})();
+```

@@ -167,7 +167,7 @@ export declare function $$ts<T = unknown>(code: string) : T;
  *  const a = res.result;
  * ```
  */
-export declare function $$escape(code: () => void) : void;
+export declare function $$escape(code: () => void) : any;
 
 
 /**

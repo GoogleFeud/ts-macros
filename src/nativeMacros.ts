@@ -45,7 +45,10 @@ export default {
         const argsArr = [...args].reverse();
         const fn = argsArr.pop();
         if (!fn || !ts.isArrowFunction(fn)) throw new MacroError(callSite, "`unwrapFunc` macro expects an arrow function as the first argument.");
-        if (!fn.parameters.length) return fn.body;
+        if (!fn.parameters.length) {
+            if (ts.isBlock(fn.body)) return fn.body.statements;
+            else return fn.body;
+        }
         const replacements = new Map();
         for (const param of fn.parameters) {
             if (ts.isIdentifier(param.name)) replacements.set(param.name.text, argsArr.pop());

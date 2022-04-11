@@ -488,6 +488,7 @@ export class MacroTransformer {
             if (type.value === "") return false;
             return true;
         }
+        else if (type.getCallSignatures().length || type.getProperties().length) return true;
         //@ts-expect-error Private API
         else if (type.intrinsicName === "false") return false;
         //@ts-expect-error Private API
