@@ -176,6 +176,12 @@ export declare function $$escape(code: () => void) : void;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export declare function $$propsOfType<T>() : Array<string>;
 
+/**
+ * Turns the type into a string.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare function $$typeToString<T>() : string;
+
 export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types

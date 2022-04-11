@@ -72,3 +72,7 @@ export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
     else if (ts.isNumericLiteral(obj)) return obj.text;
     else return undefined;
 }
+
+export function isStatement(obj: ts.Node) : obj is ts.Statement {
+    return obj.kind >= ts.SyntaxKind.Block && obj.kind <= ts.SyntaxKind.DebuggerStatement;
+}

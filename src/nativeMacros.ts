@@ -139,5 +139,15 @@ export default {
             return ts.factory.createArrayLiteralExpression(param.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
         } 
         else return ts.factory.createArrayLiteralExpression((type as ts.Type).getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
+    },
+    "$$typeToString": (_args, transformer, callSite) => {
+        if (!callSite.typeArguments || !callSite.typeArguments[0]) throw new MacroError(callSite, "`typeToString` macro expects one type parameter.");
+        const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
+        if (type.isTypeParameter()) {
+            const param = transformer.getTypeParam(type);
+            if (!param) return ts.factory.createStringLiteral("");
+            return ts.factory.createStringLiteral(transformer.checker.typeToString(param));
+        } 
+        else return ts.factory.createStringLiteral(transformer.checker.typeToString(type as ts.Type));
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.CallExpression) => ts.VisitResult<ts.Node>>;

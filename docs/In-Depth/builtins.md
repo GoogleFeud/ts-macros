@@ -274,3 +274,25 @@ function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
     return resultObj_2.value;
 })();
 ```
+
+## $$propsOfType
+
+Expands to an array with all the properties of a type.
+
+```ts --Call
+console.log($$propsOfType!<{a: string, b: number}>());
+```
+```ts --Result
+console.log(["a", "b"]);
+```
+
+## $$typeToString
+
+Turns a type to a string literal.
+
+```ts --Call
+
+```
+```ts --Result
+
+```

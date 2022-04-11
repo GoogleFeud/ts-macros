@@ -2,7 +2,7 @@
 import * as ts from "typescript";
 import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
-import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty } from "./utils";
+import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement } from "./utils";
 
 export const enum MacroParamMarkers {
     None,
@@ -126,9 +126,10 @@ export class MacroTransformer {
             let last = statements.pop()!;
             if (statements.length === 0) {
                 if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;
-                else return last;
+                else if (!isStatement(last)) return last;
             }
-            if (!ts.isReturnStatement(last)) last = ts.factory.createReturnStatement(ts.isExpressionStatement(last) ? last.expression:(last as unknown as ts.Expression));
+            if (ts.isExpressionStatement(last)) last = ts.factory.createReturnStatement(last.expression);
+            else if (!isStatement(last)) last = ts.factory.createReturnStatement(last);
             return ts.factory.createCallExpression(
                 ts.factory.createParenthesizedExpression(
                     ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...statements, last], true))
@@ -234,8 +235,15 @@ export class MacroTransformer {
                 const op = node.operator;
                 const value: ts.Expression = ts.visitNode(node.operand, this.boundVisitor);
                 const val = this.getLiteralFromNode(value);
-                if (val === NO_LIT_FOUND) return value;
+                if (val === NO_LIT_FOUND) return node;
                 return unaryActions[op]?.(val) || value;
+            }
+
+            // Detects a typeof expression and tries to remove it if possible
+            else if (ts.isTypeOfExpression(node)) {
+                const val = this.getLiteralFromNode(ts.visitNode(node.expression, this.boundVisitor));
+                if (val === NO_LIT_FOUND) return node;
+                return ts.factory.createStringLiteral(typeof val);
             }
 
             // Detects a repetition
@@ -534,6 +542,8 @@ const binaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expr
     },
     [ts.SyntaxKind.EqualsEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left === right ? ts.factory.createTrue() : ts.factory.createFalse(),
     [ts.SyntaxKind.EqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left == right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.ExclamationEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left !== right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.ExclamationEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left != right ? ts.factory.createTrue() : ts.factory.createFalse(),
     [ts.SyntaxKind.AmpersandAmpersandToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => {
         if (left && right) return origRight;
         if (!left) return origLeft;
