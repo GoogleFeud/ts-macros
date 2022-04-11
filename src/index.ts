@@ -124,9 +124,16 @@ export declare function $$ident(str: string) : any;
 export declare function $$err(str: string) : void;
 
 /**
- * Checks if `val` is included in the array literal.
+ * Checks if `val` is included in the array literal, OR checks if a substring is a string.
  */
 export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
+export declare function $$includes(arr: string, val: string) : boolean;
+
+/**
+ * Slices a string literal OR an array literal.
+ */
+export declare function $$slice<T>(str: Array<T>, start?: number, end?: number) : Array<T>;
+export declare function $$slice(str: string, start?: number, end?: number) : string;
 
 /**
  * Turns the string to code.

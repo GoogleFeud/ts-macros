@@ -44,7 +44,7 @@ export default {
     "$$inlineFunc": (args, transformer, callSite) => {
         const argsArr = [...args].reverse();
         const fn = argsArr.pop();
-        if (!fn || !ts.isArrowFunction(fn)) throw new MacroError(callSite, "`unwrapFunc` macro expects an arrow function as the first parameter.");
+        if (!fn || !ts.isArrowFunction(fn)) throw new MacroError(callSite, "`unwrapFunc` macro expects an arrow function as the first argument.");
         if (!fn.parameters.length) return fn.body;
         const replacements = new Map();
         for (const param of fn.parameters) {
@@ -59,12 +59,12 @@ export default {
         return newFn.body;
     },
     "$$kindof": (args, transformer, callSite) => { 
-        if (!args.length) throw new MacroError(callSite, "`kindof` macro expects a single parameter.");
+        if (!args.length) throw new MacroError(callSite, "`kindof` macro expects a single argument.");
         return transformer.context.factory.createNumericLiteral(args[0].kind);
     },
     "$$const": (args, transformer, callSite) => {
         const name = args[0];
-        if (!name || !ts.isStringLiteral(name)) throw new MacroError(callSite, "`define` macro expects a string literal as the first parameter.");
+        if (!name || !ts.isStringLiteral(name)) throw new MacroError(callSite, "`define` macro expects a string literal as the first argument.");
         const value = args[1];
         return [transformer.context.factory.createVariableStatement(undefined, 
             transformer.context.factory.createVariableDeclarationList([
@@ -76,7 +76,7 @@ export default {
         else return transformer.context.factory.createNumericLiteral(-1); 
     },
     "$$length": ([arrLit], transformer, callSite) => {
-        if (!ts.isArrayLiteralExpression(arrLit)) throw new MacroError(callSite, "`length` macro expects an array literal as the first parameter."); 
+        if (!ts.isArrayLiteralExpression(arrLit)) throw new MacroError(callSite, "`length` macro expects an array literal as the first argument."); 
         return transformer.context.factory.createNumericLiteral(arrLit.elements.length);
     },
     "$$ident": ([thing], transformer, callSite) => {
@@ -85,21 +85,26 @@ export default {
         else return thing;
     },
     "$$err": ([msg], transformer, callSite) => {
-        if (!msg || !ts.isStringLiteral(msg)) throw new MacroError(callSite, "`err` macro expects a string literal as the first parameter."); 
+        if (!msg || !ts.isStringLiteral(msg)) throw new MacroError(callSite, "`err` macro expects a string literal as the first argument."); 
         const lastMacro = transformer.macroStack.pop();
         throw new MacroError(callSite, `${lastMacro ? `In macro ${lastMacro.macro.name}: ` : ""}${msg.text}`);
     },
     "$$includes": ([array, item], transformer, callSite) => {
-        if (!array || !ts.isArrayLiteralExpression(array)) throw new MacroError(callSite, "`includes` macro expects an array literal as the first parameter.");
-        if (!item) throw new MacroError(callSite, "`includes` macro expects a second parameter.");
-        const valItem = transformer.getLiteralFromNode(item);
-        const normalArr = array.elements.map(el => transformer.getLiteralFromNode(ts.visitNode(el, transformer.boundVisitor)));
-        return normalArr.includes(valItem) ? ts.factory.createTrue() : ts.factory.createFalse();
+        if (!array) throw new MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
+        if (!item) throw new MacroError(callSite, "`includes` macro expects a second argument.");
+        if (ts.isStringLiteral(array)) {
+            const valItem = transformer.getLiteralFromNode(item);
+            if (typeof valItem !== "string") throw new MacroError(callSite, "`includes` macro expects a string literal as the second argument.");
+            return array.text.includes(valItem) ? ts.factory.createTrue() : ts.factory.createFalse();
+        } else if (ts.isArrayLiteralExpression(array)) {
+            const normalArr = array.elements.map(el => transformer.getLiteralFromNode(ts.visitNode(el, transformer.boundVisitor)));
+            return normalArr.includes(transformer.getLiteralFromNode(item)) ? ts.factory.createTrue() : ts.factory.createFalse();
+        } else throw new MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
     },
     "$$ts": ([code], transformer, callSite) => {
-        if (!code) throw new MacroError(callSite, "`ts` macro expects a string as it's first parameter.");
+        if (!code) throw new MacroError(callSite, "`ts` macro expects a string as it's first argument.");
         const str = transformer.getLiteralFromNode(ts.visitNode(code, transformer.boundVisitor), true);
-        if (!str || typeof str !== "string") throw new MacroError(callSite, "`ts` macro expects a string as it's first parameter.");
+        if (!str || typeof str !== "string") throw new MacroError(callSite, "`ts` macro expects a string as it's first argument.");
         const result = ts.createSourceFile("expr", str, ts.ScriptTarget.ESNext, false, ts.ScriptKind.JS);
         const visitor = (node: ts.Node): ts.Node => {
             if (ts.isIdentifier(node)) {
@@ -110,11 +115,19 @@ export default {
         return ts.visitNodes(result.statements, visitor) as unknown as Array<ts.Statement>;
     },
     "$$escape": ([code], transformer, callSite) => {
-        if (!code || !ts.isArrowFunction(code)) throw new MacroError(callSite, "`escape` macro expects an arrow function as it's first parameter.");
+        if (!code || !ts.isArrowFunction(code)) throw new MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
         if (ts.isBlock(code.body)) {
             transformer.macros.escaped.push(...code.body.statements);
         } else {
             transformer.macros.escaped.push(ts.factory.createExpressionStatement(code.body));
         }
+    },
+    "$$slice": ([thing, start, end], transformer, callSite) => {
+        if (!thing) throw new MacroError(callSite, "`slice` macro expects an array/string literal as the first argument.");
+        const startNum = (start && transformer.getNumberFromNode(start)) || -Infinity;
+        const endNum = (end && transformer.getNumberFromNode(end)) || Infinity;
+        if (ts.isStringLiteral(thing)) return ts.factory.createStringLiteral(thing.text.slice(startNum, endNum));
+        else if (ts.isArrayLiteralExpression(thing)) return ts.factory.createArrayLiteralExpression(thing.elements.slice(startNum, endNum));
+        else throw new MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.Node) => ts.VisitResult<ts.Node>>;
