@@ -133,9 +133,37 @@ export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
  */
 export declare function $$ts<T = unknown>(code: string) : T;
 
+/**
+ * "Escapes" the code inside the arrow function by placing it in the parent block. This macro **cannot** be used outside any blocks.
+ * 
+ * @example
+ * ```ts --Macro
+ * function $try(resultObj: any) {
+ *   $$escape!(() => {
+ *       const res = resultObj;
+ *       if (res.is_err()) {
+ *           return res;
+ *       }
+ *   });
+ *   return $$ident!("res").result;
+ * }
+ * 
+ * {
+ *   const result = $try!({ value: 123 });
+ * }
+ * ```
+ * ```ts --Result
+ *  const res = { value: 123 };
+ *  if (res.is_err()) {
+ *       return res;
+ *  }
+ *  const a = res.result;
+ * ```
+ */
 export declare function $$escape(code: () => void) : void;
 
 export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
+export type Save<T> = T & { __marker?: "Save" }

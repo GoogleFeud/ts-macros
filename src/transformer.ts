@@ -7,7 +7,8 @@ import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroEr
 export const enum MacroParamMarkers {
     None,
     Accumulator,
-    Var
+    Var,
+    Save
 }
 
 export interface MacroParam {
@@ -15,7 +16,8 @@ export interface MacroParam {
     marker: MacroParamMarkers,
     start: number,
     name: string,
-    defaultVal?: ts.Expression
+    defaultVal?: ts.Expression,
+    realName?: ts.Identifier
 }
 
 export interface Macro {
@@ -72,12 +74,14 @@ export class MacroTransformer {
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
                 if (!ts.isIdentifier(param.name)) throw new MacroError(param, "You cannot use deconstruction patterns in macros.");
+                const marker = this.getMarker(param);
                 params.push({
                     spread: Boolean(param.dotDotDotToken),
-                    marker: this.getMarker(param),
+                    marker,
                     start: i,
                     name: param.name.getText(),
-                    defaultVal: param.initializer
+                    defaultVal: param.initializer,
+                    realName: marker === MacroParamMarkers.Save ? ts.factory.createUniqueName(param.name.getText()) : undefined
                 });
             }
             this.macros.set({
@@ -318,6 +322,7 @@ export class MacroTransformer {
             return;
         }
         const paramMacro = macro.params[index];
+        if (paramMacro.realName) return paramMacro.realName;
         if (this.repeat.length && paramMacro.spread) {
             const paramInd = this.repeat[this.repeat.length - 1].index + paramMacro.start;
             if (paramInd >= params.length) return ts.factory.createNull();
@@ -349,6 +354,15 @@ export class MacroTransformer {
             macro,
             args: normalArgs
         });
+        const pre = [];
+        for (const param of macro.params) {
+            if (param.realName) {
+                pre.push(ts.factory.createVariableDeclaration(param.realName, undefined, undefined,
+                    param.spread ? ts.factory.createArrayLiteralExpression(normalArgs.slice(param.start)) : normalArgs[param.start] || param.defaultVal
+                ));
+            }
+        }
+        if (pre.length) this.macros.escaped.push(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
         const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
@@ -380,6 +394,7 @@ export class MacroTransformer {
         switch(typeOfMarker.value) {
         case "Accumulator": return MacroParamMarkers.Accumulator;
         case "Var": return MacroParamMarkers.Var;
+        case "Save": return MacroParamMarkers.Save;
         default: return MacroParamMarkers.None;
         }
     }
