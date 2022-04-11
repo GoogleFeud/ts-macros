@@ -37,10 +37,9 @@ export class MacroMap {
         return new MacroMap(this);
     }
 
-    getAndClearEscaped() : Array<ts.Statement> {
-        const cloned = this.escaped.slice();
+    concatEscaped(arr: Array<ts.Statement>) : void {
+        arr.push(...this.escaped);
         this.escaped.length = 0;
-        return cloned;
     }
 
 }

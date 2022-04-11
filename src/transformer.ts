@@ -90,15 +90,15 @@ export class MacroTransformer {
 
         if (ts.isBlock(node)) {
             this.macros = this.macros.extend();
-            const statements = ts.visitNodes(node.statements, (statement) => {
-                const res = this.visitor(statement);
+            const statements: Array<ts.Statement> = [];
+            for (const stmt of node.statements) {
+                const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
+                this.macros.concatEscaped(statements);
                 if (res) {
-                    const prev = this.macros.getAndClearEscaped();
-                    if (Array.isArray(res)) return [...prev, ...res];
-                    else return [...prev, res];
+                    if (Array.isArray(res)) statements.push(...res);
+                    else statements.push(res);
                 }
-                return res;
-            });
+            }
             this.macros = this.macros.getParent();
             return ts.factory.updateBlock(node, statements);
         }
