@@ -133,6 +133,8 @@ export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
  */
 export declare function $$ts<T = unknown>(code: string) : T;
 
+export declare function $$escape(code: () => void) : void;
+
 export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types

@@ -1,5 +1,3 @@
-
-import ts from "typescript";
 import { expect } from "chai";
 
 const { $$inlineFunc } = require("../../../../dist/index");

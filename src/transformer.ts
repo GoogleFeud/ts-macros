@@ -85,19 +85,27 @@ export class MacroTransformer {
                 params,
                 body: node.body
             });
-            return undefined;
+            return;
         }
 
         if (ts.isBlock(node)) {
             this.macros = this.macros.extend();
-            const newNode = ts.visitEachChild(node, this.boundVisitor, this.context);
+            const statements = ts.visitNodes(node.statements, (statement) => {
+                const res = this.visitor(statement);
+                if (res) {
+                    const prev = this.macros.getAndClearEscaped();
+                    if (Array.isArray(res)) return [...prev, ...res];
+                    else return [...prev, res];
+                }
+                return res;
+            });
             this.macros = this.macros.getParent();
-            return newNode;
+            return ts.factory.updateBlock(node, statements);
         }
 
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
             const statements = this.runMacro(node.expression, node.expression.expression.expression);
-            if (!statements) return ts.factory.createNull();
+            if (!statements) return;
             const prepared = this.makeHygienic(statements) as unknown as Array<ts.Statement>;
             if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
                 const exp = prepared.pop() as ts.ReturnStatement;
@@ -107,7 +115,8 @@ export class MacroTransformer {
         }
 
         if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression)) {
-            const statements = this.runMacro(node, node.expression.expression) as unknown as Array<ts.Statement>; 
+            const statements = this.runMacro(node, node.expression.expression) as unknown as Array<ts.Statement>|undefined;
+            if (!statements || !statements.length) return ts.factory.createNull(); 
             let last = statements.pop()!;
             if (statements.length === 0) {
                 if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;

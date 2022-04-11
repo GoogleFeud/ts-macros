@@ -1,12 +1,15 @@
+import ts = require("typescript");
 import { Macro } from "./transformer";
 
 
 export class MacroMap {
     private parent?: MacroMap;
     private macros: Record<string, Macro>;
+    escaped: Array<ts.Statement>;
     constructor(parent?: MacroMap) {
         this.macros = {};
         this.parent = parent;
+        this.escaped = [];
     }
 
     set(macro: Macro) : void {
@@ -32,6 +35,12 @@ export class MacroMap {
 
     extend() : MacroMap {
         return new MacroMap(this);
+    }
+
+    getAndClearEscaped() : Array<ts.Statement> {
+        const cloned = this.escaped.slice();
+        this.escaped.length = 0;
+        return cloned;
     }
 
 }

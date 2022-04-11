@@ -66,10 +66,10 @@ export default {
         const name = args[0];
         if (!name || !ts.isStringLiteral(name)) throw new MacroError(callSite, "`define` macro expects a string literal as the first parameter.");
         const value = args[1];
-        return transformer.context.factory.createVariableStatement(undefined, 
+        return [transformer.context.factory.createVariableStatement(undefined, 
             transformer.context.factory.createVariableDeclarationList([
                 transformer.context.factory.createVariableDeclaration(name.text, undefined, undefined, value)
-            ], ts.NodeFlags.Const));
+            ], ts.NodeFlags.Const))];
     },
     "$$i": (_, transformer) => {
         if (transformer.repeat.length) return transformer.context.factory.createNumericLiteral(transformer.repeat[transformer.repeat.length - 1].index);
@@ -108,5 +108,13 @@ export default {
             return ts.visitEachChild(node, visitor, transformer.context);
         };
         return ts.visitNodes(result.statements, visitor) as unknown as Array<ts.Statement>;
+    },
+    "$$escape": ([code], transformer, callSite) => {
+        if (!code || !ts.isArrowFunction(code)) throw new MacroError(callSite, "`escape` macro expects an arrow function as it's first parameter.");
+        if (ts.isBlock(code.body)) {
+            transformer.macros.escaped.push(...code.body.statements);
+        } else {
+            transformer.macros.escaped.push(ts.factory.createExpressionStatement(code.body));
+        }
     }
 } as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.Node) => ts.VisitResult<ts.Node>>;
