@@ -129,5 +129,15 @@ export default {
         if (ts.isStringLiteral(thing)) return ts.factory.createStringLiteral(thing.text.slice(startNum, endNum));
         else if (ts.isArrayLiteralExpression(thing)) return ts.factory.createArrayLiteralExpression(thing.elements.slice(startNum, endNum));
         else throw new MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
+    },
+    "$$propsOfType": (_args, transformer, callSite) => {
+        if (!callSite.typeArguments || !callSite.typeArguments[0]) throw new MacroError(callSite, "`propsOfType` macro expects one type parameter.");
+        const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
+        if (type.isTypeParameter()) {
+            const param = transformer.getTypeParam(type);
+            if (!param) return ts.factory.createArrayLiteralExpression();
+            return ts.factory.createArrayLiteralExpression(param.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
+        } 
+        else return ts.factory.createArrayLiteralExpression((type as ts.Type).getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
     }
-} as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.Node) => ts.VisitResult<ts.Node>>;
+} as Record<string, (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.CallExpression) => ts.VisitResult<ts.Node>>;

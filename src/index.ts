@@ -169,6 +169,13 @@ export declare function $$ts<T = unknown>(code: string) : T;
  */
 export declare function $$escape(code: () => void) : void;
 
+
+/**
+ * Returns the name of all properties of the type in an array.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare function $$propsOfType<T>() : Array<string>;
+
 export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types

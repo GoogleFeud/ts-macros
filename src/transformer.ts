@@ -23,12 +23,14 @@ export interface MacroParam {
 export interface Macro {
     name: string,
     params: Array<MacroParam>,
+    typeParams: Array<ts.TypeParameterDeclaration>,
     body?: ts.FunctionBody
 }
 
 export interface MacroExpand {
     macro: Macro,
-    args: ts.NodeArray<ts.Expression>
+    args: ts.NodeArray<ts.Expression>,
+    typeArgs: ts.NodeArray<ts.TypeNode>
 }
 
 export interface MacroRepeat {
@@ -86,7 +88,8 @@ export class MacroTransformer {
             this.macros.set({
                 name: macroName,
                 params,
-                body: node.body
+                body: node.body,
+                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
             });
             return;
         }
@@ -351,7 +354,8 @@ export class MacroTransformer {
         if (!macro || !macro.body) return;
         this.macroStack.push({
             macro,
-            args: normalArgs
+            args: normalArgs,
+            typeArgs: call.typeArguments || ts.factory.createNodeArray()
         });
         const pre = [];
         for (const param of macro.params) {
@@ -485,6 +489,16 @@ export class MacroTransformer {
         //@ts-expect-error Private API
         else if (type.intrinsicName === "null") return false;
         return undefined;
+    }
+
+    getTypeParam(type: ts.Type) : ts.Type | undefined {
+        const lastMacroCall = this.macroStack[this.macroStack.length - 1];
+        if (!lastMacroCall) return;
+        const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
+        if (resolvedTypeParameterIndex === -1) return;
+        const resolvedTypeParam = lastMacroCall.typeArgs[resolvedTypeParameterIndex];
+        if (!resolvedTypeParam) return;
+        return this.checker.getTypeAtLocation(resolvedTypeParam);
     }
 
 }
