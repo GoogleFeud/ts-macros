@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
+import { LabelKinds } from ".";
 import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
-import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement } from "./utils";
+import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, createObject } from "./utils";
 
 export const enum MacroParamMarkers {
     None,
@@ -109,6 +110,26 @@ export class MacroTransformer {
             return ts.factory.updateBlock(node, statements);
         }
 
+        if (ts.isLabeledStatement(node)) {
+            const macro = this.macros.get(node.label.text);
+            if (!macro || !macro.body) return;
+            if (ts.isIfStatement(node.statement)) {
+                this.macroStack.push({
+                    macro,
+                    args: ts.factory.createNodeArray([
+                        createObject({
+                            kind: ts.factory.createNumericLiteral(LabelKinds.If),
+                            condition: node.statement.expression,
+                            then: node.statement.thenStatement,
+                            else: node.statement.elseStatement
+                        })
+                    ]),
+                    typeArgs: ts.factory.createNodeArray()
+                });
+            }
+            return [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
+        }
+
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
             const statements = this.runMacro(node.expression, node.expression.expression.expression);
             if (!statements) return;
@@ -207,7 +228,7 @@ export class MacroTransformer {
             }
 
             // Detects an if statement and tries to remove it if possible
-            else if (ts.isIfStatement(node)) {
+            else if (ts.isIfStatement(node) && !ts.isParenthesizedExpression(node.expression)) {
                 const condition = ts.visitNode(node.expression, this.boundVisitor);
                 const res = this.getBoolFromNode(condition);
                 if (res === true) return ts.visitNode(node.thenStatement, this.boundVisitor);

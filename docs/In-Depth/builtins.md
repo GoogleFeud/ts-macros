@@ -291,8 +291,8 @@ console.log(["a", "b"]);
 Turns a type to a string literal.
 
 ```ts --Call
-
+console.log($$typeToString!<[string, number]>());
 ```
 ```ts --Result
-
+console.log("[string, number]")
 ```

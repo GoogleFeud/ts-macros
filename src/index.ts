@@ -187,3 +187,48 @@ declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
 export type Save<T> = T & { __marker?: "Save" }
+
+export const enum LabelKinds {
+    If,
+    ForIter,
+    For,
+    While,
+    Block
+}
+
+export interface IfLabel {
+    kind: LabelKinds.If
+    condition: any,
+    then: any,
+    else: any
+}
+
+export interface ForIterLabel {
+    kind: LabelKinds.ForIter,
+    type: "in" | "of",
+    itemName: string,
+    iterator: any,
+    statement: any
+}
+
+export interface ForLabel {
+    kind: LabelKinds.For,
+    initializer: any,
+    condition: any,
+    increment: any,
+    statement: any
+}
+
+export interface WhileLabel {
+    kind: LabelKinds.While,
+    do: boolean,
+    condition: any,
+    statement: any
+}
+
+export interface BlockLabel {
+    kind: LabelKinds.Block,
+    statement: any
+}
+
+export type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
