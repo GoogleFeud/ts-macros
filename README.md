@@ -1,6 +1,6 @@
 # ts-macros
 
-ts-docs is a custom typescript **transformer** which implements function macros. This library is heavily inspired by Rust's `macro_rules!` macro. 
+ts-macros is a custom typescript **transformer** which implements function macros. This library is heavily inspired by Rust's `macro_rules!` macro. 
 
 ## Basic usage
 
