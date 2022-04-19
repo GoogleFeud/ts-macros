@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { LabelKinds } from ".";
 import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
-import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, createObject } from "./utils";
+import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement } from "./utils";
+import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 
 export const enum MacroParamMarkers {
     None,
@@ -110,24 +110,20 @@ export class MacroTransformer {
             return ts.factory.updateBlock(node, statements);
         }
 
+        // Check for macro calls in labels
         if (ts.isLabeledStatement(node)) {
             const macro = this.macros.get(node.label.text);
             if (!macro || !macro.body) return;
-            if (ts.isIfStatement(node.statement)) {
-                this.macroStack.push({
-                    macro,
-                    args: ts.factory.createNodeArray([
-                        createObject({
-                            kind: ts.factory.createNumericLiteral(LabelKinds.If),
-                            condition: node.statement.expression,
-                            then: node.statement.thenStatement,
-                            else: node.statement.elseStatement
-                        })
-                    ]),
-                    typeArgs: ts.factory.createNodeArray()
-                });
-            }
-            return [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
+            const labelAction = labelActions[node.statement.kind];
+            if (!labelAction) return node;
+            this.macroStack.push({
+                macro,
+                args: ts.factory.createNodeArray([labelAction(node.statement)]),
+                typeArgs: ts.factory.createNodeArray()
+            });
+            const results = [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
+            this.macroStack.pop();
+            return results;
         }
 
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
@@ -210,7 +206,7 @@ export class MacroTransformer {
             }
 
             // Detects use of a macro parameter and replaces it with a literal
-            else if (ts.isIdentifier(node) && !ts.isParameter(node.parent)) {
+            else if (ts.isIdentifier(node)) {
                 const paramMacro = this.getMacroParam(node.text, macro, args);
                 if (!paramMacro) return node;
                 if (ts.isStringLiteral(paramMacro) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(paramMacro.text);
@@ -460,11 +456,12 @@ export class MacroTransformer {
         if (type.intrinsicName === "null") return 0;
     }
 
-    getLiteralFromNode(node: ts.Expression, handleTemplates = false) : string|number|undefined|true|false|typeof NO_LIT_FOUND {
+    getLiteralFromNode(node: ts.Expression, handleTemplates = false, handleIdents = false) : string|number|undefined|true|false|typeof NO_LIT_FOUND {
         if (ts.isParenthesizedExpression(node)) return this.getLiteralFromNode(node.expression);
         else if (ts.isAsExpression(node)) return this.getLiteralFromNode(node.expression);
         if (ts.isNumericLiteral(node)) return +node.text;
         if (ts.isStringLiteral(node)) return node.text;
+        if (handleIdents && ts.isIdentifier(node)) return node.text;
         if (handleTemplates && ts.isTemplateExpression(node)) {
             let res = node.head.text;
             for (const span of node.templateSpans) {
@@ -541,51 +538,4 @@ const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
     "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken))
-};
-
-const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
-    [ts.SyntaxKind.MinusToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left + right),
-    [ts.SyntaxKind.AsteriskToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left * right),
-    [ts.SyntaxKind.SlashToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left / right),
-    [ts.SyntaxKind.LessThanToken]: (left: number, right: number) => left < right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.LessThanEqualsToken]: (left: number, right: number) => left <= right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.GreaterThanToken]: (left: number, right: number) => left > right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.GreaterThanEqualsToken]: (left: number, right: number) => left >= right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.AmpersandToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left & right),
-    [ts.SyntaxKind.BarToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left | right),
-    [ts.SyntaxKind.CaretToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left ^ right),
-    [ts.SyntaxKind.PercentToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left % right)
-};
-
-const binaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => ts.Expression|undefined> = {
-    [ts.SyntaxKind.PlusToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => {
-        if (typeof left === "string" || typeof right === "string") return ts.factory.createStringLiteral(left as string + right);
-        else if (typeof left === "number" || typeof right === "number") return ts.factory.createNumericLiteral(left as number + (right as number));
-    },
-    [ts.SyntaxKind.EqualsEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left === right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.EqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left == right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.ExclamationEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left !== right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.ExclamationEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left != right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.AmpersandAmpersandToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => {
-        if (left && right) return origRight;
-        if (!left) return origLeft;
-        if (!right) return origRight;
-    },
-    [ts.SyntaxKind.BarBarToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => {
-        if (left) return origLeft;
-        else if (right) return origRight;
-        else return origRight;
-    }
-};
-
-const unaryActions: Record<number, (val: unknown) => ts.Expression|undefined> = {
-    [ts.SyntaxKind.ExclamationToken]: (val: unknown) => !val ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.MinusToken]: (val: unknown) => {
-        if (typeof val !== "number") return;
-        return ts.factory.createNumericLiteral(-val);
-    },
-    [ts.SyntaxKind.TildeToken]: (val: unknown) => {
-        if (typeof val !== "number") return;
-        return ts.factory.createNumericLiteral(~val);
-    }
 };

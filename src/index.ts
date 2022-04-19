@@ -97,11 +97,11 @@ export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<u
 export declare function $$kindof(ast: unknown) : number;
 
 /**
- * Create a const variable that will not get it's name changed after expanding. This is **not** hygienic.
+ * Expands to a let / const declaration list. The "varname" is **not** hygienic.
  * @param varname The name of the variable
  * @param initializer Any expression
  */
-export declare function $$const(varname: string, initializer: unknown) : number;
+export declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
 
 /**
  * If used in repetition, returns the current iteration. If used outside, returns -1.
@@ -206,7 +206,7 @@ export interface IfLabel {
 export interface ForIterLabel {
     kind: LabelKinds.ForIter,
     type: "in" | "of",
-    itemName: string,
+    initializer: any,
     iterator: any,
     statement: any
 }
