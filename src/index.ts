@@ -206,6 +206,16 @@ export interface IfLabel {
 export interface ForIterLabel {
     kind: LabelKinds.ForIter,
     type: "in" | "of",
+    /**
+     * Guaranteed to be an expression. Will expand to an identifier if a declaration is used as the initializer:
+     * ```ts
+     * // identifier "item"
+     * for (const item of ...) { ... }
+     * 
+     * // Expression "item.value"
+     * for (item.value of ...) { ... }
+     * ```
+     */
     initializer: any,
     iterator: any,
     statement: any
@@ -213,7 +223,14 @@ export interface ForIterLabel {
 
 export interface ForLabel {
     kind: LabelKinds.For,
-    initializer: any,
+    /**
+     * If a declaration is used, `variables` will be filled with each variable declaration (it's name and it's initializer). If any expression is used, or if the expression is missing,
+     * then `expression` will be set.
+     */
+    initializer: {
+        expression?: any,
+        variables?: Array<[variableName: string, initializer: any]>
+    },
     condition: any,
     increment: any,
     statement: any

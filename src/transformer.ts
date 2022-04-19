@@ -227,12 +227,18 @@ export class MacroTransformer {
             else if (ts.isIfStatement(node) && !ts.isParenthesizedExpression(node.expression)) {
                 const condition = ts.visitNode(node.expression, this.boundVisitor);
                 const res = this.getBoolFromNode(condition);
-                if (res === true) return ts.visitNode(node.thenStatement, this.boundVisitor);
+                if (res === true) {
+                    const res = ts.visitNode(node.thenStatement, this.boundVisitor);
+                    if (res && ts.isBlock(res)) return [...res.statements];
+                    return res;
+                }
                 else if (res === false) {
                     if (!node.elseStatement) return undefined;
-                    return ts.visitNode(node.elseStatement, this.boundVisitor);
+                    const res = ts.visitNode(node.elseStatement, this.boundVisitor);
+                    if (res && ts.isBlock(res)) return [...res.statements];
+                    return res;
                 }
-                else return ts.factory.createIfStatement(condition, ts.visitNode(node.thenStatement, this.boundVisitor), ts.visitNode(node.elseStatement, this.boundVisitor));
+                return ts.factory.createIfStatement(condition, ts.visitNode(node.thenStatement, this.boundVisitor), ts.visitNode(node.elseStatement, this.boundVisitor));
             }
 
             // Detects a binary operation and tries to remove it if possible
@@ -405,7 +411,7 @@ export class MacroTransformer {
             if (ts.isVariableDeclaration(node) && node.pos !== -1) {
                 const newName = ts.factory.createUniqueName(node.name.getText());
                 defined.set(node.name.getText(), newName);
-                return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, node.initializer);
+                return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, ts.visitNode(node.initializer, visitor));
             }
             else if (ts.isIdentifier(node) && defined.has(node.text)) return defined.get(node.text)!;
             return ts.visitEachChild(node, visitor, this.context);
@@ -497,6 +503,8 @@ export class MacroTransformer {
             if (node.text === "") return false;
             return true;
         }
+        else if (ts.isArrayLiteralExpression(node) || ts.isObjectLiteralElement(node)) return true;
+        else if (ts.isIdentifier(node) && node.text === "undefined") return false;
         const type = this.checker.getTypeAtLocation(node);
         if (type.isNumberLiteral()) {
             if (type.value === 0) return false;
@@ -506,7 +514,7 @@ export class MacroTransformer {
             if (type.value === "") return false;
             return true;
         }
-        else if (type.getCallSignatures().length || type.getProperties().length) return true;
+        else if (type.getCallSignatures().length) return true;
         //@ts-expect-error Private API
         else if (type.intrinsicName === "false") return false;
         //@ts-expect-error Private API

@@ -108,16 +108,22 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
         });
     },
     [ts.SyntaxKind.ForStatement]: (node: ts.ForStatement) => {
-        let initializer;
-        if (node.initializer && ts.isVariableDeclarationList(node.initializer)) {
-            const firstDecl = node.initializer.declarations[0];
-            if (firstDecl && ts.isIdentifier(firstDecl.name)) initializer = firstDecl.name;
-        } else {
-            initializer = node.initializer;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let variables, expression;
+        if (node.initializer) {
+            if (ts.isVariableDeclarationList(node.initializer)) {
+                variables = [];
+                for (const decl of node.initializer.declarations) {
+                    if (ts.isIdentifier(decl.name)) variables.push(ts.factory.createArrayLiteralExpression([ts.factory.createIdentifier(decl.name.text), decl.initializer || ts.factory.createIdentifier("undefined")]));
+                }
+            } else expression = node.initializer;
         }
         return createObject({
             kind: ts.factory.createNumericLiteral(LabelKinds.For),
-            initializer,
+            initializer: createObject({
+                variables: variables && ts.factory.createArrayLiteralExpression(variables),
+                expression
+            }),
             condition: node.condition,
             increment: node.incrementor,
             statement: node.statement
