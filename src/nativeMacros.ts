@@ -71,9 +71,11 @@ export default {
         if (!name) throw new MacroError(callSite, "`define` macro expects a string literal as the first argument.");
         const strContent = transformer.getLiteralFromNode(name, true, true);
         if (typeof strContent !== "string") throw new MacroError(callSite, "`define` macro expects a string literal as the first argument.");
-        return transformer.context.factory.createVariableDeclarationList([
+        const list = transformer.context.factory.createVariableDeclarationList([
             transformer.context.factory.createVariableDeclaration(strContent, undefined, undefined, value)
         ], useLet ? ts.NodeFlags.Let : ts.NodeFlags.Const);
+        if (ts.isForStatement(callSite.parent)) return list;
+        else return [ts.factory.createVariableStatement(undefined, list)];
     },
     "$$i": (_, transformer) => {
         if (transformer.repeat.length) return transformer.context.factory.createNumericLiteral(transformer.repeat[transformer.repeat.length - 1].index);

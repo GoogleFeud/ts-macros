@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const chai_1 = require("chai");
-const { $$const } = require("../../../../dist/index");
-describe("$$const", () => {
+const { $$define } = require("../../../../dist/index");
+describe("$$define", () => {
     it("Define a constant", () => {
         const testVar = 123;
         (0, chai_1.expect)(testVar).to.be.equal(123);
