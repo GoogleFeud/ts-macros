@@ -99,7 +99,7 @@ A general C-like for loop. Check out the [[ForLabel]] interface for all the prop
 
 ```ts --Macro
 // Macro for turning a regular for loop into a while loop
-function $ForToWhile(info: ForLabel, init: Var) {
+function $ForToWhile(info: ForLabel) {
     if (info.initializer.variables) {
         +[[info.initializer.variables], (variable: [string, any]) => {
             $$define!(variable[0], variable[1], true)
@@ -249,3 +249,29 @@ const interval_1 = setInterval(() => {
     }
 }, 5000);
 ```
+
+## Nesting macro labels
+
+Macro labels can be nested. Let's use both the `ForToWhile` and the `ToInterval` macros we created earlier on the same statement:
+
+```ts --Call
+$ToInterval:
+$ForToWhile:
+for (let i=0; i < 100; i++) {
+    console.log(i);
+}
+```
+```ts --Result
+let i = 0;
+const interval = setInterval(() => {
+    if (i < 100) {
+        console.log(i);
+        i++;
+    }
+    else {
+        clearInterval(interval);
+    }
+}, 1000);
+```
+
+If a nested label macro expands to two or more statements that can be used with macro labels, then the first statement will be used in the upper macro label, while all other statements will be placed **above** that statement.

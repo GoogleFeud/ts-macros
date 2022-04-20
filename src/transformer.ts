@@ -114,14 +114,27 @@ export class MacroTransformer {
         if (ts.isLabeledStatement(node)) {
             const macro = this.macros.get(node.label.text);
             if (!macro || !macro.body) return;
-            const labelAction = labelActions[node.statement.kind];
+            let statementNode = node.statement;
+            const results = [];
+            if (ts.isLabeledStatement(statementNode)) {
+                const labelRes = this.visitor(node.statement);
+                if (!labelRes) return node;
+                else if (Array.isArray(labelRes)) {
+                    const foundStmt = labelRes.findIndex(node => labelActions[node.kind]);
+                    if (foundStmt === -1) return node;
+                    results.push(...labelRes.filter((_item, ind) => ind !== foundStmt));
+                    statementNode = labelRes[foundStmt] as ts.Statement;
+                }
+                else statementNode = ts.visitNode(node.statement, this.boundVisitor);
+            }
+            const labelAction = labelActions[statementNode.kind];
             if (!labelAction) return node;
             this.macroStack.push({
                 macro,
-                args: ts.factory.createNodeArray([labelAction(node.statement)]),
+                args: ts.factory.createNodeArray([labelAction(statementNode)]),
                 typeArgs: ts.factory.createNodeArray()
             });
-            const results = [...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements];
+            results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
             this.macroStack.pop();
             return results;
         }
