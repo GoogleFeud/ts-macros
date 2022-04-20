@@ -274,4 +274,4 @@ const interval = setInterval(() => {
 }, 1000);
 ```
 
-If a nested label macro expands to two or more statements that can be used with macro labels, then the first statement will be used in the upper macro label, while all other statements will be placed **above** that statement.
+If a nested label macro expands to two or more statements that can be used with macro labels, then only the first statement will be used in the upper macro label, while all other statements will be placed **above** that statement.
