@@ -12,12 +12,13 @@ jobs:
       - uses: actions/setup-node@v2
       - run: npm i
       - run: tsc
+      - run: npm run docs
+      - run: touch ./docs/.nojekyll
       - run: |
           cd ./playground
           npm i
           npx next build
-          npx next export
-          touch ./out/.nojekyll
+          npx next export -o ../docs/playground
       - run: npm run docs
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.3
