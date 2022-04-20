@@ -11,18 +11,6 @@ jobs:
     steps:
       - uses: actions/setup-node@v2
       - run: npm i
-      - run: npm run docs
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@4.1.3
-        with:
-          branch: gh-pages
-          folder: .
-  compile-playground:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2 
-      - uses: actions/setup-node@v2
-      - run: npm i
       - run: tsc
       - run: |
           cd ./playground
@@ -30,3 +18,9 @@ jobs:
           npx next build
           npx next export
           touch ./out/.nojekyll
+      - run: npm run docs
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.3
+        with:
+          branch: gh-pages
+          folder: .
