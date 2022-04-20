@@ -16,6 +16,7 @@ console.log($contains!(searchItem, "erwin", "tj"));
 // Transpiles to: console.log(false);
 ```
 
+You can check out the [interactive playground](https://googlefeud.github.io/ts-macros/playground/) if you want to play with macros without having to set up an enviourment!
 
 Macros can also be **chained** with any javascript expression.
 
