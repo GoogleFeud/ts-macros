@@ -1,4 +1,4 @@
 ---
 name: Playground
-redirect: ../playground
+redirect: ./playground/out
 ---
