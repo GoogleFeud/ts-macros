@@ -49,6 +49,8 @@ export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
 
 export class MacroError {
     constructor(callSite: ts.Node, msg: string) {
+        // Just throw a regular error if the transformer is running in the browser
+        if (!ts.sys || typeof process !== "object") throw new Error(msg);
         console.error(ts.formatDiagnosticsWithColorAndContext([{
             category: ts.DiagnosticCategory.Error,
             code: 8000,
@@ -71,6 +73,11 @@ export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
     else if (ts.isPrivateIdentifier(obj)) return obj.text;
     else if (ts.isNumericLiteral(obj)) return obj.text;
     else return undefined;
+}
+
+export function getNameFromBindingName(obj: ts.BindingName) : string|undefined {
+    if (ts.isIdentifier(obj)) return obj.text;
+    return;
 }
 
 export function isStatement(obj: ts.Node) : obj is ts.Statement {

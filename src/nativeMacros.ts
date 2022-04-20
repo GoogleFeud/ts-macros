@@ -86,8 +86,9 @@ export default {
         return transformer.context.factory.createNumericLiteral(arrLit.elements.length);
     },
     "$$ident": ([thing], transformer, callSite) => {
-        if (!thing) throw new MacroError(callSite, "`ident` macro expects a string literal as the first parameter."); 
-        else if (ts.isStringLiteral(thing)) return transformer.context.factory.createIdentifier(thing.text);
+        if (!thing) throw new MacroError(callSite, "`ident` macro expects a string literal as the first parameter.");
+        const lastMacro = transformer.getLastMacro()?.defined || {};
+        if (ts.isStringLiteral(thing)) return lastMacro[thing.text] || ts.factory.createIdentifier(thing.text);
         else return thing;
     },
     "$$err": ([msg], transformer, callSite) => {
@@ -123,7 +124,7 @@ export default {
     "$$escape": ([code], transformer, callSite) => {
         if (!code || !ts.isArrowFunction(code)) throw new MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
         if (ts.isBlock(code.body)) {
-            transformer.macros.escaped.push(...code.body.statements);
+            transformer.macros.escaped.push(...transformer.makeHygienic(code.body.statements));
         } else {
             transformer.macros.escaped.push(ts.factory.createExpressionStatement(code.body));
         }

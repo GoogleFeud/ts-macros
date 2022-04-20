@@ -42,4 +42,8 @@ export class MacroMap {
         this.escaped.length = 0;
     }
 
+    clear() : void {
+        this.macros = {};
+    }
+
 }

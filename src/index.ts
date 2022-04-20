@@ -4,7 +4,7 @@ import * as ts from "typescript";
 import { MacroMap } from "./macroMap";
 import { MacroTransformer } from "./transformer";
 
-const macros = new MacroMap();
+export const macros = new MacroMap();
 
 export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
     const typeChecker = program.getTypeChecker();

@@ -159,7 +159,7 @@ $arr!(1, 2, 3, 4, 5);
 
 ## $$ident
 
-Turns a string literal into an identifier.
+Turns a string literal into an identifier. 
 
 ```ts --Usage
 import { $$ident } from "ts-macros";
