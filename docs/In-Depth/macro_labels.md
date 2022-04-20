@@ -33,7 +33,7 @@ for (let item = 0; item < iter; item++) {
 }
 ```
 
-Only catch is that these macros cannot accept any other parameters - their first parameter will **always** be an object with information about the statement. All statements are wrapped in an arrow function, you can either call it or inline it with `$$inlineFunc`.
+Only catch is that these macros cannot accept any other parameters - their first parameter will **always** be an object with information about the statement. Even though you cannot provide parameters yourself, you can still use the `Var` and `Accumulator` markers. All statements are wrapped in an arrow function, you can either call it or inline it with `$$inlineFunc`.
 
 ## Usable statements
 
