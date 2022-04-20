@@ -6,7 +6,6 @@ on:
       - dev
 jobs:
   deploy-docs:
-    needs: compile-playground
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v2
