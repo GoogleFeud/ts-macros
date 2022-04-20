@@ -1,0 +1,17 @@
+  
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true
+  },
+  "tsdocsOptions": {
+    "entryPoints": ["./src/index.ts"],
+    "name": "ts-macros",
+    "customPages": "./docs"
+  },
+  "exclude": ["./tests", "./test", "./dist", "./node_modules", "./playground"]
+}
