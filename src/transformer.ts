@@ -135,6 +135,8 @@ export class MacroTransformer {
                 typeArgs: ts.factory.createNodeArray()
             });
             results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
+            const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
+            if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
             this.macroStack.pop();
             return results;
         }
