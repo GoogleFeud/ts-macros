@@ -43,8 +43,10 @@ export default {
     },
     "$$inlineFunc": (args, transformer, callSite) => {
         const argsArr = [...args].reverse();
-        const fn = argsArr.pop();
-        if (!fn || !ts.isArrowFunction(fn)) throw new MacroError(callSite, "`unwrapFunc` macro expects an arrow function as the first argument.");
+        const fnParam = argsArr.pop();
+        if (!fnParam) throw new MacroError(callSite, "`inlineFunc` macro expects an arrow function as the first argument.");
+        const fn = ts.visitNode(fnParam, transformer.boundVisitor);
+        if (!fn || !ts.isArrowFunction(fn)) throw new MacroError(callSite, "`inlineFunc` macro expects an arrow function as the first argument.");
         if (!fn.parameters.length) {
             if (ts.isBlock(fn.body)) return fn.body.statements;
             else return fn.body;
@@ -65,14 +67,15 @@ export default {
         if (!args.length) throw new MacroError(callSite, "`kindof` macro expects a single argument.");
         return transformer.context.factory.createNumericLiteral(args[0].kind);
     },
-    "$$const": (args, transformer, callSite) => {
-        const name = args[0];
-        if (!name || !ts.isStringLiteral(name)) throw new MacroError(callSite, "`define` macro expects a string literal as the first argument.");
-        const value = args[1];
-        return [transformer.context.factory.createVariableStatement(undefined, 
-            transformer.context.factory.createVariableDeclarationList([
-                transformer.context.factory.createVariableDeclaration(name.text, undefined, undefined, value)
-            ], ts.NodeFlags.Const))];
+    "$$define": ([name, value, useLet], transformer, callSite) => {
+        if (!name) throw new MacroError(callSite, "`define` macro expects a string literal as the first argument.");
+        const strContent = transformer.getLiteralFromNode(name, true, true);
+        if (typeof strContent !== "string") throw new MacroError(callSite, "`define` macro expects a string literal as the first argument.");
+        const list = transformer.context.factory.createVariableDeclarationList([
+            transformer.context.factory.createVariableDeclaration(strContent, undefined, undefined, value)
+        ], useLet ? ts.NodeFlags.Let : ts.NodeFlags.Const);
+        if (ts.isForStatement(callSite.parent)) return list;
+        else return [ts.factory.createVariableStatement(undefined, list)];
     },
     "$$i": (_, transformer) => {
         if (transformer.repeat.length) return transformer.context.factory.createNumericLiteral(transformer.repeat[transformer.repeat.length - 1].index);
@@ -83,8 +86,9 @@ export default {
         return transformer.context.factory.createNumericLiteral(arrLit.elements.length);
     },
     "$$ident": ([thing], transformer, callSite) => {
-        if (!thing) throw new MacroError(callSite, "`ident` macro expects a string literal as the first parameter."); 
-        else if (ts.isStringLiteral(thing)) return transformer.context.factory.createIdentifier(thing.text);
+        if (!thing) throw new MacroError(callSite, "`ident` macro expects a string literal as the first parameter.");
+        const lastMacro = transformer.getLastMacro()?.defined || {};
+        if (ts.isStringLiteral(thing)) return lastMacro[thing.text] || ts.factory.createIdentifier(thing.text);
         else return thing;
     },
     "$$err": ([msg], transformer, callSite) => {
@@ -120,7 +124,7 @@ export default {
     "$$escape": ([code], transformer, callSite) => {
         if (!code || !ts.isArrowFunction(code)) throw new MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
         if (ts.isBlock(code.body)) {
-            transformer.macros.escaped.push(...code.body.statements);
+            transformer.macros.escaped.push(...transformer.makeHygienic(code.body.statements));
         } else {
             transformer.macros.escaped.push(ts.factory.createExpressionStatement(code.body));
         }

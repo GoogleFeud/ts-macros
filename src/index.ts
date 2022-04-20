@@ -4,7 +4,7 @@ import * as ts from "typescript";
 import { MacroMap } from "./macroMap";
 import { MacroTransformer } from "./transformer";
 
-const macros = new MacroMap();
+export const macros = new MacroMap();
 
 export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
     const typeChecker = program.getTypeChecker();
@@ -97,11 +97,11 @@ export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<u
 export declare function $$kindof(ast: unknown) : number;
 
 /**
- * Create a const variable that will not get it's name changed after expanding. This is **not** hygienic.
+ * Expands to a let / const declaration list. The "varname" is **not** hygienic.
  * @param varname The name of the variable
  * @param initializer Any expression
  */
-export declare function $$const(varname: string, initializer: unknown) : number;
+export declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
 
 /**
  * If used in repetition, returns the current iteration. If used outside, returns -1.
@@ -187,3 +187,65 @@ declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
 export type Save<T> = T & { __marker?: "Save" }
+
+export const enum LabelKinds {
+    If,
+    ForIter,
+    For,
+    While,
+    Block
+}
+
+export interface IfLabel {
+    kind: LabelKinds.If
+    condition: any,
+    then: any,
+    else: any
+}
+
+export interface ForIterLabel {
+    kind: LabelKinds.ForIter,
+    type: "in" | "of",
+    /**
+     * Guaranteed to be an expression. Will expand to an identifier if a declaration is used as the initializer:
+     * ```ts
+     * // identifier "item"
+     * for (const item of ...) { ... }
+     * 
+     * // Expression "item.value"
+     * for (item.value of ...) { ... }
+     * ```
+     */
+    initializer: any,
+    iterator: any,
+    statement: any
+}
+
+export interface ForLabel {
+    kind: LabelKinds.For,
+    /**
+     * If a declaration is used, `variables` will be filled with each variable declaration (it's name and it's initializer). If any expression is used, or if the expression is missing,
+     * then `expression` will be set.
+     */
+    initializer: {
+        expression?: any,
+        variables?: Array<[variableName: string, initializer: any]>
+    },
+    condition: any,
+    increment: any,
+    statement: any
+}
+
+export interface WhileLabel {
+    kind: LabelKinds.While,
+    do: boolean,
+    condition: any,
+    statement: any
+}
+
+export interface BlockLabel {
+    kind: LabelKinds.Block,
+    statement: any
+}
+
+export type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;

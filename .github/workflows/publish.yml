@@ -2,7 +2,8 @@ name: Publish package to GitHub Packages
 on:
   workflow_dispatch:
   release:
-    types: [created]
+    branches:
+      - dev
 jobs:
   build:
     runs-on: ubuntu-latest 

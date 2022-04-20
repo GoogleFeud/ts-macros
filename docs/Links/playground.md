@@ -1,0 +1,4 @@
+---
+name: Playground
+redirect: ./playground
+---

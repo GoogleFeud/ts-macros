@@ -10,5 +10,5 @@
         { "transform": "../dist" }
       ]
     },
-    "include": ["./integrated", "./snapshots/index.ts"]
+    "include": ["./integrated", "./snapshots/index.ts", "integrated/labels"]
 }

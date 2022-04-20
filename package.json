@@ -1,6 +1,6 @@
 {
   "name": "ts-macros",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "",
   "main": "dist/index.js",
   "devDependencies": {
@@ -22,6 +22,7 @@
     "build": "tsc",
     "lint": "npx eslint",
     "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
+    "playground": "tsc && cd ./playground && npm run dev",
     "manual": "tsc && ttsc test/src/index.ts",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"

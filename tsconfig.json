@@ -13,5 +13,5 @@
     "name": "ts-macros",
     "customPages": "./docs"
   },
-  "exclude": ["./tests", "./test", "./dist", "./node_modules"]
+  "exclude": ["./tests", "./test", "./dist", "./node_modules", "./playground"]
 }
