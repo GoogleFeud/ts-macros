@@ -22,7 +22,7 @@ Macros can also be **chained** with any javascript expression.
 
 ```ts
 interface MacroStr extends String {
-    $contains: (...vals: Array<string>) => string|false;
+    $contains: (...vals: Array<string>) => boolean;
 }
 
 ("feud" as unknown as MacroStr).$contains!("google", "feud", "erwin");

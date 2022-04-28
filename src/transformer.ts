@@ -72,6 +72,7 @@ export class MacroTransformer {
 
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
         if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
+            if (!node.body) return;
             const macroName = ts.getNameOfDeclaration(node)!.getText();
             if (this.macros.shallowHas(macroName)) throw new MacroError(node, `Macro ${macroName} is already defined.`);
             const params: Array<MacroParam> = [];
@@ -396,6 +397,9 @@ export class MacroTransformer {
         const args = call.arguments;
         let macro, normalArgs;
         if (ts.isPropertyAccessExpression(name)) {
+            const symofArg = this.checker.getSymbolAtLocation(name.expression);
+            console.log(symofArg);
+            if (symofArg && (symofArg.flags & ts.SymbolFlags.Namespace) !== 0) return this.runMacro(call, name.name);
             macro = this.macros.get(name.name.text); 
             const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...call.arguments]);
             normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
