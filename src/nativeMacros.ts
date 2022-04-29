@@ -1,7 +1,11 @@
 import ts = require("typescript");
+import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { MacroError } from "./utils";
+import { MacroError, primitiveToNode } from "./utils";
+
+const jsonFileCache: Record<string, ts.Expression> = {};
+const regFileCache: Record<string, string> = {};
 
 export default {
     "$$loadEnv": (args, transformer, callSite) => {
@@ -32,14 +36,23 @@ export default {
                 )])]:[]
         );
     },
-    "$$loadJSONAsEnv": (args, transformer, callSite) => {
-        const extraPath = ts.isStringLiteral(args[0]) ? args[0].text:undefined;
-        if (!extraPath) throw new MacroError(callSite, "`loadJSONAsEnv` macro expects a path to the JSON file.");
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const json = require(path.join(ts.sys.getCurrentDirectory(), extraPath));
-        Object.assign(process.env, json);
-        transformer.props.optimizeEnv = true;
-        return undefined;
+    "$$readFile": ([file, parseJSON], transformer, callSite) => {
+        const filePath = file && transformer.getLiteralFromNode(file);
+        if (!filePath || typeof filePath !== "string")  throw new MacroError(callSite, "`readFile` macro expects a path to the JSON file as the first parameter.");
+        const shouldParse = parseJSON && transformer.getBoolFromNode(parseJSON);
+        if (shouldParse) {
+            if (jsonFileCache[filePath]) return jsonFileCache[filePath];
+        }
+        else if (regFileCache[filePath]) return regFileCache[filePath];
+        const fileContents = fs.readFileSync(filePath, "utf-8");
+        if (shouldParse) {
+            const value = primitiveToNode(JSON.parse(fileContents));
+            jsonFileCache[filePath] = value;
+            return value;
+        } else {
+            regFileCache[filePath] = fileContents;
+            return ts.factory.createStringLiteral(fileContents);
+        }
     },
     "$$inlineFunc": (args, transformer, callSite) => {
         const argsArr = [...args].reverse();

@@ -94,3 +94,18 @@ export function createObject(record: Record<string, ts.Expression|ts.Statement|u
     }
     return ts.factory.createObjectLiteralExpression(assignments);
 }
+
+export function primitiveToNode(primitive: unknown) : ts.Expression {
+    if (typeof primitive === "string") return ts.factory.createStringLiteral(primitive);
+    else if (typeof primitive === "number") return ts.factory.createNumericLiteral(primitive);
+    else if (typeof primitive === "boolean") return primitive ? ts.factory.createTrue() : ts.factory.createFalse();
+    else if (primitive === null) return ts.factory.createNull();
+    else if (Array.isArray(primitive)) return ts.factory.createArrayLiteralExpression(primitive.map(p => primitiveToNode(p)));
+    else {
+        const assignments: Array<ts.PropertyAssignment> = [];
+        for (const key in (primitive as Record<string, unknown>)) {
+            assignments.push(ts.factory.createPropertyAssignment(key, primitiveToNode((primitive as Record<string, unknown>)[key])));
+        }
+        return ts.factory.createObjectLiteralExpression(assignments);
+    }
+} 

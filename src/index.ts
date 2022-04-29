@@ -42,9 +42,7 @@ export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
 export declare function $$loadEnv(path?: string) : void;
 
 /**
- * Loads a JSON object and puts all properties in the `process.env` object.
- * Since that object can only contain strings, it's not recommended to put arrays or other complex objects inside the JSON. Works the same way as `$$loadEnv`. 
- * This macro only loads the properties inside the JSON during the transpilation process - you won't find the properties if you run the transpiled code.
+ * Reads the contents of the specified file and expands to them. If the `parseJSON` argument is set to true, then the contents get parsed to JSON and then expanded.
  * 
  * @example
  * ```ts --Macro
@@ -64,7 +62,8 @@ export declare function $$loadEnv(path?: string) : void;
  * { debug: false }
  * ```
  */
-export declare function $$loadJSONAsEnv(path: string) : void;
+export declare function $$readFile(path: string, parseJSON?: false) : string;
+export declare function $$readFile<T = Record<string, unknown>>(path: string, parseJSON?: boolean) : T;
 
 /**
  * Inlines an arrow function literal.

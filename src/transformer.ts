@@ -176,62 +176,34 @@ export class MacroTransformer {
         if (this.macroStack.length) {
             const {macro, args } = this.getLastMacro()!;
 
-            // Detects property / element access and tries to remvoe it if possible
+            // Detects property / element access and tries to remove it if possible
             if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
                 if (ts.isPropertyAccessExpression(node) && this.props.optimizeEnv && node.expression.getText() === "process.env") {
                     const value = process.env[node.name.text];
                     if (!value) return node;
                     return ts.factory.createStringLiteral(value);
                 } else {
-                    // First we reverse the access chain
-                    let accessChain: ts.PropertyAccessExpression|ts.ElementAccessExpression = node;
-                    let firstIdentifier: string|undefined;
-                    while (accessChain) {
-                        if (ts.isIdentifier(accessChain.expression)) {
-                            firstIdentifier = accessChain.expression.text;
-                            break;
-                        } else if (ts.isPropertyAccessExpression(accessChain.expression) || ts.isElementAccessExpression(accessChain.expression)) {
-                            accessChain = accessChain.expression;
-                        } else break;
-                    }
-                    if (firstIdentifier) {
-                        const arg = this.getMacroParam(firstIdentifier, macro, args);
-                        if (arg && (ts.isObjectLiteralExpression(arg) || ts.isArrayLiteralExpression(arg))) {
-                            let parent: ts.Node = accessChain;
-                            let value: ts.Node | undefined = arg;
-                            while (value && (ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent))) {
-                                let parentVal: ts.MemberName|ts.NumericLiteral|undefined;
-                                if (ts.isPropertyAccessExpression(parent)) parentVal = parent.name;
-                                else if (ts.isElementAccessExpression(parent)) {
-                                    const num = this.getNumberFromNode(parent.argumentExpression);
-                                    if (num === undefined) return ts.factory.createElementAccessExpression(value as ts.Expression, parent.argumentExpression);
-                                    parentVal = ts.factory.createNumericLiteral(num);
-                                }
-                                else return ts.factory.createElementAccessExpression(value as ts.Expression, parent);
-                                if (ts.isObjectLiteralExpression(value)) {
-                                    const tempVal: ts.Node|undefined = value.properties.find(prop => prop.name && (getNameFromProperty(prop.name) === (parentVal as ts.Identifier).text));
-                                    if (tempVal && ts.isPropertyAssignment(tempVal)) value = tempVal.initializer;
-                                    else return ts.factory.createPropertyAccessExpression(value as ts.Expression, parentVal as ts.Identifier);
-                                    parent = parent.parent;
-                                } else if (ts.isArrayLiteralExpression(value)) {
-                                    const tempVal: ts.Node|undefined = value.elements[+(parentVal as ts.NumericLiteral).text];
-                                    if (tempVal) {
-                                        value = tempVal;
-                                        parent = parent.parent;
-                                    }
-                                    else return ts.factory.createElementAccessExpression(value as ts.Expression, parentVal);
-                                } 
-                                else if (parentVal) {
-                                    if (ts.isMemberName(parentVal)) return ts.factory.createPropertyAccessExpression(value as ts.Expression, parentVal);
-                                    else if (ts.isNumericLiteral(parentVal)) return ts.factory.createElementAccessExpression(value as ts.Expression, parentVal);
-                                }
-                                else return node;
-                            }
-                            return value;
-                        }
+                    let exp: ts.Expression = ts.visitNode(node.expression, this.boundVisitor);
+                    while (ts.isAsExpression(exp) || ts.isParenthesizedExpression(exp)) exp = exp.expression;
+                    if (ts.isObjectLiteralExpression(exp)) {
+                        const name = ts.isPropertyAccessExpression(node) ? getNameFromProperty(node.name) : this.getNumberFromNode(ts.visitNode(node.argumentExpression, this.boundVisitor));
+                        if (!name) return node;
+                        const prop = exp.properties.find(p => p.name && (getNameFromProperty(p.name) === name));
+                        if (prop && ts.isPropertyAssignment(prop)) return prop.initializer;
+                        return ts.factory.createPropertyAccessExpression(exp, name.toString()); 
+                    } else if (ts.isArrayLiteralExpression(exp)) {
+                        if (!ts.isElementAccessExpression(node)) return ts.factory.createPropertyAccessExpression(exp, node.name);
+                        const nameNode = ts.visitNode(node.argumentExpression, this.boundVisitor);
+                        const name = this.getNumberFromNode(nameNode);
+                        return exp.elements[name as number] || ts.factory.createElementAccessExpression(exp, nameNode);
+                    } else {
+                        if (ts.isPropertyAccessExpression(node)) return ts.factory.createPropertyAccessExpression(exp, ts.visitNode(node.name, this.boundVisitor));
+                        else return ts.factory.createElementAccessExpression(exp, ts.visitNode(node.argumentExpression, this.boundVisitor));
                     }
                 }
             }
+
+            else if (ts.isAsExpression(node)) return ts.visitNode(node.expression, this.boundVisitor);
 
             // Detects use of a macro parameter and replaces it with a literal
             else if (ts.isIdentifier(node)) {
@@ -495,6 +467,15 @@ export class MacroTransformer {
         if (type.isNumberLiteral()) return type.value;
         //@ts-expect-error Private API
         if (type.intrinsicName === "null") return 0;
+    }
+
+    getStringFromNode(node: ts.Expression) : string | undefined {
+        if (ts.isParenthesizedExpression(node)) return this.getStringFromNode(node.expression);
+        if (ts.isNumericLiteral(node)) return node.text;
+        const type = this.checker.getTypeAtLocation(node);
+        if (type.isStringLiteral()) return type.value;
+        //@ts-expect-error Private API
+        if (type.intrinsicName === "null") return "";
     }
 
     getLiteralFromNode(node: ts.Expression, handleTemplates = false, handleIdents = false) : string|number|undefined|true|false|typeof NO_LIT_FOUND {
