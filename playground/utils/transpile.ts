@@ -4,7 +4,7 @@ import TsMacros, { macros } from "../../dist";
 
 export const Markers = `
 declare function $$loadEnv(path?: string) : void;
-declare function $$loadJSONAsEnv(path: string) : void;
+declare function $$readFile(path: string, parseJSON?: false) : string;
 declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
 declare function $$kindof(ast: unknown) : number;
 declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
