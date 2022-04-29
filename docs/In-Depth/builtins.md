@@ -20,7 +20,8 @@ $$loadEnv!();
 function $multiply(num: number) : number {
     process.env.TRIPLE === "yes" ? num * 3 : num * 2;
 }
-
+```
+```ts --Call
 [$multiply!(1), $multiply!(2), (3).$multiply!()];
 ```
 ```js --Result
@@ -31,9 +32,9 @@ require("dotenv").config();
 TRIPLE=yes
 ```
 
-## $$loadJSONAsEnv
+## $$readFile
 
-Loads a JSON object and puts all properties in the process.env object. Since that object can only contain strings, it's not recommended to put arrays or other complex objects inside the JSON. Works the same way as [[$$loadEnv]]. This macro only loads the properties inside the JSON during the transpilation process - you won't find the properties if you run the transpiled code.
+Reads from the provided file path and expands to the file's contents. You can also parse the file's contents to JSON by setting the second parameter to `true`:
 
 ```ts --Macro
 import { $$loadJSONAsEnv } from "ts-macros";
@@ -44,6 +45,9 @@ function $debug(exp: unknown) : void {
 }
 
 $debug!(1 + 1);
+```
+```ts --Call
+
 ```
 ```js --Result
 // Empty!
@@ -194,15 +198,30 @@ Error: In macro $$send: Expected string literal, found something else.
 
 ## $$includes
 
-Checks if `val` is included in the array literal.
+Checks if `val` is included in the array literal / string.
 
 ```ts --Call
 $$includes!([1, 2, 3], 2);
-$$includes!([1, 2, 3], 4);
+$$includes!("HellO!", "o");
 ```
 ```ts --Result
 true;
 false;
+```
+
+## $$slice
+
+Slices an array literal / string.
+
+```ts --Call
+$$slice!("Hello", 0, 2);
+$$slice!([1, 2, 3, 4], 2);
+$$slice!([1, 2, 3, 4], -1);
+```
+``` ts --Result
+"He";
+[3, 4];
+[4];
 ```
 
 ## $$ts
@@ -242,7 +261,7 @@ class ClassB {
 
 ## $$escape
 
-"Escapes" the code inside the arrow function by placing it in the parent block. This macro **cannot** be used outside any blocks.
+"Escapes" the code inside the arrow function by placing it in the parent block. 
 
 ```ts --Macro
 function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
@@ -258,7 +277,7 @@ function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
 (() => {
     const a = $try!({ value: 123, is_err: () => false });
     $try!({is_err: () => true });
-});
+})();
 ```
 ```ts --Result
 (() => {
@@ -277,7 +296,7 @@ function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
 
 ## $$propsOfType
 
-Expands to an array with all the properties of a type.
+Expands to an array with all the properties of a type. This only works when the generic type has been provided, and it's not implicit.
 
 ```ts --Call
 console.log($$propsOfType!<{a: string, b: number}>());
