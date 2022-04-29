@@ -37,23 +37,18 @@ TRIPLE=yes
 Reads from the provided file path and expands to the file's contents. You can also parse the file's contents to JSON by setting the second parameter to `true`:
 
 ```ts --Macro
-import { $$loadJSONAsEnv } from "ts-macros";
-$$loadJSONAsEnv!("config.json");
-
-function $debug(exp: unknown) : void {
-    if (process.env.debug === "true") console.log(exp);
+function $log(...contents: Array<unknown>) : void {
+    if ($$readFile!<{debug: boolean}>("./test/config.json", true).debug) console.log(+[() => contents]);
 }
-
-$debug!(1 + 1);
 ```
 ```ts --Call
-
+$log!("Hello", "World!");
 ```
 ```js --Result
-// Empty!
+console.log("Hello", "World!");
 ```
-```json --Env
-{ debug: false }
+```json --Json
+{ "debug": true }
 ```
 
 ## $$kindof
