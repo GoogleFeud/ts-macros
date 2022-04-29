@@ -67,7 +67,16 @@ export class MacroTransformer {
 
     run(node: ts.SourceFile): ts.Node {
         if (node.isDeclarationFile) return node;
-        return ts.visitEachChild(node, this.boundVisitor, this.context);
+        const statements: Array<ts.Statement> = [];
+        for (const stmt of node.statements) {
+            const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
+            this.macros.concatEscaped(statements);
+            if (res) {
+                if (Array.isArray(res)) statements.push(...res);
+                else statements.push(res);
+            }
+        }
+        return ts.factory.updateSourceFile(node, statements);
     }
 
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
@@ -184,7 +193,7 @@ export class MacroTransformer {
                     return ts.factory.createStringLiteral(value);
                 } else {
                     let exp: ts.Expression = ts.visitNode(node.expression, this.boundVisitor);
-                    while (ts.isAsExpression(exp) || ts.isParenthesizedExpression(exp)) exp = exp.expression;
+                    while (ts.isParenthesizedExpression(exp)) exp = exp.expression;
                     if (ts.isObjectLiteralExpression(exp)) {
                         const name = ts.isPropertyAccessExpression(node) ? getNameFromProperty(node.name) : this.getNumberFromNode(ts.visitNode(node.argumentExpression, this.boundVisitor));
                         if (!name) return node;
@@ -195,11 +204,9 @@ export class MacroTransformer {
                         if (!ts.isElementAccessExpression(node)) return ts.factory.createPropertyAccessExpression(exp, node.name);
                         const nameNode = ts.visitNode(node.argumentExpression, this.boundVisitor);
                         const name = this.getNumberFromNode(nameNode);
-                        return exp.elements[name as number] || ts.factory.createElementAccessExpression(exp, nameNode);
-                    } else {
-                        if (ts.isPropertyAccessExpression(node)) return ts.factory.createPropertyAccessExpression(exp, ts.visitNode(node.name, this.boundVisitor));
-                        else return ts.factory.createElementAccessExpression(exp, ts.visitNode(node.argumentExpression, this.boundVisitor));
-                    }
+                        if (name !== undefined && exp.elements[name]) return exp.elements[name];
+                        return ts.factory.createElementAccessExpression(exp, nameNode);
+                    } else return ts.visitEachChild(node, this.boundVisitor, this.context);
                 }
             }
 
