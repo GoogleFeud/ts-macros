@@ -194,15 +194,30 @@ Error: In macro $$send: Expected string literal, found something else.
 
 ## $$includes
 
-Checks if `val` is included in the array literal.
+Checks if `val` is included in the array literal / string.
 
 ```ts --Call
 $$includes!([1, 2, 3], 2);
-$$includes!([1, 2, 3], 4);
+$$includes!("HellO!", "o");
 ```
 ```ts --Result
 true;
 false;
+```
+
+## $$slice
+
+Slices an array literal / string.
+
+```ts --Call
+$$slice!("Hello", 0, 2);
+$$slice!([1, 2, 3, 4], 2);
+$$slice!([1, 2, 3, 4], -1);
+```
+``` ts --Result
+"He";
+[3, 4];
+[4];
 ```
 
 ## $$ts
