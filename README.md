@@ -1,6 +1,6 @@
 # ts-macros
 
-ts-macros is a custom typescript transformer which allows you to create function macros. This library is heavily inspired by Rust's `macro_rules!` macro. 
+ts-macros is a custom typescript transformer which allows you to create function macros. This library is heavily inspired by Rust's `macro_rules!` macro, and it's just as powerful! 
 
 ## Basic usage
 
@@ -31,6 +31,13 @@ declare global {
 
 To read more about ts-macros features, visit the [documentation](https://googlefeud.github.io/ts-macros/index.html), or you can check out the [interactive playground](https://googlefeud.github.io/ts-macros/playground/) if you want to play with macros without having to set up an enviourment!
 
+**What you can do with ts-macros**:
+- Generate repetitive code
+- Generate code conditionally, based on enviourment variables or other configuration files
+- Create abstractions without the runtime cost
+
+**What you can't do with ts-macros**:
+- Generate types which you can use in your code. ts-docs is only a transformer, it's ran **after** typechecking, so generating different types has no effect.
 
 ## Install
 

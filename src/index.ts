@@ -46,20 +46,18 @@ export declare function $$loadEnv(path?: string) : void;
  * 
  * @example
  * ```ts --Macro
- *  import { $$loadJSONAsEnv } from "ts-macros";
- *  $$loadJSONAsEnv!("config.json");
- *
- *   function $debug(exp: unknown) : void {
- *       if (process.env.debug === "true") console.log(exp);
- *   }
- *
- *   $debug!(1 + 1);
+ * function $log(...contents: Array<unknown>) : void {
+ *     if ($$readFile!<{debug: boolean}>("./test/config.json", true).debug) console.log(+[() => contents]);
+ * }
+ * ```
+ * ```js --Call
+ * $log!("Hello", "World!");
  * ```
  * ```js --Result
- *  // Empty!
+ *  console.log("Hello", "World!");
  * ```
  * ```json --Env
- * { debug: false }
+ * { "debug": true }
  * ```
  */
 export declare function $$readFile(path: string, parseJSON?: false) : string;
@@ -140,7 +138,7 @@ export declare function $$slice(str: string, start?: number, end?: number) : str
 export declare function $$ts<T = unknown>(code: string) : T;
 
 /**
- * "Escapes" the code inside the arrow function by placing it in the parent block. This macro **cannot** be used outside any blocks.
+ * "Escapes" the code inside the arrow function by placing it in the parent block.
  * 
  * @example
  * ```ts --Macro
