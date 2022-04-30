@@ -106,9 +106,9 @@ export declare function $$define(varname: string, initializer: unknown, let?: bo
 export declare function $$i() : number;
 
 /**
- * Gets the length of an array literal.
+ * Gets the length of an array or a string literal.
  */
-export declare function $$length(arr: Array<any>) : number;
+export declare function $$length(arr: Array<any>|string) : number;
 
 /**
  * Turns a string to an identifier.

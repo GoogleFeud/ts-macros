@@ -105,4 +105,14 @@ export function primitiveToNode(primitive: unknown) : ts.Expression {
         }
         return ts.factory.createObjectLiteralExpression(assignments);
     }
-} 
+}
+
+export function resolveAliasedSymbol(checker: ts.TypeChecker, sym?: ts.Symbol) : ts.Symbol | undefined {
+    if (!sym) return;
+    while ((sym.flags & ts.SymbolFlags.Alias) !== 0) {
+        const newSym = checker.getAliasedSymbol(sym);
+        if (newSym.name === "unknown") return sym;
+        sym = newSym;
+    }
+    return sym;
+}
