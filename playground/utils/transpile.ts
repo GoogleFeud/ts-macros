@@ -9,7 +9,7 @@ declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>
 declare function $$kindof(ast: unknown) : number;
 declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
 declare function $$i() : number;
-declare function $$length(arr: Array<any>) : number;
+declare function $$length(arr: Array<any>|string) : number;
 declare function $$ident(str: string) : any;
 declare function $$err(str: string) : void;
 declare function $$includes<T>(arr: Array<T>, val: T) : boolean;

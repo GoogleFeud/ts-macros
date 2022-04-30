@@ -140,7 +140,7 @@ $arr!(1, 2, 3);
 
 ## $$length
 
-Gets the length of an array literal.
+Gets the length of an array / string literal.
 
 ```ts --Macro
 import { $$arr } from "ts-macros";

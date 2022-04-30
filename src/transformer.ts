@@ -161,7 +161,7 @@ export class MacroTransformer {
                 const exp = prepared.pop() as ts.ReturnStatement;
                 if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
             }
-            return prepared;
+            else return prepared;
         }
 
         if (ts.isCallExpression(node) && ts.isNonNullExpression(node.expression)) {
@@ -183,7 +183,7 @@ export class MacroTransformer {
 
         // If this is true then we're in the context of a macro call
         if (this.macroStack.length) {
-            const {macro, args } = this.getLastMacro()!;
+            const { macro, args } = this.getLastMacro()!;
 
             // Detects property / element access and tries to remove it if possible
             if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
@@ -206,11 +206,14 @@ export class MacroTransformer {
                         const name = this.getNumberFromNode(nameNode);
                         if (name !== undefined && exp.elements[name]) return exp.elements[name];
                         return ts.factory.createElementAccessExpression(exp, nameNode);
-                    } else return ts.visitEachChild(node, this.boundVisitor, this.context);
+                    }
                 }
             }
 
             else if (ts.isAsExpression(node)) return ts.visitNode(node.expression, this.boundVisitor);
+            else if (ts.isNumericLiteral(node)) return ts.factory.createNumericLiteral(node.text);
+            else if (ts.isStringLiteral(node)) return ts.factory.createStringLiteral(node.text);
+            else if (ts.isRegularExpressionLiteral(node)) return ts.factory.createRegularExpressionLiteral(node.text);
 
             // Detects use of a macro parameter and replaces it with a literal
             else if (ts.isIdentifier(node)) {
@@ -426,7 +429,7 @@ export class MacroTransformer {
                 defined[name] = newName;
                 return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, ts.visitNode(node.initializer, visitor));
             }
-            else if (ts.isIdentifier(node) && node.text in defined) return defined[node.text];
+            else if (ts.isIdentifier(node) && (!node.parent || !ts.isPropertyAccessExpression(node.parent)) && node.text in defined) return defined[node.text];
             return ts.visitEachChild(node, visitor, this.context);
         };
         return ts.visitNodes(statements, visitor);
@@ -475,24 +478,22 @@ export class MacroTransformer {
         if (type.intrinsicName === "null") return 0;
     }
 
-    getStringFromNode(node: ts.Expression) : string | undefined {
-        if (ts.isParenthesizedExpression(node)) return this.getStringFromNode(node.expression);
-        if (ts.isNumericLiteral(node)) return node.text;
-        const type = this.checker.getTypeAtLocation(node);
-        if (type.isStringLiteral()) return type.value;
-        //@ts-expect-error Private API
-        if (type.intrinsicName === "null") return "";
+    getStringFromNode(node?: ts.Expression, handleIdents = false, handleTemplates = false) : string | undefined {
+        if (!node) return;
+        const lit = this.getLiteralFromNode(node, handleIdents, handleTemplates);
+        if (typeof lit === "string") return lit;
+        return undefined;
     }
 
-    getLiteralFromNode(node: ts.Expression, handleTemplates = false, handleIdents = false) : string|number|undefined|true|false|typeof NO_LIT_FOUND {
+    getLiteralFromNode(node: ts.Expression, handleIdents = false, handleTemplates = false) : string|number|undefined|true|false|typeof NO_LIT_FOUND {
         if (ts.isParenthesizedExpression(node)) return this.getLiteralFromNode(node.expression);
         else if (ts.isAsExpression(node)) return this.getLiteralFromNode(node.expression);
         else if (ts.isNumericLiteral(node)) return +node.text;
         else if (ts.isStringLiteral(node)) return node.text;
         else if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
         else if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
-        if (handleIdents && ts.isIdentifier(node)) return node.text;
-        if (handleTemplates && ts.isTemplateExpression(node)) {
+        else if (handleIdents && ts.isIdentifier(node)) return node.text;
+        else if (handleTemplates && ts.isTemplateExpression(node)) {
             let res = node.head.text;
             for (const span of node.templateSpans) {
                 const lit = this.getLiteralFromNode(ts.visitNode(span.expression, this.boundVisitor));
