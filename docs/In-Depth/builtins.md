@@ -140,7 +140,7 @@ $arr!(1, 2, 3);
 
 ## $$length
 
-Gets the length of an array literal.
+Gets the length of an array / string literal.
 
 ```ts --Macro
 import { $$arr } from "ts-macros";
@@ -213,7 +213,7 @@ $$slice!("Hello", 0, 2);
 $$slice!([1, 2, 3, 4], 2);
 $$slice!([1, 2, 3, 4], -1);
 ```
-``` ts --Result
+```ts --Result
 "He";
 [3, 4];
 [4];
@@ -291,7 +291,7 @@ function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
 
 ## $$propsOfType
 
-Expands to an array with all the properties of a type. This only works when the generic type has been provided, and it's not implicit.
+Expands to an array with all the properties of a type.
 
 ```ts --Call
 console.log($$propsOfType!<{a: string, b: number}>());
