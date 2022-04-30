@@ -291,7 +291,7 @@ function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
 
 ## $$propsOfType
 
-Expands to an array with all the properties of a type. This only works when the generic type has been provided, and it's not implicit.
+Expands to an array with all the properties of a type.
 
 ```ts --Call
 console.log($$propsOfType!<{a: string, b: number}>());
