@@ -30,8 +30,8 @@ export interface Macro {
 
 export interface MacroExpand {
     macro: Macro,
+    call?: ts.CallExpression,
     args: ts.NodeArray<ts.Expression>,
-    typeArgs: ts.NodeArray<ts.TypeNode>,
     defined: Record<string, ts.Identifier>
 }
 
@@ -142,8 +142,8 @@ export class MacroTransformer {
             if (!labelAction) return node;
             this.macroStack.push({
                 macro,
+                call: undefined,
                 args: ts.factory.createNodeArray([labelAction(statementNode)]),
-                typeArgs: ts.factory.createNodeArray(),
                 defined: {}
             });
             results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
@@ -398,7 +398,7 @@ export class MacroTransformer {
         this.macroStack.push({
             macro,
             args: normalArgs,
-            typeArgs: call.typeArguments || ts.factory.createNodeArray(),
+            call: call,
             defined: {}
         });
         const pre = [];
@@ -556,9 +556,12 @@ export class MacroTransformer {
         if (!lastMacroCall) return;
         const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
         if (resolvedTypeParameterIndex === -1) return;
-        const resolvedTypeParam = lastMacroCall.typeArgs[resolvedTypeParameterIndex];
-        if (!resolvedTypeParam) return;
-        return this.checker.getTypeAtLocation(resolvedTypeParam);
+        if (lastMacroCall.call) {
+            const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
+            if (!resolvedTypeParam) return this.checker.getResolvedSignature(lastMacroCall.call)?.getTypeParameterAtPosition(resolvedTypeParameterIndex);
+
+            return this.checker.getTypeAtLocation(resolvedTypeParam);
+        }
     }
 
     getLastMacro() : MacroExpand|undefined {
