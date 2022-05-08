@@ -310,3 +310,52 @@ console.log($$typeToString!<[string, number]>());
 ```ts --Result
 console.log("[string, number]")
 ```
+
+## $$comptime
+
+This macro allows you to run typescript code during transpilation. It should only be used as an expression statement, because it expands to nothing. Additionally, you **cannot** use macros inside the arrow function's body.
+
+```ts
+$$comptime!(() => {
+// This will be logged when you're transpiling the code
+console.log("Hello World!");
+});
+```
+
+If this macro is used inside a function (can be any type of function - arrow function, function declaration, constructor, method, getter, setter, etc.), it will be ran for every **visible** call to the function (so if the function is called inside a loop or an interval, the arrow function will be called once).
+
+```ts
+class User {
+
+    send(message: string) {
+        $$comptime!(() => {
+            console.log("User#send was called somewhere!");
+        });
+    }
+}
+
+const me = new User();
+me.send(); // Logs "User#send was called somewhere!" during transpilation
+me.send(); // And again...
+me.send(); // And again...
+
+for (let i=0; i < 10; i++) {
+    me.send(); // And again... only once though!
+}
+```
+
+Also, you can access the function's parameters as long as they are **literals**:
+
+```ts
+const greet = (name: string) => {
+    $$comptime!(() => {
+        console.log(`Hello ${name}`);
+    });
+}
+
+greet("Michael"); // Logs "Hello Michael" during transpilation
+let name: string = "Bella";
+greet(name); // Logs "Hello undefined"
+```
+
+Remember, this works only with literals like `"ABC"`, `34`, `true`, `[1, 2, 3]`, `{a: 1, b: 2}`.
