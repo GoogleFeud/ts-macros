@@ -47,24 +47,25 @@ export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
     return res as ReturnType<typeof getRepetitionParams>;
 }
 
-export class MacroError {
-    constructor(callSite: ts.Node, msg: string) {
-        // Just throw a regular error if the transformer is running in the browser
-        if (!ts.sys || typeof process !== "object") throw new Error(msg);
-        console.error(ts.formatDiagnosticsWithColorAndContext([{
-            category: ts.DiagnosticCategory.Error,
-            code: 8000,
-            file: callSite.getSourceFile(),
-            start: callSite.pos,
-            length: callSite.end - callSite.pos,
-            messageText: msg
-        }], {
-            getNewLine: () => "\r\n",
-            getCurrentDirectory: ts.sys.getCurrentDirectory,
-            getCanonicalFileName: (fileName) => fileName
-        }));
-        process.exit();
-    }
+export function MacroError(callSite: ts.Node, msg: string) : void {
+    if (!ts.sys || typeof process !== "object") throw new Error(msg);
+    MacroErrorWrapper(callSite.pos, callSite.end - callSite.pos, msg, callSite.getSourceFile());
+    process.exit();
+}
+
+export function MacroErrorWrapper(start: number, end: number, msg: string, file: ts.SourceFile) : void {
+    console.error(ts.formatDiagnosticsWithColorAndContext([{
+        category: ts.DiagnosticCategory.Error,
+        code: 8000,
+        file,
+        start,
+        length: end,
+        messageText: msg
+    }], {
+        getNewLine: () => "\r\n",
+        getCurrentDirectory: ts.sys.getCurrentDirectory,
+        getCanonicalFileName: (fileName) => fileName
+    }));
 }
 
 export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
@@ -115,4 +116,52 @@ export function resolveAliasedSymbol(checker: ts.TypeChecker, sym?: ts.Symbol) :
         sym = newSym;
     }
     return sym;
+}
+
+export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseBody | undefined }) : string {
+    if (!fn.body) return "";
+    const includedFns = new Set<string>();
+    let code = "";
+    const visitor = (node: ts.Node) => {
+        if (ts.isCallExpression(node)) {
+            const signature = checker.getResolvedSignature(node);
+            if (signature && 
+                signature.declaration && 
+                (ts.isFunctionDeclaration(signature.declaration) ||
+                ts.isArrowFunction(signature.declaration) ||
+                ts.isFunctionExpression(signature.declaration)    
+                )) {
+                const name = signature.declaration.name ? signature.declaration.name.text : ts.isIdentifier(node.expression) ? node.expression.text : undefined;
+                if (!name || includedFns.has(name)) return;
+                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration)}}`;
+                includedFns.add(name);
+            }
+            ts.forEachChild(node, visitor);
+        } 
+        else ts.forEachChild(node, visitor);
+    };
+    ts.forEachChild(fn.body, visitor);
+    return code + ts.transpile(fn.body.getText());
+}
+
+
+export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknown> = []) : void {
+    try {
+        fn(...args);
+    } catch(err: unknown) {
+        if (err instanceof Error) {
+            const { line, col } = (err.stack || "").match(/<anonymous>:(?<line>\d+):(?<col>\d+)/)?.groups || {};
+            const lineNum = line ? (+line - 1) : 0;
+            const colNum = (col ? (+col - 1) : 0);
+            const file = ts.createSourceFile("comptime", fn.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
+            const startLoc = ts.getPositionOfLineAndCharacter(file, lineNum, colNum);
+            let node: ts.Node = file;
+            const visitor = (visitedNode: ts.Node) => {
+                if (visitedNode.pos === startLoc) node = visitedNode;
+                else ts.forEachChild(visitedNode, visitor);
+            };
+            ts.forEachChild(file, visitor);
+            MacroErrorWrapper(node.pos, node.end - node.pos, err.message, file);
+        } else throw err;
+    }
 }

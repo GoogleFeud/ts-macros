@@ -19,6 +19,8 @@ declare function $$slice(str: string, start?: number, end?: number) : string;
 declare function $$ts<T = unknown>(code: string) : T;
 declare function $$escape(code: () => void) : any;
 declare function $$typeToString<T>() : string;
+declare function $$propsOfType<T>() : Array<string>;
+declare function $$comptime(fn: () => void) : void;
 type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };

@@ -179,6 +179,11 @@ export declare function $$propsOfType<T>() : Array<string>;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export declare function $$typeToString<T>() : string;
 
+/**
+ * Run typescript code during transpilation.
+ */
+export declare function $$comptime(fn: () => void) : void;
+
 export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 // eslint-disable-next-line @typescript-eslint/ban-types
