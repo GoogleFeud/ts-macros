@@ -55,7 +55,7 @@ export class MacroTransformer {
     props: MacroTransformerBuiltinProps;
     checker: ts.TypeChecker;
     macros: MacroMap;
-    comptimeSignatures: Map<ts.Signature, (...params: Array<unknown>) => void>;
+    comptimeSignatures: Map<ts.Node, (...params: Array<unknown>) => void>;
     constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
@@ -481,8 +481,8 @@ export class MacroTransformer {
         // Handle comptime signatures
         if (this.comptimeSignatures.size) {
             const signature = this.checker.getResolvedSignature(node);
-            if (signature) {
-                const func = this.comptimeSignatures.get(signature);
+            if (signature && signature.declaration) {
+                const func = this.comptimeSignatures.get(signature.declaration);
                 if (func) {
                     tryRun(func, node.arguments?.map(arg => {
                         const lit = this.getLiteralFromNode(arg, false, true, true);

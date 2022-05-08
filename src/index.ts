@@ -180,7 +180,21 @@ export declare function $$propsOfType<T>() : Array<string>;
 export declare function $$typeToString<T>() : string;
 
 /**
- * Run typescript code during transpilation.
+ * This macro allows you to run typescript code during transpilation. It should only be used
+ * as an expression statement, because it expands to nothing. Additionally, you **cannot** use
+ * macros inside the arrow function's body.
+ * 
+ * @example
+ * ```ts
+ * $$comptime!(() => {
+ *  // This will be logged when you're transpiling the code
+ *  console.log("Hello World!");
+ * });
+ * ```
+ * 
+ * If this macro is used inside a function, it will be ran for every **visible** call to the function
+ * (so if the function is called inside a loop or an interval, the arrow function will be called once).
+ * Also, the arrow function can use the function's parameters as long as they're literals.
  */
 export declare function $$comptime(fn: () => void) : void;
 

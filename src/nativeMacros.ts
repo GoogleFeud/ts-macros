@@ -176,6 +176,7 @@ export default {
         else return ts.factory.createStringLiteral(transformer.checker.typeToString(type as ts.Type));
     },
     "$$comptime": (_, transformer, callSite) => {
+        if (transformer.macroStack.length) throw MacroError(callSite, "`comptime` macro cannot be called inside macros.");
         const fn = callSite.arguments[0];
         if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`comptime` macro expects an arrow function as the first parameter.");
         let parent = callSite.parent;
@@ -184,8 +185,8 @@ export default {
             if (ts.isBlock(parent)) parent = parent.parent;
             if ("body" in parent) {
                 const signature = transformer.checker.getSignatureFromDeclaration(parent as ts.SignatureDeclaration);
-                if (!signature) return;
-                transformer.comptimeSignatures.set(signature, new Function(...signature.parameters.map(p => p.name), fnBodyToString(transformer.checker, fn)) as (...args: Array<unknown>) => void);
+                if (!signature || !signature.declaration) return;
+                transformer.comptimeSignatures.set(signature.declaration, new Function(...signature.parameters.map(p => p.name), fnBodyToString(transformer.checker, fn)) as (...args: Array<unknown>) => void);
                 return;
             }
         }
