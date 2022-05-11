@@ -1,4 +1,4 @@
 ---
 name: Playground
-redirect: /playground
+redirect: https://googlefeud.github.io/ts-macros/playground/
 ---
