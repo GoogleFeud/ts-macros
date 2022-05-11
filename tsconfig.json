@@ -11,7 +11,10 @@
   "tsdocsOptions": {
     "entryPoints": ["./src/index.ts"],
     "name": "ts-macros",
-    "customPages": "./docs"
+    "customPages": "./docs",
+    "style": {
+      "dontCollapseCategories": true
+    }
   },
   "exclude": ["./tests", "./test", "./dist", "./node_modules", "./playground"]
 }
