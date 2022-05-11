@@ -48,12 +48,12 @@ export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
 }
 
 export function MacroError(callSite: ts.Node, msg: string) : void {
-    if (!ts.sys || typeof process !== "object") throw new Error(msg);
     MacroErrorWrapper(callSite.pos, callSite.end - callSite.pos, msg, callSite.getSourceFile());
     process.exit();
 }
 
 export function MacroErrorWrapper(start: number, end: number, msg: string, file: ts.SourceFile) : void {
+    if (!ts.sys || typeof process !== "object") throw new Error(msg);
     console.error(ts.formatDiagnosticsWithColorAndContext([{
         category: ts.DiagnosticCategory.Error,
         code: 8000,
