@@ -3,38 +3,27 @@ import { Macro } from "./transformer";
 
 
 export class MacroMap {
-    private parent?: MacroMap;
-    private macros: Record<string, Macro>;
+    private macros: Map<ts.Symbol, Macro>;
     escaped: Array<ts.Statement>;
-    constructor(parent?: MacroMap) {
-        this.macros = {};
-        this.parent = parent;
+    constructor() {
+        this.macros = new Map();
         this.escaped = [];
     }
 
-    set(macro: Macro) : void {
-        this.macros[macro.name] = macro;
+    set(symbol: ts.Symbol, macro: Macro) : void {
+        this.macros.set(symbol, macro);
     }
 
-    get(macroName: string) : Macro|undefined {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        let parent: MacroMap|undefined = this;
-        while (parent) {
-            if (macroName in parent.macros) return parent.macros[macroName];
-            parent = parent.parent;
+    get(symbol: ts.Symbol) : Macro|undefined {
+        return this.macros.get(symbol);
+    }
+
+    findByName(name: string) : Macro[] {
+        const macros = [];
+        for (const [, macro] of this.macros) {
+            if (macro.name === name) macros.push(macro);
         }
-    }
-
-    shallowHas(macroName: string) : boolean {
-        return macroName in this.macros;
-    }
-
-    getParent() : MacroMap {
-        return this.parent || this;
-    }
-
-    extend() : MacroMap {
-        return new MacroMap(this);
+        return macros;
     }
 
     concatEscaped(arr: Array<ts.Statement>) : void {
@@ -43,7 +32,7 @@ export class MacroMap {
     }
 
     clear() : void {
-        this.macros = {};
+        this.macros.clear();
     }
 
 }

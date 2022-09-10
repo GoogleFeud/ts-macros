@@ -84,8 +84,9 @@ export class MacroTransformer {
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
         if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
             if (!node.body) return;
-            const macroName = ts.getNameOfDeclaration(node)!.getText();
-            if (this.macros.shallowHas(macroName)) throw MacroError(node, `Macro ${macroName} is already defined.`);
+            const sym = this.checker.getSymbolAtLocation(node);
+            if (!sym) return;
+            const macroName = sym.name;
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
@@ -99,7 +100,7 @@ export class MacroTransformer {
                     defaultVal: param.initializer
                 });
             }
-            this.macros.set({
+            this.macros.set(sym, {
                 name: macroName,
                 params,
                 body: node.body,
@@ -109,7 +110,6 @@ export class MacroTransformer {
         }
 
         if (ts.isBlock(node)) {
-            this.macros = this.macros.extend();
             const statements: Array<ts.Statement> = [];
             for (const stmt of node.statements) {
                 const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
@@ -119,13 +119,12 @@ export class MacroTransformer {
                     else statements.push(res);
                 }
             }
-            this.macros = this.macros.getParent();
             return ts.factory.updateBlock(node, statements);
         }
 
         // Check for macro calls in labels
         if (ts.isLabeledStatement(node)) {
-            const macro = this.macros.get(node.label.text);
+            const macro = this.findMacroByName(node.label, node.label.text);
             if (!macro || !macro.body) return;
             let statementNode = node.statement;
             const results = [];
@@ -389,7 +388,7 @@ export class MacroTransformer {
         if (ts.isPropertyAccessExpression(name)) {
             const symofArg = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name.expression));
             if (symofArg && (symofArg.flags & ts.SymbolFlags.Namespace) !== 0) return this.runMacro(call, name.name);
-            macro = this.macros.get(name.name.text); 
+            macro = this.findMacroByName(name.expression, symofArg!.name);
             const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...call.arguments]);
             normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
         } else {
@@ -399,7 +398,7 @@ export class MacroTransformer {
                 if (Array.isArray(macroResult)) return macroResult as unknown as ts.NodeArray<ts.Statement>;
                 return [ts.factory.createExpressionStatement(macroResult as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
             }
-            macro = this.macros.get(name.getText());
+            macro = this.macros.get(resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name))!);
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
         if (!macro || !macro.body) return;
@@ -598,6 +597,12 @@ export class MacroTransformer {
 
             return this.checker.getTypeAtLocation(resolvedTypeParam);
         }
+    }
+
+    findMacroByName(node: ts.Node, name: string) : Macro|undefined {
+        const allMacros = this.macros.findByName(name);
+        if (allMacros.length > 1) throw MacroError(node, `More than one macro with the name ${name} exists.`);
+        return allMacros[0];
     }
 
     getLastMacro() : MacroExpand|undefined {
