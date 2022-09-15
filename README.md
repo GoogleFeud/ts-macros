@@ -37,7 +37,7 @@ To read more about ts-macros features, visit the [documentation](https://googlef
 - Create abstractions without the runtime cost
 
 **What you can't do with ts-macros**:
-- Generate types which you can use in your code. ts-docs is only a transformer, it's ran **after** typechecking, so generating different types has no effect.
+- Generate types which you can use in your code. ts-docs is only a transformer, it's ran **after** typechecking, so generating different types has no effect. However, the code inside the macro itself still gets typechecked
 
 ## Install
 
@@ -63,6 +63,8 @@ and add the `ts-docs` transformer to your `tsconfig.json`:
     ]
 }
 ```
+
+then transpile your code with `ttsc`.
 
 ### Usage with ts-loader
 

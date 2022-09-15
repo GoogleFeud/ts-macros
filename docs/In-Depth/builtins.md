@@ -5,7 +5,7 @@ order: 7
 
 # Built-in macros
 
-ts-docs provides you with a lot of useful built-in macros which you can use inside macros.
+ts-macros provides you with a lot of useful built-in macros which you can use inside macros.
 
 |> Important: You cannot chain built-in macros!
 
@@ -359,3 +359,17 @@ greet(name); // Logs "Hello undefined"
 ```
 
 Remember, this works only with literals like `"ABC"`, `34`, `true`, `[1, 2, 3]`, `{a: 1, b: 2}`.
+
+You can also call other functions within it, but the functions must not have use any outside variables. 
+
+This macro is especially useful when you want to validate a function argument during compile-time:
+
+```ts
+function send(msg: string) {
+    $$comptime!(() => {
+        if (!msg.startsWith("C")) console.log("Message must start with C.");
+    });
+}
+
+send("ABC")
+```
