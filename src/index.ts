@@ -7,6 +7,7 @@ import { MacroTransformer } from "./transformer";
 export const macros = new MacroMap();
 
 export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
+    macros.clear();
     const typeChecker = program.getTypeChecker();
     const transformer = new MacroTransformer(ctx, typeChecker, macros);
     return firstNode => {

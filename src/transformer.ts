@@ -433,7 +433,7 @@ export class MacroTransformer {
     makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
         const defined = this.getLastMacro()?.defined || {};
         const visitor = (node: ts.Node) : ts.Node => {
-            if (ts.isVariableDeclaration(node)) {
+            if (ts.isVariableDeclaration(node) && node.pos !== -1) {
                 const name = getNameFromBindingName(node.name);
                 if (!name) return node;
                 const newName = ts.factory.createUniqueName(name);
