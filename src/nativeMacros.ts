@@ -72,9 +72,10 @@ export default {
             if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
             return ts.visitEachChild(node, visitor, transformer.context);
         };
-        const newFn = ts.visitEachChild(fn, visitor, transformer.context);
-        if ("statements" in newFn.body) return transformer.context.factory.createImmediatelyInvokedArrowFunction(newFn.body.statements);
-        return newFn.body;
+        transformer.context.suspendLexicalEnvironment();
+        const newFn = ts.visitFunctionBody(fn.body, visitor, transformer.context);
+        if (ts.isBlock(newFn)) return transformer.context.factory.createImmediatelyInvokedArrowFunction(newFn.statements);
+        return newFn;
     },
     "$$kindof": (args, transformer, callSite) => { 
         if (!args.length) throw MacroError(callSite, "`kindof` macro expects a single argument.");

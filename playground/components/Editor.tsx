@@ -16,7 +16,7 @@ export function TextEditor(props: {
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
             ...CompilerOptions as unknown as languages.typescript.CompilerOptions
         });
-        const filename = "ts:ts-runtime-checks/index.d.ts";
+        const filename = "ts:ts-macros/index.d.ts";
         monaco.languages.typescript.javascriptDefaults.addExtraLib(Markers, filename);
         monaco.editor.createModel(Markers, "typescript", monaco.Uri.parse(filename));
     }, [monaco]);
