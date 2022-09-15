@@ -16,7 +16,7 @@ jobs:
       - run: touch ./docs/.nojekyll
       - run: |
           cd ./playground
-          npm i
+          npm i --force
           npx next build
           npx next export -o ../docs/playground
       - name: Deploy to GitHub Pages
