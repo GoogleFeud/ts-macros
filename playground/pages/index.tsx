@@ -77,7 +77,7 @@ while (arr.length !== 0) {
 const SetupCode = `
 // Interactive playground!
 // Write your code here and see the transpiled result.
-// All items from the library are already imported!
+// All types and functions from the library are already imported!
 
 ${SetupCodes[Math.floor(Math.random() * SetupCodes.length)]}
 `;
@@ -144,6 +144,6 @@ export async function getStaticProps() {
     return {
         props: {
             lib: fs.readFileSync(path.join(process.cwd(), "./node_modules/typescript/lib/lib.es5.d.ts"), "utf-8")
-        }, // will be passed to the page component as props
+        }
     };
 }

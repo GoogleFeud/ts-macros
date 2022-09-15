@@ -5,7 +5,7 @@ order: 1
 
 # Overview
 
-ts-docs is a custom typescript **transformer** which implements function macros. This library is heavily inspired by Rust's `macro_rules!` macro. Since it's a custom transformer, it can be plugged in into any tool which uses the `typescript` npm package.
+ts-macros is a custom typescript **transformer** which implements function macros. This library is heavily inspired by Rust's `macro_rules!` macro. Since it's a custom transformer, it can be plugged in into any tool which uses the `typescript` npm package.
 
 
 ## Basic usage
@@ -49,7 +49,7 @@ By default, typescript doesn't allow you to add custom transformers, so you must
 npm i --save-dev ttypescript
 ```
 
-and add the `ts-docs` transformer to your `tsconfig.json`:
+and add the `ts-macros` transformer to your `tsconfig.json`:
 
 ```json
 "compilerOptions": {
@@ -59,6 +59,8 @@ and add the `ts-docs` transformer to your `tsconfig.json`:
     ]
 }
 ```
+
+then transpile your code with `ttsc`.
 
 ### Usage with ts-loader
 

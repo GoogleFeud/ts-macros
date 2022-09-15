@@ -75,7 +75,7 @@ console.log(2, 3, 4, 5, 6);
 
 ## $$i built-in macro
 
-ts-docs provides a built-in macro, `$$i`, if used inside a repetition, it'll return the number of the current iteration, if it's used outside, `-1`.
+ts-macros provides a built-in macro, `$$i`, if used inside a repetition, it'll return the number of the current iteration, if it's used outside, `-1`.
 
 ```ts --Macro
 import { $$i } from "../../dist";

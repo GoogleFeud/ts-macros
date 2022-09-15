@@ -10,9 +10,9 @@ export function Runnable(props: { code: string }) {
             <Highlight text={props.code} />
         </div>
         <div className={styles.runSection}>
-            <button className={styles.button} onClick={() => {
+            <button className={styles.button} onClick={async () => {
                 try {
-                    setEvalRes(eval(props.code));
+                    setEvalRes(await eval(props.code));
                 } catch(err) {
                     // @ts-expect-error ...
                     setEvalRes(err.toString());
