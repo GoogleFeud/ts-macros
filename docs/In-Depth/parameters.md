@@ -23,7 +23,7 @@ for (let i = 0; i < [1, 2, 3, 4, 5].length; i++) {
 }
 ```
 
-To avoid this, you can assign the literal to a variable.
+To avoid this, you can assign the literal to a variable, or use the [[Save]] marker.
 
 ```ts --Macro
 function $loop(arr: Array<number>, cb: (element: number) => void) {

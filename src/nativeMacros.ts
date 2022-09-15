@@ -72,9 +72,10 @@ export default {
             if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
             return ts.visitEachChild(node, visitor, transformer.context);
         };
-        const newFn = ts.visitEachChild(fn, visitor, transformer.context);
-        if ("statements" in newFn.body) return transformer.context.factory.createImmediatelyInvokedArrowFunction(newFn.body.statements);
-        return newFn.body;
+        transformer.context.suspendLexicalEnvironment();
+        const newFn = ts.visitFunctionBody(fn.body, visitor, transformer.context);
+        if (ts.isBlock(newFn)) return transformer.context.factory.createImmediatelyInvokedArrowFunction(newFn.statements);
+        return newFn;
     },
     "$$kindof": (args, transformer, callSite) => { 
         if (!args.length) throw MacroError(callSite, "`kindof` macro expects a single argument.");
@@ -141,9 +142,9 @@ export default {
     "$$escape": ([code], transformer, callSite) => {
         if (!code || !ts.isArrowFunction(code)) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
         if (ts.isBlock(code.body)) {
-            transformer.macros.escaped.push(...transformer.makeHygienic(code.body.statements));
+            transformer.macros.pushEscaped(...transformer.makeHygienic(code.body.statements));
         } else {
-            transformer.macros.escaped.push(ts.factory.createExpressionStatement(code.body));
+            transformer.macros.pushEscaped(ts.factory.createExpressionStatement(code.body));
         }
     },
     "$$slice": ([thing, start, end], transformer, callSite) => {

@@ -5,7 +5,7 @@ order: 5
 
 # Literals
 
-Literals in ts-docs are **very** powerful. When you use literals in macros, ts-docs is able to completely remove those literls and give you the final result. For example, adding two numeric literals:
+Literals in ts-macros are **very** powerful. When you use literals in macros, ts-macros is able to completely remove those literls and give you the final result. For example, adding two numeric literals:
 
 ```ts --Macro
 function $add(numA: number, numB: number) : number {
