@@ -142,9 +142,9 @@ export default {
     "$$escape": ([code], transformer, callSite) => {
         if (!code || !ts.isArrowFunction(code)) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
         if (ts.isBlock(code.body)) {
-            transformer.macros.escaped.push(...transformer.makeHygienic(code.body.statements));
+            transformer.macros.pushEscaped(...transformer.makeHygienic(code.body.statements));
         } else {
-            transformer.macros.escaped.push(ts.factory.createExpressionStatement(code.body));
+            transformer.macros.pushEscaped(ts.factory.createExpressionStatement(code.body));
         }
     },
     "$$slice": ([thing, start, end], transformer, callSite) => {

@@ -4,7 +4,7 @@ import { Macro } from "./transformer";
 
 export class MacroMap {
     private macros: Map<ts.Symbol, Macro>;
-    escaped: Array<ts.Statement>;
+    escaped: Array<Array<ts.Statement>>;
     constructor() {
         this.macros = new Map();
         this.escaped = [];
@@ -18,6 +18,14 @@ export class MacroMap {
         return this.macros.get(symbol);
     }
 
+    extendEscaped() : void {
+        this.escaped.push([]);
+    }
+
+    pushEscaped(...item: Array<ts.Statement>) : void {
+        this.escaped[this.escaped.length - 1].push(...item);
+    }
+
     findByName(name: string) : Macro[] {
         const macros = [];
         for (const [, macro] of this.macros) {
@@ -27,8 +35,12 @@ export class MacroMap {
     }
 
     concatEscaped(arr: Array<ts.Statement>) : void {
-        arr.push(...this.escaped);
-        this.escaped.length = 0;
+        arr.push(...this.escaped[this.escaped.length - 1]);
+        this.escaped[this.escaped.length - 1].length = 0;
+    }
+
+    removeEscaped() : void {
+        this.escaped[this.escaped.length - 1].pop();
     }
 
     clear() : void {

@@ -70,6 +70,7 @@ export class MacroTransformer {
     run(node: ts.SourceFile): ts.Node {
         if (node.isDeclarationFile) return node;
         const statements: Array<ts.Statement> = [];
+        this.macros.extendEscaped();
         for (const stmt of node.statements) {
             const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
             this.macros.concatEscaped(statements);
@@ -78,6 +79,7 @@ export class MacroTransformer {
                 else statements.push(res);
             }
         }
+        this.macros.removeEscaped();
         return ts.factory.updateSourceFile(node, statements);
     }
 
@@ -111,6 +113,7 @@ export class MacroTransformer {
 
         if (ts.isBlock(node)) {
             const statements: Array<ts.Statement> = [];
+            this.macros.extendEscaped();
             for (const stmt of node.statements) {
                 const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
                 this.macros.concatEscaped(statements);
@@ -119,6 +122,7 @@ export class MacroTransformer {
                     else statements.push(res);
                 }
             }
+            this.macros.removeEscaped();
             return ts.factory.updateBlock(node, statements);
         }
 
@@ -418,7 +422,7 @@ export class MacroTransformer {
                 }
             }
         }
-        if (pre.length) this.macros.escaped.push(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
+        if (pre.length) this.macros.pushEscaped(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
         const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
@@ -429,15 +433,18 @@ export class MacroTransformer {
     makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
         const defined = this.getLastMacro()?.defined || {};
         const visitor = (node: ts.Node) : ts.Node => {
-            if (ts.isVariableDeclaration(node) && node.pos !== -1) {
+            if (ts.isVariableDeclaration(node)) {
                 const name = getNameFromBindingName(node.name);
                 if (!name) return node;
                 const newName = ts.factory.createUniqueName(name);
                 defined[name] = newName;
                 return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, ts.visitNode(node.initializer, visitor));
             }
-            else if (ts.isIdentifier(node) && (!node.parent || !ts.isPropertyAccessExpression(node.parent)) && node.text in defined) return defined[node.text];
-            return ts.visitEachChild(node, visitor, this.context);
+            else if (ts.isIdentifier(node)) {
+                if (node.parent && ts.isPropertyAccessExpression(node.parent) && node.parent.expression !== node) return node;
+                else return defined[node.text] || node;
+            }
+            else return ts.visitEachChild(node, visitor, this.context);
         };
         return ts.visitNodes(statements, visitor);
     }
