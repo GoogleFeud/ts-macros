@@ -82,10 +82,10 @@ export class MacroTransformer {
     }
 
     visitor(node: ts.Node): ts.VisitResult<ts.Node> {
-        if (ts.isFunctionDeclaration(node) && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && ts.getNameOfDeclaration(node)?.getText().startsWith("$")) {
-            if (!node.body) return;
-            const sym = this.checker.getSymbolAtLocation(node);
-            if (!sym) return;
+        if (ts.isFunctionDeclaration(node) && node.name && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword)) {
+            if (!node.body) return node;
+            const sym = this.checker.getSymbolAtLocation(node.name);
+            if (!sym || !sym.name.startsWith("$")) return node;
             const macroName = sym.name;
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
