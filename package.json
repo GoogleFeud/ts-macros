@@ -4,8 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "devDependencies": {
-    "@ts-docs/default-docs-structure": "^0.4.3",
-    "@ts-docs/ts-docs": "^0.4.3",
+    "@ts-docs/default-docs-structure": "^0.4.4",
+    "@ts-docs/ts-docs": "^0.4.4",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.1.0",
     "@types/node": "^16.3.3",
