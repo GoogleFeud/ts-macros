@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
-      - run: npm i
+      - run: npm i --force
       - run: tsc
       - run: npm run docs
       - run: touch ./docs/.nojekyll
