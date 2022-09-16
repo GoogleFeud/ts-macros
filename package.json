@@ -23,7 +23,7 @@
     "lint": "npx eslint",
     "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
-    "manual": "tsc && ttsc test/src/index.ts",
+    "manual": "tsc && cd ./test && ttsc",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"
   },
