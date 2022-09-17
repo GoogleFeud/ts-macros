@@ -392,7 +392,10 @@ export class MacroTransformer {
         if (ts.isPropertyAccessExpression(name)) {
             const symofArg = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name.expression));
             if (symofArg && (symofArg.flags & ts.SymbolFlags.Namespace) !== 0) return this.runMacro(call, name.name);
-            macro = this.findMacroByName(name.expression, symofArg!.name);
+            const possibleMacros = this.findMacroByTypeParams(name, call);
+            if (!possibleMacros.length) throw MacroError(call, `No possible candidates for "${name.name.getText()}" call`);
+            else if (possibleMacros.length > 1) throw MacroError(call, `More than one possible candidate for "${name.name.getText()}" call`);
+            else macro = possibleMacros[0];
             const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...call.arguments]);
             normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
         } else {
@@ -604,6 +607,32 @@ export class MacroTransformer {
 
             return this.checker.getTypeAtLocation(resolvedTypeParam);
         }
+    }
+
+    findMacroByTypeParams(prop: ts.PropertyAccessExpression, call: ts.CallExpression) : Array<Macro> {
+        const name = prop.name.getText();
+        const firstType = this.checker.getApparentType(this.checker.getTypeAtLocation(prop.expression));
+        const restTypes = call.arguments.map((exp) => this.checker.getTypeAtLocation(exp));
+        const macros = [];
+        mainLoop:
+        for (const [sym, macro] of this.macros.macros) {
+            if (macro.name !== name) continue;
+            const fnType = this.checker.getTypeOfSymbolAtLocation(sym, sym.valueDeclaration!).getCallSignatures()[0];
+            const fnArgs = fnType.parameters.map(p => this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!));
+            const firstArg = fnArgs.shift()!;
+            if (restTypes.length > fnArgs.length) continue;
+            if (firstType === this.checker.getApparentType(firstArg)) {
+                for (let i=0; i < fnArgs.length; i++) {
+                    if (!restTypes[i]) {
+                        if (fnArgs[i].getDefault() || fnArgs[i] !== fnArgs[i].getNonNullableType()) continue;
+                        else continue mainLoop;
+                    }
+                    if (this.checker.getApparentType(this.checker.getNonNullableType(fnArgs[i])) !== this.checker.getApparentType(restTypes[i])) continue mainLoop;
+                }
+                macros.push(macro);
+            }
+        }
+        return macros;
     }
 
     findMacroByName(node: ts.Node, name: string) : Macro|undefined {
