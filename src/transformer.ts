@@ -456,7 +456,6 @@ export class MacroTransformer {
         if (!param.type) return MacroParamMarkers.None;
         const type = this.checker.getTypeAtLocation(param.type).getProperty("__marker");
         if (!type) return MacroParamMarkers.None;
-        //@ts-expect-error Internal API
         const typeOfMarker = (this.checker.getTypeOfSymbol(type) as ts.Type).getNonNullableType();
         if (!typeOfMarker.isStringLiteral()) return MacroParamMarkers.None;
         switch(typeOfMarker.value) {
@@ -616,18 +615,36 @@ export class MacroTransformer {
         const macros = [];
         mainLoop:
         for (const [sym, macro] of this.macros.macros) {
+            // If the names are different, continue to the next macro
             if (macro.name !== name) continue;
             const fnType = this.checker.getTypeOfSymbolAtLocation(sym, sym.valueDeclaration!).getCallSignatures()[0];
             const fnArgs = fnType.parameters.map(p => this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!));
             const firstArg = fnArgs.shift()!;
-            if (restTypes.length > fnArgs.length) continue;
-            if (firstType === this.checker.getApparentType(firstArg)) {
+            // If the first parameter matches type
+            if (this.checker.isTypeAssignableTo(firstArg, firstType)) {
+                // Check if the rest of the parameters match
                 for (let i=0; i < fnArgs.length; i++) {
+                    // If the parameter is spread, do not compare, it will be done afterwards
+                    if (macro.params[i + 1].spread) break;
+                    // If the macro call is missing a parameter
+                    // and that parameter is NOT optional and does NOT have a default value
+                    // continue to the next macro
                     if (!restTypes[i]) {
                         if (fnArgs[i].getDefault() || fnArgs[i] !== fnArgs[i].getNonNullableType()) continue;
                         else continue mainLoop;
                     }
-                    if (this.checker.getApparentType(this.checker.getNonNullableType(fnArgs[i])) !== this.checker.getApparentType(restTypes[i])) continue mainLoop;
+                    if (!this.checker.isTypeAssignableTo(restTypes[i], fnArgs[i])) continue mainLoop;
+                }
+                // If the macro call has more arguments than the macro declaration
+                if (restTypes.length > fnArgs.length) {
+                    // If the last parameter of the function is a spread parameter, check if the rest of the
+                    // passed values match the type, otherwise return
+                    const argType = this.checker.getTypeArguments(fnArgs[fnArgs.length - 1] as ts.TypeReference)[0];
+                    if (macro.params[macro.params.length - 1].spread) {
+                        for (let i=fnArgs.length - 1; i < restTypes.length; i++) {
+                            if (!this.checker.isTypeAssignableTo(restTypes[i], argType)) break mainLoop;
+                        }
+                    } else continue;
                 }
                 macros.push(macro);
             }
