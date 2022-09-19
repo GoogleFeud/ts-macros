@@ -3,7 +3,7 @@ import { Macro } from "./transformer";
 
 
 export class MacroMap {
-    private macros: Map<ts.Symbol, Macro>;
+    macros: Map<ts.Symbol, Macro>;
     escaped: Array<Array<ts.Statement>>;
     constructor() {
         this.macros = new Map();
