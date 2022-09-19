@@ -24,17 +24,6 @@ console.log($contains!(searchItem, "erwin", "tj"));
 console.log(searchItem === "erwin" || searchItem === "tj");
 ```
 
-Macros can also be **chained** with any javascript expression.
-
-```ts
-interface MacroStr extends String {
-    $contains: (...vals: Array<string>) => string|false;
-}
-
-("feud" as unknown as MacroStr).$contains!("google", "feud", "erwin");
-// Transpiles to: true
-```
-
 ## Install
 
 ```

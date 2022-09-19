@@ -1,6 +1,6 @@
 {
   "name": "ts-macros",
-  "version": "1.3.4",
+  "version": "1.3.6",
   "description": "",
   "main": "dist/index.js",
   "devDependencies": {
@@ -11,6 +11,7 @@
     "@types/node": "^16.3.3",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
+    "@types/ts-expose-internals": "npm:ts-expose-internals@4.8.3",
     "chai": "^4.3.6",
     "diff": "^5.0.0",
     "eslint": "^7.30.0",
@@ -23,7 +24,7 @@
     "lint": "npx eslint",
     "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
-    "manual": "tsc && ttsc test/src/index.ts",
+    "manual": "tsc && cd ./test && ttsc",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"
   },
