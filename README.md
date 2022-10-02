@@ -72,6 +72,7 @@ then transpile your code with `ttsc`.
 const TsMacros = require("ts-macros").default;
 
 options: {
+      compiler: "ttypescript",
       getCustomTransformers: program => {
         before: [TsMacros(program)]
       }
