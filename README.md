@@ -72,8 +72,8 @@ then transpile your code with `ttsc`.
 const TsMacros = require("ts-macros").default;
 
 options: {
-      getCustomTransformers: program => {
+    getCustomTransformers: (program) => ({
         before: [TsMacros(program)]
-      }
+    }),
 }
 ```
