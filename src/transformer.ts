@@ -382,7 +382,11 @@ export class MacroTransformer {
             if (paramInd >= params.length) return ts.factory.createNull();
             return params[paramInd];
         }
-        if (paramMacro.spread) return ts.factory.createArrayLiteralExpression(params.slice(paramMacro.start) as Array<ts.Expression>);
+        if (paramMacro.spread) {
+            const spreadItems = params.slice(paramMacro.start) as Array<ts.Expression>;
+            if (spreadItems.length === 1 && ts.isSpreadElement(spreadItems[0])) return spreadItems[0].expression;
+            else return ts.factory.createArrayLiteralExpression(params.slice(paramMacro.start) as Array<ts.Expression>);
+        }
         return params[paramMacro.start] || paramMacro.defaultVal;
     }
 
