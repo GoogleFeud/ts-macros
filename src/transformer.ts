@@ -610,7 +610,7 @@ export class MacroTransformer {
 
     findMacroByTypeParams(prop: ts.PropertyAccessExpression, call: ts.CallExpression) : Array<Macro> {
         const name = prop.name.getText();
-        const firstType = this.checker.getApparentType(this.checker.getTypeAtLocation(prop.expression));
+        const firstType = this.checker.getTypeAtLocation(prop.expression);
         const restTypes = call.arguments.map((exp) => this.checker.getTypeAtLocation(exp));
         const macros = [];
         mainLoop:
@@ -619,7 +619,9 @@ export class MacroTransformer {
             if (macro.name !== name) continue;
             const fnType = this.checker.getTypeOfSymbolAtLocation(sym, sym.valueDeclaration!).getCallSignatures()[0];
             const fnArgs = fnType.parameters.map(p => this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!));
-            const firstArg = fnArgs.shift()!;
+            let firstArg = fnArgs.shift()!;
+            // Treat type parameters as their constraint or any if there is none
+            if (firstArg.isTypeParameter()) firstArg = firstArg.getConstraint() || this.checker.getAnyType();
             // If the first parameter matches type
             if (this.checker.isTypeAssignableTo(firstArg, firstType)) {
                 // Check if the rest of the parameters match
