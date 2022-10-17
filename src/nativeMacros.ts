@@ -140,11 +140,13 @@ export default {
         return ts.visitNodes(result.statements, visitor) as unknown as Array<ts.Statement>;
     },
     "$$escape": ([code], transformer, callSite) => {
-        if (!code || !ts.isArrowFunction(code)) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
-        if (ts.isBlock(code.body)) {
-            transformer.macros.pushEscaped(...transformer.makeHygienic(code.body.statements));
+        if (!code) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
+        const maybeFn = ts.visitNode(code, transformer.boundVisitor);
+        if (!ts.isArrowFunction(maybeFn)) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
+        if (ts.isBlock(maybeFn.body)) {
+            transformer.macros.pushEscaped(...transformer.makeHygienic(maybeFn.body.statements));
         } else {
-            transformer.macros.pushEscaped(ts.factory.createExpressionStatement(code.body));
+            transformer.macros.pushEscaped(ts.factory.createExpressionStatement(maybeFn.body));
         }
     },
     "$$slice": ([thing, start, end], transformer, callSite) => {
