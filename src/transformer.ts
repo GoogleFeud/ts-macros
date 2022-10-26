@@ -622,12 +622,15 @@ export class MacroTransformer {
             // If the names are different, continue to the next macro
             if (macro.name !== name) continue;
             const fnType = this.checker.getTypeOfSymbolAtLocation(sym, sym.valueDeclaration!).getCallSignatures()[0];
-            const fnArgs = fnType.parameters.map(p => this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!));
-            let firstArg = fnArgs.shift()!;
-            // Treat type parameters as their constraint or any if there is none
-            if (firstArg.isTypeParameter()) firstArg = firstArg.getConstraint() || this.checker.getAnyType();
+            const fnArgs = fnType.parameters.map(p => {
+                const type = this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!);
+                // Treat type parameters as their constraint or any if there is none
+                if (type.isTypeParameter()) return type.getConstraint() || this.checker.getAnyType();
+                else return type;
+            });
+            const firstArg = fnArgs.shift()!;
             // If the first parameter matches type
-            if (this.checker.isTypeAssignableTo(firstArg, firstType)) {
+            if (this.checker.isTypeAssignableTo(firstType, firstArg)) {
                 // Check if the rest of the parameters match
                 for (let i=0; i < fnArgs.length; i++) {
                     // If the parameter is spread, do not compare, it will be done afterwards
@@ -645,10 +648,11 @@ export class MacroTransformer {
                 if (restTypes.length > fnArgs.length) {
                     // If the last parameter of the function is a spread parameter, check if the rest of the
                     // passed values match the type, otherwise return
-                    const argType = this.checker.getTypeArguments(fnArgs[fnArgs.length - 1] as ts.TypeReference)[0];
+                    let argType = this.checker.getTypeArguments(fnArgs[fnArgs.length - 1] as ts.TypeReference)[0];
+                    if (argType.isTypeParameter()) argType = argType.getConstraint() || this.checker.getAnyType();
                     if (macro.params[macro.params.length - 1].spread) {
                         for (let i=fnArgs.length - 1; i < restTypes.length; i++) {
-                            if (!this.checker.isTypeAssignableTo(restTypes[i], argType)) break mainLoop;
+                            if (!this.checker.isTypeAssignableTo(restTypes[i], argType)) continue mainLoop;
                         }
                     } else continue;
                 }
