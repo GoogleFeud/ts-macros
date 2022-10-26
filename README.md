@@ -53,12 +53,12 @@ By default, typescript doesn't allow you to add custom transformers, so you must
 npm i --save-dev ttypescript
 ```
 
-and add the `ts-docs` transformer to your `tsconfig.json`:
+and add the `ts-macros` transformer to your `tsconfig.json`:
 
 ```json
 "compilerOptions": {
-//... other options
-"plugins": [
+    //... other options
+    "plugins": [
         { "transform": "ts-macros" }
     ]
 }
