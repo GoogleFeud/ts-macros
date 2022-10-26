@@ -57,8 +57,8 @@ and add the `ts-macros` transformer to your `tsconfig.json`:
 
 ```json
 "compilerOptions": {
-//... other options
-"plugins": [
+    //... other options
+    "plugins": [
         { "transform": "ts-macros" }
     ]
 }
