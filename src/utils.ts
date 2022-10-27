@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { MacroTransformer } from "./transformer";
+import { MacroParam, MacroTransformer } from "./transformer";
 
 export function flattenBody(body: ts.ConciseBody) : Array<ts.Node> {
     if ("statements" in body) return [...body.statements];
@@ -164,4 +164,13 @@ export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknow
             MacroErrorWrapper(node.pos, node.end - node.pos, err.message, file);
         } else throw err;
     }
+}
+
+export function macroParamsToArray<T>(params: Array<MacroParam>, values: Array<T>) : Array<T|Array<T>> {
+    const result = [];
+    for (let i=0; i < params.length; i++) {
+        if (params[i].spread) result.push(values.slice(i));
+        else result.push(values[i]);
+    }
+    return result;
 }
