@@ -16,4 +16,20 @@ describe("$$typeToString", () => {
         expect($test!<boolean>(true)).to.be.equal(true);
     });
 
+    type Foo = {
+        foo: boolean
+        bar: Bar
+    }
+
+    type Bar = number
+
+    function $test2<K extends keyof Foo>(key: K) {
+        return $$typeToString!<Foo[K]>()
+    }
+
+    it("Should stringify complex type", () => {
+        expect($test2!("foo")).to.equal('boolean');
+        expect($test2!("bar")).to.equal('Bar');
+    });
+
 });
