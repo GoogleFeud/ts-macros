@@ -8,4 +8,8 @@ describe("$$typeToString", () => {
         (0, chai_1.expect)(false).to.be.equal(false);
         (0, chai_1.expect)(true).to.be.equal(true);
     });
+    it("Should work with complex type", () => {
+        (0, chai_1.expect)("number").to.equal("number");
+        (0, chai_1.expect)("boolean").to.equal("boolean");
+    });
 });

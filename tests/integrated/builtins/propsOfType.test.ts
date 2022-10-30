@@ -18,4 +18,23 @@ describe("$$propsOfType", () => {
         expect($test!<{a: number, __b: string}>({a: 123, __b: "Hello"})).to.be.deep.equal({a: 123});
     });
 
+    type Complex = {
+        foo: {
+            bar1: { a: number, b: string },
+            bar2: { c: number, d: string },
+            bar3: { e: number, f: string }
+        }
+    }
+
+    function $test2<K extends keyof Complex, T extends keyof Complex[K]>(key1: K, key2: T, element: number = 0) {
+        $$propsOfType!<Complex[K][T]>()[element]
+    }
+
+    it("Should work with complex type", () => {
+        expect($test2!("foo", "bar1"), "a");
+        expect($test2!("foo", "bar1", 1), "b");
+        expect($test2!("foo", "bar3"), "e");
+        expect($test2!("foo", "bar2", 1), "d");
+    });
+
 });

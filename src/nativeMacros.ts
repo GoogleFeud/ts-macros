@@ -165,8 +165,14 @@ export default {
             const param = transformer.getTypeParam(type);
             if (!param) return ts.factory.createArrayLiteralExpression();
             return ts.factory.createArrayLiteralExpression(param.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
-        } 
-        else return ts.factory.createArrayLiteralExpression((type as ts.Type).getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
+        } else {
+            const lastMacro = transformer.getLastMacro();
+            if (lastMacro) {
+                const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
+                const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
+                return ts.factory.createArrayLiteralExpression(resolveTypeWithTypeParams(type, allParams, replacementTypes).getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
+            } else return ts.factory.createArrayLiteralExpression(type.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
+        }
     },
     "$$typeToString": (_args, transformer, callSite) => {
         if (!callSite.typeArguments || !callSite.typeArguments[0]) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
@@ -178,12 +184,12 @@ export default {
         }
         else {
             const lastMacro = transformer.getLastMacro();
-            const allParams = lastMacro?.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
-            const replacementTypes = lastMacro && resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
-            if (!allParams || !replacementTypes) return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
-            return ts.factory.createStringLiteral(transformer.checker.typeToString(resolveTypeWithTypeParams(type, allParams, replacementTypes)));
+            if (lastMacro) {
+                const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
+                const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
+                return ts.factory.createStringLiteral(transformer.checker.typeToString(resolveTypeWithTypeParams(type, allParams, replacementTypes)));
+            } else return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
         }
-        //else return ts.factory.createStringLiteral(resolveTypeWithTypeParams());
     },
     "$$comptime": (_, transformer, callSite) => {
         if (transformer.macroStack.length) throw MacroError(callSite, "`comptime` macro cannot be called inside macros.");
