@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import { MacroParam, MacroTransformer } from "./transformer";
@@ -173,4 +174,40 @@ export function macroParamsToArray<T>(params: Array<MacroParam>, values: Array<T
         else result.push(values[i]);
     }
     return result;
+}
+
+export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.TypeParameter[], replacementTypes: ts.Type[]) : ts.Type {
+    // Access type
+    if ("indexType" in providedType && "objectType" in providedType) {
+        const indexType = resolveTypeWithTypeParams((providedType as any).indexType as ts.Type, typeParams, replacementTypes);
+        const objectType = resolveTypeWithTypeParams((providedType as any).objectType as ts.Type, typeParams, replacementTypes);
+        const foundType = indexType.isTypeParameter() ? replacementTypes[typeParams.findIndex(t => t === indexType)] : indexType;
+        if (!foundType || !foundType.isLiteral()) return providedType;
+        const realType = objectType.getProperty(foundType.value.toString());
+        if (!realType) return providedType;
+        return providedType.checker.getTypeOfSymbol(realType);
+    }
+    // Conditional type
+    else if ("checkType" in providedType && "extendsType" in providedType) {
+        const checkType = resolveTypeWithTypeParams((providedType as any).checkType as ts.Type, typeParams, replacementTypes);
+        const extendsType = resolveTypeWithTypeParams((providedType as any).extendsType as ts.Type, typeParams, replacementTypes);
+        const trueType = resolveTypeWithTypeParams((providedType as any).resolvedTrueType as ts.Type, typeParams, replacementTypes);
+        const falseType = resolveTypeWithTypeParams((providedType as any).resolvedFalseType as ts.Type, typeParams, replacementTypes);
+        if (providedType.checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
+        else return falseType;
+    } else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
+    return providedType;
+}
+
+export function resolveTypeArguments(checker: ts.TypeChecker, call: ts.CallExpression) : ts.Type[] {
+    const sig = checker.getResolvedSignature(call);
+    if (!sig || !sig.mapper) return [];
+    switch (sig.mapper.kind) {
+    case ts.TypeMapKind.Simple:
+        return [sig.mapper.target];
+    case ts.TypeMapKind.Array:
+        return sig.mapper.targets?.filter(t => t) || [];
+    default:
+        return [];
+    }
 }

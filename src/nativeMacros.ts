@@ -2,7 +2,7 @@ import ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { fnBodyToString, MacroError, primitiveToNode, tryRun } from "./utils";
+import { fnBodyToString, MacroError, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -175,8 +175,15 @@ export default {
             const param = transformer.getTypeParam(type);
             if (!param) return ts.factory.createStringLiteral("");
             return ts.factory.createStringLiteral(transformer.checker.typeToString(param));
-        } 
-        else return ts.factory.createStringLiteral(transformer.checker.typeToString(type as ts.Type));
+        }
+        else {
+            const lastMacro = transformer.getLastMacro();
+            const allParams = lastMacro?.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
+            const replacementTypes = lastMacro && resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
+            if (!allParams || !replacementTypes) return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
+            return ts.factory.createStringLiteral(transformer.checker.typeToString(resolveTypeWithTypeParams(type, allParams, replacementTypes)));
+        }
+        //else return ts.factory.createStringLiteral(resolveTypeWithTypeParams());
     },
     "$$comptime": (_, transformer, callSite) => {
         if (transformer.macroStack.length) throw MacroError(callSite, "`comptime` macro cannot be called inside macros.");
