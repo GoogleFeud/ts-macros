@@ -9,8 +9,6 @@ ts-macros provides you with a lot of useful built-in macros which you can use in
 
 |> Important: You cannot chain built-in macros!
 
-Click on the macro's name to learn more about it:
-
 [[$$loadEnv]] - Loads an env file from the provided path.     
 [[$$readFile]] - Reads from the provided file and expands to the file's contents.     
 [[$$kindof]] - Expands to the `kind` of the AST node.     
@@ -27,4 +25,5 @@ Click on the macro's name to learn more about it:
 [[$$propsOfType]] - Expands to an array with all properties of a type.     
 [[$$typeToString]] - Turns a type to a string literal.     
 [[$$comptime]] - Allows you to run code during transpilation.     
-[[$$raw]] - Allows you to interact with the raw typescript APIs.     
+[[$$raw]] - Allows you to interact with the raw typescript APIs.    
+[[$$getStore]], [[$$setStore]] - Allow you to store variables in a macro call.

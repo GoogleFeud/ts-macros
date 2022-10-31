@@ -453,6 +453,22 @@ export interface RawContext {
  */
 export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 
+/**
+ * Stores the expression `value` in `key`. Storage is **not** persistent,
+ * it won't stay across macro calls.
+ * 
+ * @category Built-in Macros
+ */
+export declare function $$setStore(key: string, value: any) : void;
+
+/**
+ * Expands to the stored expression at `key`. If a key hasn't been found,
+ * it will expand to `null`.
+ * 
+ * @category Built-in Macros
+ */
+export declare function $$getStore<T>(key: string) : T;
+
 export type Accumulator = number & { __marker?: "Accumulator" };
 export type Save<T> = T & { __marker?: "Save" }
 

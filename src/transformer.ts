@@ -30,7 +30,8 @@ export interface MacroExpand {
     macro: Macro,
     call?: ts.CallExpression,
     args: ts.NodeArray<ts.Expression>,
-    defined: Record<string, ts.Identifier>
+    defined: Record<string, ts.Identifier>,
+    store: Record<string, ts.Expression>
 }
 
 export interface MacroRepeat {
@@ -151,7 +152,8 @@ export class MacroTransformer {
                 macro,
                 call: undefined,
                 args: ts.factory.createNodeArray([labelAction(statementNode)]),
-                defined: {}
+                defined: {},
+                store: {}
             });
             results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
             const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
@@ -413,7 +415,8 @@ export class MacroTransformer {
             macro,
             args: normalArgs,
             call: call,
-            defined: {}
+            defined: {},
+            store: {}
         });
         const pre = [];
         for (const param of macro.params) {

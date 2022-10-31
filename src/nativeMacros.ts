@@ -280,4 +280,20 @@ export default {
         },
         preserveParams: true
     },
+    "$$setStore": {
+        call: ([key, value], transformer, callSite) => {
+            if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`setStore` macro expects a string literal as the key.");
+            const lastMacro = transformer.getLastMacro();
+            if (!lastMacro) throw MacroError(callSite, "`setStore` macro must be called inside another macro.");
+            lastMacro.store[key.text] = value;
+        }
+    },
+    "$$getStore": {
+        call: ([key], transformer, callSite) => {
+            if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`getStore` macro expects a string literal as the key.");
+            const lastMacro = transformer.getLastMacro();
+            if (!lastMacro) throw MacroError(callSite, "`getStore` macro must be called inside another macro.");
+            return lastMacro.store[key.text];
+        }
+    }
 } as Record<string, NativeMacro>;
