@@ -142,13 +142,13 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
         else ts.forEachChild(node, visitor);
     };
     ts.forEachChild(fn.body, visitor);
-    return code + ts.transpile(fn.body.getText());
+    return code + ts.transpile((fn.body.original || fn.body).getText());
 }
 
 
-export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknown> = []) : void {
+export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknown> = []) : any {
     try {
-        fn(...args);
+        return fn(...args);
     } catch(err: unknown) {
         if (err instanceof Error) {
             const { line, col } = (err.stack || "").match(/<anonymous>:(?<line>\d+):(?<col>\d+)/)?.groups || {};

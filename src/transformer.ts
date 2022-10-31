@@ -2,7 +2,7 @@
 import * as ts from "typescript";
 import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
-import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun, fnBodyToString, macroParamsToArray } from "./utils";
+import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 
 export const enum MacroParamMarkers {
@@ -25,8 +25,7 @@ export interface Macro {
     name: string,
     params: Array<MacroParam>,
     typeParams: Array<ts.TypeParameterDeclaration>,
-    body?: ts.FunctionBody,
-    rawBody?: string
+    body?: ts.FunctionBody
 }
 
 export interface MacroExpand {
@@ -46,7 +45,7 @@ export interface MacroTransformerBuiltinProps {
     optimizeEnv?: boolean
 }
 
-const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
+export const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
 
 export class MacroTransformer {
     context: ts.TransformationContext;
@@ -107,8 +106,7 @@ export class MacroTransformer {
                 name: macroName,
                 params,
                 body: node.body,
-                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| [],
-                rawBody: macroName.startsWith("$$$") ? fnBodyToString(this.checker, node) : undefined
+                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
             });
             return;
         }
@@ -405,8 +403,9 @@ export class MacroTransformer {
             const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...call.arguments]);
             normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
         } else {
-            if (nativeMacros[name.getText()]) {
-                const macroResult = nativeMacros[name.getText()](ts.visitNodes(args, this.boundVisitor), this, call);
+            const nativeMacro = nativeMacros[name.getText()];
+            if (nativeMacro) {
+                const macroResult = nativeMacro.call(nativeMacro.preserveParams ? args : ts.visitNodes(args, this.boundVisitor), this, call);
                 if (!macroResult) return undefined;
                 if (Array.isArray(macroResult)) return macroResult as unknown as ts.NodeArray<ts.Statement>;
                 return [ts.factory.createExpressionStatement(macroResult as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
@@ -415,10 +414,6 @@ export class MacroTransformer {
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
         if (!macro || !macro.body) return;
-        if (macro.rawBody) {
-            const callable = new Function("ts", ...macro.params.map(p => p.name), macro.rawBody);
-            return callable(ts, ...macroParamsToArray(macro.params, args as unknown as Array<ts.Expression>));
-        }
         this.macroStack.push({
             macro,
             args: normalArgs,

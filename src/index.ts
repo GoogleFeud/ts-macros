@@ -2,7 +2,7 @@
 
 import * as ts from "typescript";
 import { MacroMap } from "./macroMap";
-import { MacroTransformer } from "./transformer";
+import { MacroExpand, MacroTransformer } from "./transformer";
 
 export const macros = new MacroMap();
 
@@ -168,7 +168,7 @@ export declare function $$escape(code: () => void) : any;
 
 
 /**
- * Returns the name of all properties of the type in an array.
+ * Returns the names of all properties of the type in an array.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export declare function $$propsOfType<T>() : Array<string>;
@@ -197,6 +197,50 @@ export declare function $$typeToString<T>() : string;
  * Also, the arrow function can use the function's parameters as long as they're literals.
  */
 export declare function $$comptime(fn: () => void) : void;
+
+export interface RawContext {
+    ts: typeof ts,
+    factory: ts.NodeFactory,
+    transformer: MacroTransformer,
+    checker: ts.TypeChecker,
+    thisMacro: MacroExpand
+}
+
+/**
+ * Allows you to interact with the raw typescript AST by passing an arrow function which will be invoked
+ * during the transpilation process, much like the [[$$comptime]] macro, except this macro gives you
+ * access to the parameters as AST nodes, not actual values.
+ * 
+ * This macro can only be used inside other macros, and the parameters of the arrow function should
+ * match the macro's, except in AST form. The only exception to this rule is rest operators, those get
+ * turned into an array of expressions.
+ * 
+ * You also cannot use other macros or any typescript features inside the arrow function.
+ * 
+ * The first parameter of the function is a [[RawContext]], which gives you access to the everything
+ * exported by typescript ([[RawContext.ts]]) so you don't have to import it.
+ * 
+ * Use the high-level tools provided by ts-macros if possible - they're easier to read and understand,
+ * they're more concise and most importantly you won't be directly using the typescript API which changes
+ * frequently.
+ * 
+ * @example
+ * ```ts
+ * import * as ts from "typescript";
+ * // raw version
+ * function $addNumbers(...numbers: Array<number>) {
+ *   return $$raw!((numsAst: Array<ts.Expression>) => {
+ *     return numsAst.slice(1).reduce((exp, num) => ts.factory.createBinaryExpression(exp, ts.SyntaxKind.PlusToken, num), numsAst[0]);
+ *  });
+ * }
+ * 
+ * // ts-macros version
+ * function $addNumbers(...numbers: Array<number>) {
+ *  return +["+", [numbers], (num) => num]
+ * }
+ * ```
+ */
+export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 
 export type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
