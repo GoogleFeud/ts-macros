@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 
 export const enum MacroParamMarkers {
@@ -36,8 +36,8 @@ export interface MacroExpand {
 
 export interface MacroRepeat {
     index: number,
-    repeatName?: string,
-    elements: Array<ts.Expression>
+    repeatNames: Array<string>,
+    elementSlices: Array<Array<ts.Expression>>
 }
 
 export interface MacroTransformerBuiltinProps {
@@ -336,25 +336,30 @@ export class MacroTransformer {
 
     execRepetition(fn: ts.ArrowFunction, args: ts.NodeArray<ts.Node>, macro: Macro, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
         const newBod = [];
-        const finalElements = [];
-        for (const lit of elements) {
+        const repeatNames = fn.parameters.map(p => p.name.getText());
+        const elementSlices: Array<Array<ts.Expression>> = Array.from({length: repeatNames.length}, () => []);
+        for (let i=0; i < elements.length; i++) {
+            const lit = elements[i];
             const resolved = ts.visitNode(lit, this.boundVisitor);
-            if (ts.isArrayLiteralExpression(resolved)) finalElements.push(...resolved.elements); 
+            if (ts.isArrayLiteralExpression(resolved)) elementSlices[i % repeatNames.length].push(...resolved.elements);
         }
         const ind = this.repeat.push({
             index: 0,
-            elements: finalElements,
-            repeatName: fn.parameters[0]?.name.getText()
+            elementSlices,
+            repeatNames
         }) - 1;
 
-        const totalLoopsNeeded = this.getTotalLoops(flattenBody(fn.body), args, macro.params, finalElements);
+        const totalLoopsNeeded = Math.max(...elementSlices.map(s => s.length));
         for (; this.repeat[ind].index < totalLoopsNeeded; this.repeat[ind].index++) {
             if ("statements" in fn.body) {
                 if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor))));
                 else {
                     for (const stmt of fn.body.statements) {
-                        const res = ts.visitNode(stmt, this.boundVisitor);
-                        newBod.push(res);
+                        const res = this.boundVisitor(stmt);
+                        if (res) {
+                            if (Array.isArray(res)) newBod.push(...res as ts.Statement[]);
+                            else newBod.push(res as ts.Statement);
+                        }
                     }
                 }
             }
@@ -370,22 +375,18 @@ export class MacroTransformer {
     getMacroParam(name: string, macro: Macro, params: ts.NodeArray<ts.Node>) : ts.Node|undefined {
         const index = macro.params.findIndex(p => p.name === name);
         if (index === -1) {
-            const lastRepeat = this.repeat[this.repeat.length - 1];
-            if (lastRepeat && lastRepeat.elements.length) {
-                if (lastRepeat.repeatName === name) {
-                    if (lastRepeat.elements.length <= lastRepeat.index) return ts.factory.createNull();
-                    return lastRepeat.elements[lastRepeat.index]; 
+            for (const repeat of this.repeat) {
+                const repeatNameIndex = repeat.repeatNames.indexOf(name);
+                if (repeatNameIndex !== -1) {
+                    const repeatCollection = repeat.elementSlices[repeatNameIndex];
+                    if (repeatCollection.length <= repeat.index) return ts.factory.createNull();
+                    else return repeatCollection[repeat.index];
                 }
             }
             return;
         }
         const paramMacro = macro.params[index];
         if (paramMacro.realName) return paramMacro.realName;
-        if (this.repeat.length && paramMacro.spread) {
-            const paramInd = this.repeat[this.repeat.length - 1].index + paramMacro.start;
-            if (paramInd >= params.length) return ts.factory.createNull();
-            return params[paramInd];
-        }
         if (paramMacro.spread) {
             const spreadItems = params.slice(paramMacro.start) as Array<ts.Expression>;
             if (spreadItems.length === 1 && ts.isSpreadElement(spreadItems[0])) return spreadItems[0].expression;
@@ -473,25 +474,6 @@ export class MacroTransformer {
         case "Save": return MacroParamMarkers.Save;
         default: return MacroParamMarkers.None;
         }
-    }
-
-    getTotalLoops(statements: Array<ts.Node>, args: ts.NodeArray<ts.Node>, params: Array<MacroParam>, literals: Array<ts.Expression>) : number {
-        let total = literals.length;
-        const cb = (node: ts.Node): ts.Node|undefined => {
-            if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) return node;
-            else if (ts.isIdentifier(node)) {
-                const param = params.find(p => p.name === node.text);
-                if (!param || !param.spread) return node;
-                const amount = args.length - param.start;
-                if (amount > total) total += amount - total;
-                return node;
-            }
-            else return ts.visitEachChild(node, cb, this.context);
-        };
-        for (const stmt of statements) {
-            cb(stmt);
-        }
-        return total;
     }
 
     callComptimeFunction(node: ts.CallExpression | ts.NewExpression) : void {

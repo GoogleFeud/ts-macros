@@ -4,8 +4,8 @@ import { expect } from "chai";
 describe("Macro expand", () => {
     
     function $push<T>(array: T[], ...elements: Array<T>) {
-        +[(elements: T) => {
-            array.push(elements);
+        +[[elements], (el: T) => {
+            array.push(el);
         }];
     }
 
@@ -21,8 +21,8 @@ describe("Macro expand", () => {
     });
 
     function $push2<T>(array: T[], ...elements: Array<T>) {
-        +["()", (elements: T) => {
-            array.push(elements);
+        +["()", [elements], (el: T) => {
+            array.push(el);
         }];
     }
 
