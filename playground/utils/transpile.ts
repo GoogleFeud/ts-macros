@@ -30,8 +30,6 @@ interface RawContext {
 }
 declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 type Accumulator = number & { __marker?: "Accumulator" };
-declare const var_sym: unique symbol;
-type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
 type Save<T> = T & { __marker?: "Save" }
 const enum LabelKinds {
     If,

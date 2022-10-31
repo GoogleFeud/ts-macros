@@ -454,9 +454,6 @@ export interface RawContext {
 export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 
 export type Accumulator = number & { __marker?: "Accumulator" };
-declare const var_sym: unique symbol;
-// eslint-disable-next-line @typescript-eslint/ban-types
-export type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
 export type Save<T> = T & { __marker?: "Save" }
 
 export const enum LabelKinds {

@@ -7,7 +7,6 @@ import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "
 export const enum MacroParamMarkers {
     None,
     Accumulator,
-    Var,
     Save
 }
 
@@ -295,18 +294,9 @@ export class MacroTransformer {
             }
 
             // Detects a repetition
-            else if (ts.isExpressionStatement(node)) {
-                if (ts.isBinaryExpression(node.expression) && node.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.expression.left)) {
-                    const inner = node.expression;
-                    const param = macro.params.find(p => p.name === (inner.left as ts.Identifier).text);
-                    if (!param || param.marker !== MacroParamMarkers.Var) return ts.visitEachChild(node, this.boundVisitor, this.context);
-                    param.defaultVal = ts.visitNode(inner.right, this.boundVisitor);
-                    return undefined;
-                }
-                else if (ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
-                    const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
-                    return this.execRepetition(fn, args, macro, literals, separator);
-                } 
+            else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
+                const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
+                return this.execRepetition(fn, args, macro, literals, separator);
             } 
             else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.operand);
@@ -470,7 +460,6 @@ export class MacroTransformer {
         if (!typeOfMarker.isStringLiteral()) return MacroParamMarkers.None;
         switch(typeOfMarker.value) {
         case "Accumulator": return MacroParamMarkers.Accumulator;
-        case "Var": return MacroParamMarkers.Var;
         case "Save": return MacroParamMarkers.Save;
         default: return MacroParamMarkers.None;
         }

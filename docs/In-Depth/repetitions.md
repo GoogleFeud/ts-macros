@@ -31,7 +31,11 @@ console.log("b")
 console.log("c")
 ```
 
-The repetition goes through all the numbers and strings, and creates a `console.log` statement for each of them. Easy! However, when a second parameter is added to the repetition callback, the two arrays get iterated side by side:
+The repetition goes through all the numbers and strings, and creates a `console.log` expression for each of them. Easy!
+
+## Multiple elements in repetition
+
+Let's say you want to go through 2 or more arrays **at the same time**, to create combinations like `1a`, `2b`, etc. You can accomplish this by adding another parameter:
 
 ```ts --Macro
 function $test(...numbers: Array<number>) {
