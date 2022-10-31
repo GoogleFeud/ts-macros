@@ -38,6 +38,7 @@ export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
  * ``` --Env
  * TRIPLE=yes
  * ```
+ * @category Built-in Macros
  */
 export declare function $$loadEnv(path?: string) : void;
 
@@ -59,22 +60,44 @@ export declare function $$loadEnv(path?: string) : void;
  * ```json --Env
  * { "debug": true }
  * ```
+ * @category Built-in Macros
  */
 export declare function $$readFile(path: string, parseJSON?: false) : string;
 export declare function $$readFile<T = Record<string, unknown>>(path: string, parseJSON?: boolean) : T;
 
 /**
- * Inlines an arrow function literal.
+ * Inlines the provided arrow function, replacing any argument occurrences with the corresponding values inside the `argReplacements` array.
  * @param func The arrow function literal to inline
  * @param params Any expression to replace the function's arguments
  * 
  * @example
- * ```ts
- * import { $$inlineFunc } from "ts-macros";
+ * ```ts --Macro
+ * import { $$inlineFunc, $$kindof } from "ts-macros";
+ * import * as ts from "typescript"
  * 
- * $$inlineFunc!((a, b) => a + b, 5, 10 + 5);
- * // Transpiles to 20
- * ``` 
+ * function $map(arr: Array<number>, cb: Function) : Array<number> {
+ *    if ($$kindof!(arr) !== ts.SyntaxKind.Identifier) var arr = arr; // Only declare a variable if the `arr` argument is not a variable
+ *     const res = [];
+ *     for (let i=0; i < arr.length; i++) {
+ *        res.push($$inlineFunc!(cb, arr[i]));
+ *     }
+ *     return res;
+ * }
+ * ```
+ * ```ts --Call
+ * console.log($map!([1, 2, 3, 4, 5], (num: number) => num * 2));
+ * ```
+ * ```js --Result
+ * console.log((() => {
+ *     var arr = [1, 2, 3, 4, 5];
+ *     const res = [];
+ *     for (let i = 0; i < arr.length; i++) {
+ *         res.push(arr[i] * 2);
+ *     }
+ *     return res;
+ * })());
+ * ```
+ * @category Built-in Macros
  */
 // eslint-disable-next-line @typescript-eslint/ban-types
 export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
@@ -83,57 +106,182 @@ export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<u
  * @param ast Any expression
  * 
  * @example
- * ```ts
- * import { $$kindof } from "ts-macros";
- * import * as ts from "typescript";
+ * ```ts --Macro
+ * import {$$kindof} from "ts-macros";
+ * import * as ts from "typescript"
  * 
- * console.log($$kindof!([1]) === ts.SyntaxKind.ArrayLiteralExpression);
- * // Transpiles to console.log(true)
+ * function $doSomethingBasedOnTypeOfParam(param: unknown) {
+ *     if ($$kindof!(param) === ts.SyntaxKind.ArrayLiteralExpression) "Provided value is an array literal!";
+ *     else if ($$kindof!(param) === ts.SyntaxKind.ArrowFunction) "Provided value is an arrow function!";
+ *     else if ($$kindof!(param) === ts.SyntaxKind.CallExpression) "Provided value is a function call!";
+ * }
  * ```
+ * ```ts --Call
+ * $doSomethingBasedOnTypeOfParam!([1, 2, 3]);
+ * $doSomethingBasedOnTypeOfParam!(console.log(1));
+ * $doSomethingBasedOnTypeOfParam!(() => 1 + 1);
+ * ```
+ * ```js --Result
+ * "Provided value is an array literal!";
+ * "Provided value is a function call!";
+ * "Provided value is an arrow function!";
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$kindof(ast: unknown) : number;
 
 /**
- * Expands to a let / const declaration list. The "varname" is **not** hygienic.
+ * Creates a const variable with the provided name and initializer. This is not hygienic, use it when you want to create a variable and know it's name.
  * @param varname The name of the variable
  * @param initializer Any expression
+ * 
+ * @example
+ * ```ts --Usage
+ * import { $$const } from "ts-macros";
+ * 
+ * $$const!("abc", 123);
+ * ```
+ * ```js --Result
+ * const abc = 123;
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
 
 /**
- * If used in repetition, returns the current iteration. If used outside, returns -1.
+ * If this macro is called in a repetition, it's going to return the number of the current iteration. If it's called outside, it's going to return `-1`.
+ * 
+ * @example
+ * ```ts --Macro
+ * import { $$i } from "ts-macros";
+ * 
+ * function $arr(...els: Array<number>) {
+ *    +["[]", (els: number) => els + $$i!()];
+ * }
+ * ```
+ * ```ts --Call
+ * $arr!(1, 2, 3);
+ * ```
+ * ```ts --Result
+ * [1, 3, 5]
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$i() : number;
 
 /**
  * Gets the length of an array or a string literal.
+ * 
+ * @example
+ * ```ts --Macro
+ * import { $$arr } from "ts-macros";
+ * 
+ * function $arr(...els: Array<number>) {
+ *     $$length!(els);
+ * }
+ * ```
+ * ```ts --Call
+ * $arr!(1, 2, 3, 4, 5);
+ * ```
+ * ```ts --Result
+ * 5
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$length(arr: Array<any>|string) : number;
 
 /**
- * Turns a string to an identifier.
+ * Turns a string literal into an identifier. 
+ * 
+ * ```ts --Usage
+ * import { $$ident } from "ts-macros";
+ * 
+ * const Hello = "World";
+ * console.log($$ident!("Hello"));
+ * ```
+ * ```js --Result
+ * const Hello = "World";
+ * console.log(Hello);
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$ident(str: string) : any;
 
 /**
  * Throws an error during transpilation.
+ * 
+ * @param str - The error to throw.
+ * @category Built-in Macros
  */
 export declare function $$err(str: string) : void;
 
 /**
- * Checks if `val` is included in the array literal, OR checks if a substring is a string.
+ * Checks if `val` is included in the array literal / string.
+ * 
+ * ```ts --Call
+ * $$includes!([1, 2, 3], 2);
+ * $$includes!("HellO!", "o");
+ * ```
+ * ```ts --Result
+ * true;
+ * false;
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
 export declare function $$includes(arr: string, val: string) : boolean;
 
 /**
- * Slices a string literal OR an array literal.
+ * Slices a string literal or an array literal.
+ * ```ts --Call
+ * $$slice!("Hello", 0, 2);
+ * $$slice!([1, 2, 3, 4], 2);
+ * $$slice!([1, 2, 3, 4], -1);
+ * ```
+ * ```ts --Result
+ * "He";
+ * [3, 4];
+ * [4];
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$slice<T>(str: Array<T>, start?: number, end?: number) : Array<T>;
 export declare function $$slice(str: string, start?: number, end?: number) : string;
 
 /**
- * Turns the string to code.
+ * Turns the provided string into code. You should use this only when you can't accomplish something with other macros.
+ * 
+ * ```ts --Macro
+ * type ClassInfo = { name: string, value: string };
+ * 
+ * export function $makeClasses(...info: Array<ClassInfo>) {
+ *     +[(info: ClassInfo) => {
+ *         $$ts!(`
+ *           class ${info.name} {
+ *                 constructor() {
+ *                     this.value = ${info.value}
+ *                 }
+ *             }
+ *         `);
+ *     }];
+ * }
+ * ```
+ * ```ts --Call
+ * $makeClasses!({name: "ClassA", value: "1"}, {name: "ClassB", value: "2"})
+ * ```
+ * ```ts --Result
+ * class ClassA {
+ *    constructor() {
+ *         this.value = 1;
+ *     }
+ * }
+ * class ClassB {
+ *    constructor() {
+ *         this.value = 2;
+ *     }
+ * }
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$ts<T = unknown>(code: string) : T;
 
@@ -163,38 +311,101 @@ export declare function $$ts<T = unknown>(code: string) : T;
  *  }
  *  const a = res.result;
  * ```
+ * @category Built-in Macros
  */
 export declare function $$escape(code: () => void) : any;
 
 
 /**
- * Returns the names of all properties of the type in an array.
+ * Expands to an array with all the properties of a type.
+ * 
+ * ```ts --Call
+ * console.log($$propsOfType!<{a: string, b: number}>());
+ * ```
+ * ```ts --Result
+ * console.log(["a", "b"]);
+ * ```
+ * @category Built-in Macros
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export declare function $$propsOfType<T>() : Array<string>;
 
 /**
- * Turns the type into a string.
+ * Turns a type to a string literal.
+ * 
+ * ```ts --Call
+ * console.log($$typeToString!<[string, number]>());
+ * ```
+ * ```ts --Result
+ * console.log("[string, number]")
+ * ```
+ * @category Built-in Macros
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export declare function $$typeToString<T>() : string;
 
 /**
- * This macro allows you to run typescript code during transpilation. It should only be used
- * as an expression statement, because it expands to nothing. Additionally, you **cannot** use
- * macros inside the arrow function's body.
+ * This macro allows you to run typescript code during transpilation. It should only be used as an expression statement, because it expands to nothing. Additionally, you **cannot** use macros inside the arrow function's body.
  * 
- * @example
  * ```ts
  * $$comptime!(() => {
- *  // This will be logged when you're transpiling the code
- *  console.log("Hello World!");
+ * // This will be logged when you're transpiling the code
+ * console.log("Hello World!");
  * });
  * ```
  * 
- * If this macro is used inside a function, it will be ran for every **visible** call to the function
- * (so if the function is called inside a loop or an interval, the arrow function will be called once).
- * Also, the arrow function can use the function's parameters as long as they're literals.
+ * If this macro is used inside a function (can be any type of function - arrow function, function declaration, constructor, method, getter, setter, etc.), it will be ran for every **visible** call to the function (so if the function is called inside a loop or an interval, the arrow function will be called once).
+ * 
+ * ```ts
+ * class User {
+ * 
+ *     send(message: string) {
+ *        $$comptime!(() => {
+ *             console.log("User#send was called somewhere!");
+ *         });
+ *     }
+ * }
+ * 
+ * const me = new User();
+ * me.send(); // Logs "User#send was called somewhere!" during transpilation
+ * me.send(); // And again...
+ * me.send(); // And again...
+ * 
+ * for (let i=0; i < 10; i++) {
+ *     me.send(); // And again... only once though!
+ * }
+ * ```
+ * 
+ * Also, you can access the function's parameters as long as they are **literals**:
+ * 
+ * ```ts
+ * const greet = (name: string) => {
+ *     $$comptime!(() => {
+ *         console.log(`Hello ${name}`);
+ *     });
+ * }
+ * 
+ * greet("Michael"); // Logs "Hello Michael" during transpilation
+ * let name: string = "Bella";
+ * greet(name); // Logs "Hello undefined"
+ * ```
+ * 
+ * Remember, this works only with literals like `"ABC"`, `34`, `true`, `[1, 2, 3]`, `{a: 1, b: 2}`.
+ * 
+ * You can also call other functions within it, but the functions must not have use any outside variables. 
+ * 
+ * This macro is especially useful when you want to validate a function argument during compile-time:
+ * 
+ * ```ts
+ * function send(msg: string) {
+ *    $$comptime!(() => {
+ *         if (!msg.startsWith("C")) console.log("Message must start with C.");
+ *     });
+ * }
+ * 
+ * send("ABC")
+ * ```
+ * @category Built-in Macros
  */
 export declare function $$comptime(fn: () => void) : void;
 
@@ -239,6 +450,7 @@ export interface RawContext {
  *  return +["+", [numbers], (num) => num]
  * }
  * ```
+ * @category Built-in Macros
  */
 export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 

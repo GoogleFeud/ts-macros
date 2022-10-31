@@ -21,6 +21,14 @@ declare function $$escape(code: () => void) : any;
 declare function $$typeToString<T>() : string;
 declare function $$propsOfType<T>() : Array<string>;
 declare function $$comptime(fn: () => void) : void;
+interface RawContext {
+    ts: any,
+    factory: any,
+    transformer: any,
+    checker: any,
+    thisMacro: any
+}
+declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 type Accumulator = number & { __marker?: "Accumulator" };
 declare const var_sym: unique symbol;
 type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
@@ -79,6 +87,7 @@ export const CompilerOptions: ts.CompilerOptions = {
 export function genTranspile(lib: string) : (str: string) => { code?: string, error?: unknown} {
     const LibFile = ts.createSourceFile("lib.d.ts", lib, CompilerOptions.target || ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);
     return (str) => {
+        console.log("HMM?:", str);
         const SourceFile = ts.createSourceFile("module.ts", Markers + str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
         let output = "";
         const CompilerHost: ts.CompilerHost = {
