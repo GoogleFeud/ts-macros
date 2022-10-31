@@ -172,9 +172,18 @@ export default {
             const maybeFn = ts.visitNode(code, transformer.boundVisitor);
             if (!ts.isArrowFunction(maybeFn)) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
             if (ts.isBlock(maybeFn.body)) {
-                transformer.macros.pushEscaped(...transformer.makeHygienic(maybeFn.body.statements));
+                const hygienicBody = [...transformer.makeHygienic(maybeFn.body.statements)];
+                const lastStatement = hygienicBody.pop();
+                transformer.escapeStatement(...hygienicBody);
+                if (lastStatement) {
+                    if (ts.isReturnStatement(lastStatement)) {
+                        return lastStatement.expression;
+                    } else {
+                        transformer.escapeStatement(lastStatement);
+                    }
+                }
             } else {
-                transformer.macros.pushEscaped(ts.factory.createExpressionStatement(maybeFn.body));
+                transformer.escapeStatement(ts.factory.createExpressionStatement(maybeFn.body));
             }
         }
     },

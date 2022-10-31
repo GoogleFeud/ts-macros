@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { MacroMap } from "./macroMap";
 import nativeMacros from "./nativeMacros";
 import { flattenBody, wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
@@ -45,6 +44,8 @@ export interface MacroTransformerBuiltinProps {
     optimizeEnv?: boolean
 }
 
+export type MacroMap = Map<ts.Symbol, Macro>;
+
 export const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
 
 export class MacroTransformer {
@@ -55,12 +56,14 @@ export class MacroTransformer {
     props: MacroTransformerBuiltinProps;
     checker: ts.TypeChecker;
     macros: MacroMap;
+    escapedStatements: Array<Array<ts.Statement>>;
     comptimeSignatures: Map<ts.Node, (...params: Array<unknown>) => void>;
     constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.repeat = [];
         this.macroStack = [];
+        this.escapedStatements = [];
         this.props = {};
         this.checker = checker;
         this.macros = macroMap;
@@ -70,16 +73,16 @@ export class MacroTransformer {
     run(node: ts.SourceFile): ts.Node {
         if (node.isDeclarationFile) return node;
         const statements: Array<ts.Statement> = [];
-        this.macros.extendEscaped();
+        this.addEscapeScope();
         for (const stmt of node.statements) {
             const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
-            this.macros.concatEscaped(statements);
+            this.saveAndClearEscapedStatements(statements);
             if (res) {
                 if (Array.isArray(res)) statements.push(...res);
                 else statements.push(res);
             }
         }
-        this.macros.removeEscaped();
+        this.removeEscapeScope();
         return ts.factory.updateSourceFile(node, statements);
     }
 
@@ -113,16 +116,16 @@ export class MacroTransformer {
 
         if (ts.isBlock(node)) {
             const statements: Array<ts.Statement> = [];
-            this.macros.extendEscaped();
+            this.addEscapeScope();
             for (const stmt of node.statements) {
                 const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
-                this.macros.concatEscaped(statements);
+                this.saveAndClearEscapedStatements(statements);
                 if (res) {
                     if (Array.isArray(res)) statements.push(...res);
                     else statements.push(res);
                 }
             }
-            this.macros.removeEscaped();
+            this.removeEscapeScope();
             return ts.factory.updateBlock(node, statements);
         }
 
@@ -222,6 +225,7 @@ export class MacroTransformer {
             }
 
             else if (ts.isAsExpression(node)) return ts.visitNode(node.expression, this.boundVisitor);
+            else if (ts.isNonNullExpression(node)) return ts.visitNode(node.expression, this.boundVisitor);
             else if (ts.isNumericLiteral(node)) return ts.factory.createNumericLiteral(node.text);
             else if (ts.isStringLiteral(node)) return ts.factory.createStringLiteral(node.text);
             else if (ts.isRegularExpressionLiteral(node)) return ts.factory.createRegularExpressionLiteral(node.text);
@@ -430,7 +434,7 @@ export class MacroTransformer {
                 }
             }
         }
-        if (pre.length) this.macros.pushEscaped(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
+        if (pre.length) this.escapeStatement(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
         const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
@@ -619,7 +623,7 @@ export class MacroTransformer {
         const restTypes = call.arguments.map((exp) => this.checker.getTypeAtLocation(exp));
         const macros = [];
         mainLoop:
-        for (const [sym, macro] of this.macros.macros) {
+        for (const [sym, macro] of this.macros) {
             // If the names are different, continue to the next macro
             if (macro.name !== name) continue;
             const fnType = this.checker.getTypeOfSymbolAtLocation(sym, sym.valueDeclaration!).getCallSignatures()[0];
@@ -664,13 +668,33 @@ export class MacroTransformer {
     }
 
     findMacroByName(node: ts.Node, name: string) : Macro|undefined {
-        const allMacros = this.macros.findByName(name);
-        if (allMacros.length > 1) throw MacroError(node, `More than one macro with the name ${name} exists.`);
-        return allMacros[0];
+        const foundMacros = [];
+        for (const [, macro] of this.macros) {
+            if (macro.name === name) foundMacros.push(macro);
+        }
+        if (foundMacros.length > 1) throw MacroError(node, `More than one macro with the name ${name} exists.`);
+        return foundMacros[0];
     }
 
     getLastMacro() : MacroExpand|undefined {
         return this.macroStack[this.macroStack.length - 1];
+    }
+
+    saveAndClearEscapedStatements(into: Array<ts.Statement>) : void {
+        into.push(...this.escapedStatements[this.escapedStatements.length - 1]);
+        this.escapedStatements[this.escapedStatements.length - 1].length = 0;
+    }
+
+    escapeStatement(...statements: Array<ts.Statement>) : void {
+        this.escapedStatements[this.escapedStatements.length - 1].push(...statements);
+    }
+
+    removeEscapeScope() : void {
+        this.escapedStatements.pop();
+    }
+
+    addEscapeScope() : void {
+        this.escapedStatements.push([]);
     }
 
 }

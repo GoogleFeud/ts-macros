@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as ts from "typescript";
-import { MacroMap } from "./macroMap";
 import { MacroExpand, MacroTransformer } from "./transformer";
 
-export const macros = new MacroMap();
+export const macros = new Map();
 
 export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
     const typeChecker = program.getTypeChecker();
@@ -287,22 +286,22 @@ export declare function $$ts<T = unknown>(code: string) : T;
 
 /**
  * "Escapes" the code inside the arrow function by placing it in the parent block.
+ * If the last statement inside the arrow function is a return statement, the escape
+ * macro itself will expand to the returned expression.
  * 
  * @example
  * ```ts --Macro
  * function $try(resultObj: any) {
- *   $$escape!(() => {
+ *    $$escape!(() => {
  *       const res = resultObj;
  *       if (res.is_err()) {
  *           return res;
  *       }
+ *       return res.result;
  *   });
- *   return $$ident!("res").result;
  * }
- * 
- * {
- *   const result = $try!({ value: 123 });
- * }
+ *
+ * const result = $try!({ value: 123 });
  * ```
  * ```ts --Result
  *  const res = { value: 123 };
@@ -313,7 +312,7 @@ export declare function $$ts<T = unknown>(code: string) : T;
  * ```
  * @category Built-in Macros
  */
-export declare function $$escape(code: () => void) : any;
+export declare function $$escape<T>(code: () => T) : T;
 
 
 /**
