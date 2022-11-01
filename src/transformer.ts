@@ -239,6 +239,19 @@ export class MacroTransformer {
                 if (ts.isIdentifier(paramMacro)) return paramMacro;
                 return ts.visitNode(paramMacro, this.boundVisitor);
             }
+            
+            else if (ts.isArrayLiteralExpression(node) && node.elements.some(t => ts.isSpreadElement(t))) {
+                const elements = [];
+                for (const element of node.elements) {
+                    if (ts.isSpreadElement(element)) {
+                        const visited = ts.visitNode(element.expression, this.boundVisitor);
+                        if (ts.isArrayLiteralExpression(visited)) elements.push(...visited.elements);
+                        else elements.push(ts.visitNode(element, this.boundVisitor));
+                    }
+                    else elements.push(ts.visitNode(element, this.boundVisitor));
+                }
+                return ts.factory.createArrayLiteralExpression(elements);
+            }
 
             // Detects a ternary expression and tries to remove it if possible
             else if (ts.isConditionalExpression(node)) {
