@@ -47,7 +47,7 @@ export declare function $$loadEnv(path?: string) : void;
  * @example
  * ```ts --Macro
  * function $log(...contents: Array<unknown>) : void {
- *     if ($$readFile!<{debug: boolean}>("./test/config.json", true).debug) console.log(+[() => contents]);
+ *     if ($$readFile!<{debug: boolean}>("./test/config.json", true).debug) console.log(+[[contents], (content) => content]);
  * }
  * ```
  * ```js --Call
@@ -71,11 +71,10 @@ export declare function $$readFile<T = Record<string, unknown>>(path: string, pa
  * 
  * @example
  * ```ts --Macro
- * import { $$inlineFunc, $$kindof } from "ts-macros";
+ * import { $$inlineFunc } from "ts-macros";
  * import * as ts from "typescript"
  * 
- * function $map(arr: Array<number>, cb: Function) : Array<number> {
- *    if ($$kindof!(arr) !== ts.SyntaxKind.Identifier) var arr = arr; // Only declare a variable if the `arr` argument is not a variable
+ * function $map(arr: Save<Array<number>>, cb: Function) : Array<number> {
  *     const res = [];
  *     for (let i=0; i < arr.length; i++) {
  *        res.push($$inlineFunc!(cb, arr[i]));
@@ -292,7 +291,7 @@ export declare function $$ts<T = unknown>(code: string) : T;
  * @example
  * ```ts --Macro
  * function $try(resultObj: any) {
- *    $$escape!(() => {
+ *    return $$escape!(() => {
  *       const res = resultObj;
  *       if (res.is_err()) {
  *           return res;
@@ -428,7 +427,7 @@ export interface RawContext {
  * You also cannot use other macros or any typescript features inside the arrow function.
  * 
  * The first parameter of the function is a [[RawContext]], which gives you access to the everything
- * exported by typescript ([[RawContext.ts]]) so you don't have to import it.
+ * exported by typescript so you don't have to import it.
  * 
  * Use the high-level tools provided by ts-macros if possible - they're easier to read and understand,
  * they're more concise and most importantly you won't be directly using the typescript API which changes
@@ -439,8 +438,8 @@ export interface RawContext {
  * import * as ts from "typescript";
  * // raw version
  * function $addNumbers(...numbers: Array<number>) {
- *   return $$raw!((numsAst: Array<ts.Expression>) => {
- *     return numsAst.slice(1).reduce((exp, num) => ts.factory.createBinaryExpression(exp, ts.SyntaxKind.PlusToken, num), numsAst[0]);
+ *   return $$raw!((ctx: RawContext, numsAst: Array<ts.Expression>) => {
+ *     return numsAst.slice(1).reduce((exp, num) => ctx.factory.createBinaryExpression(exp, ctx.ts.SyntaxKind.PlusToken, num), numsAst[0]);
  *  });
  * }
  * 
@@ -469,7 +468,59 @@ export declare function $$setStore(key: string, value: any) : void;
  */
 export declare function $$getStore<T>(key: string) : T;
 
+/**
+ * A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
+ * 
+ * ```ts --Macro
+ * import { Accumulator } from "ts-macros"
+ * 
+ * function $num(acc: Accumulator = 0) : Array<number> {
+ *     acc;
+ * }
+ * ```
+ * ```ts --Call
+ * $num!();
+ * $num!();
+ * $num!();
+ * ```
+ * ```ts --Result
+ * 0
+ * 1
+ * 2
+ * ```
+ */
 export type Accumulator = number & { __marker?: "Accumulator" };
+
+/**
+ * Saves the provided expression in a hygienic variable. This guarantees that the parameter will expand to an identifier. The declaration statement is also not considered part of the expanded code.
+ * 
+ * ```ts --Macro
+ * function $map(arr: Save<Array<number>>, cb: Function) : Array<number> {
+ *     const res = [];
+ *     for (let i=0; i < arr.length; i++) {
+ *         res.push($$inlineFunc!(cb, arr[i]));
+ *     }
+ *     return $$ident!("res");
+ * }
+ * ```
+ * ```ts --Call
+ * {
+ *     const mapResult = $map!([1, 2, 3, 4, 5], (n) => console.log(n));
+ * }
+ * ```
+ * ```ts --Result
+ * {
+ *     let arr_1 = [1, 2, 3, 4, 5];
+ *     const mapResult = (() => {
+ *         const res = [];
+ *         for (let i = 0; i < arr_1.length; i++) {
+ *             res.push(console.log(arr_1[i]));
+ *         }
+ *         return res;
+ *     })();
+ * }
+ * ```
+ */
 export type Save<T> = T & { __marker?: "Save" }
 
 export const enum LabelKinds {

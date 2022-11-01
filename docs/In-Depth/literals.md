@@ -19,7 +19,7 @@ $add!(5, 10);
 15
 ```
 
-This works for all binary and unary operators.
+This works for almost all binary and unary operators.
 
 ## Logic
 

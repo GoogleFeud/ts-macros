@@ -89,7 +89,7 @@ If you want part of the code to be ran **outside** of the IIFE (for example you 
 
 ```ts --Macro
 function $if<T>(comparison: any, then: () => T, _else?: () => T) {
-    $$escape!(() => {
+    return $$escape!(() => {
         var val;
         if ($$kindof!(_else) === ts.SyntaxKind.ArrowFunction) {
             if (comparison) {

@@ -88,7 +88,7 @@ If a repetition is placed inside of a function call, and a separator is **not** 
 
 ```ts --Macro
 function $log(...items: Array<number>) {
-    console.log(+[(items: number) => items + 1]);
+    console.log(+[[items], (item: number) => item + 1]);
 }
 ```
 ```ts --Call
@@ -106,7 +106,7 @@ ts-macros provides a built-in macro, `$$i`, if used inside a repetition, it'll r
 import { $$i } from "../../dist";
 
 function $arr(...els: Array<number>) : Array<number> {
-    return +["[]", (els: number) => els + $$i!()] as unknown as Array<number>;
+    return +["[]", [els], (el: number) => el + $$i!()] as unknown as Array<number>;
 }
 ```
 ```ts --Call

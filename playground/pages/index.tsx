@@ -31,11 +31,11 @@ $contains!(searchItem, ["erwin", "tj"]);`,
     `type ClassInfo = { name: string, value: string };
 
 function $makeClasses(...info: Array<ClassInfo>) {
-    +[(info: ClassInfo) => {
+    +[[info], (classInfo: ClassInfo) => {
         $$ts!(\`
-            class \${info.name} {
+            class \${classInfo.name} {
                 constructor() {
-                    this.value = \${info.value}
+                    this.value = \${classInfo.value}
                 }
             }
         \`);

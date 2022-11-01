@@ -13,8 +13,8 @@ ts-macros is a custom typescript **transformer** which implements function macro
 All macro names must start with a dollar sign (`$`) and must be declared using the function keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `$macro!(params)`.
 
 ```ts --Macro
-function $contains(value: unknown, ...possible: Array<unknown>) {
-    return +["||", (possible: unknown) => value === possible];
+function $contains<T>(value: T, ...possible: Array<T>) {
+    return +["||", [possible], (item: T) => value === item];
 }
 ```
 ```ts --Call

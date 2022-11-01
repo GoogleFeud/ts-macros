@@ -8,7 +8,7 @@ All macro names must start with a dollar sign (`$`) and must be declared using t
 
 ```ts
 function $contains<T>(value: T, ...possible: Array<T>) {
-    return +["||", (possible: T) => value === possible];
+    return +["||", [possible], (item: T) => value === item];
 }
 
 const searchItem = "google";
