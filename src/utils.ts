@@ -195,7 +195,19 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         const falseType = resolveTypeWithTypeParams((providedType as any).resolvedFalseType as ts.Type, typeParams, replacementTypes);
         if (providedType.checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
         else return falseType;
-    } else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
+    }
+    // Intersections
+    else if (providedType.isIntersection()) {
+        const symTable = new Map();
+        for (const unresolvedType of providedType.types) {
+            const resolved = resolveTypeWithTypeParams(unresolvedType, typeParams, replacementTypes);
+            for (const prop of resolved.getProperties()) {
+                symTable.set(prop.name, prop);
+            }
+        }
+        return providedType.checker.createAnonymousType(undefined, symTable, [], [], []);
+    }
+    else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
     return providedType;
 }
 
