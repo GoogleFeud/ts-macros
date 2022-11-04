@@ -31,6 +31,10 @@ export interface MacroExpand {
     call?: ts.CallExpression,
     args: ts.NodeArray<ts.Expression>,
     defined: Record<string, ts.Identifier>,
+    /**
+    * The item which has the decorator
+    */
+    target?: ts.Node,
     store: Record<string, ts.Expression>
 }
 
@@ -166,13 +170,33 @@ export class MacroTransformer {
             if (ts.isNonNullExpression(node.expression.expression)) {
                 const statements = this.runMacro(node.expression, node.expression.expression.expression);
                 if (!statements) return;
-                const prepared = this.makeHygienic(statements) as unknown as Array<ts.Statement>;
+                const prepared = this.makeHygienic(ts.factory.createNodeArray(statements)) as unknown as Array<ts.Statement>;
                 if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
                     const exp = prepared.pop() as ts.ReturnStatement;
                     if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
                 }
                 else return prepared;
             }
+        }
+
+        if (ts.canHaveDecorators(node) && ts.getDecorators(node)?.length) {
+            const decorators = ts.getDecorators(node)!;
+            let prev;
+            const extra = [];
+            for (let i=decorators.length - 1; i >= 0; i--) {
+                const decorator = decorators[i];
+                if (ts.isCallExpression(decorator.expression) && ts.isNonNullExpression(decorator.expression.expression)) {
+                    const res = this.runMacro(decorator.expression, decorator.expression.expression.expression, prev || decorator.parent);
+                    if (res && res.length) {
+                        if (ts.isReturnStatement(res[res.length - 1])) {
+                            const returnSttm = res.pop() as ts.ReturnStatement;
+                            if (returnSttm.expression) prev = ts.visitNode(returnSttm.expression, this.boundVisitor);
+                            extra.push(...res);
+                        }
+                    }
+                }
+            }
+            return [...(extra as Array<ts.Node>), (prev as ts.Node)];
         }
 
         if (ts.isCallExpression(node)) {
@@ -400,7 +424,7 @@ export class MacroTransformer {
         return params[paramMacro.start] || paramMacro.defaultVal;
     }
 
-    runMacro(call: ts.CallExpression, name: ts.Expression) : ts.NodeArray<ts.Statement>|undefined {
+    runMacro(call: ts.CallExpression, name: ts.Expression, target?: ts.Node) : Array<ts.Statement>|undefined {
         const args = call.arguments;
         let macro, normalArgs;
         if (ts.isPropertyAccessExpression(name)) {
@@ -417,8 +441,8 @@ export class MacroTransformer {
             if (nativeMacro) {
                 const macroResult = nativeMacro.call(nativeMacro.preserveParams ? args : ts.visitNodes(args, this.boundVisitor), this, call);
                 if (!macroResult) return undefined;
-                if (Array.isArray(macroResult)) return macroResult as unknown as ts.NodeArray<ts.Statement>;
-                return [ts.factory.createExpressionStatement(macroResult as ts.Expression)] as unknown as ts.NodeArray<ts.Statement>;
+                if (Array.isArray(macroResult)) return macroResult as Array<ts.Statement>;
+                return [ts.factory.createExpressionStatement(macroResult as ts.Expression)];
             }
             macro = this.macros.get(resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name))!);
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
@@ -428,6 +452,7 @@ export class MacroTransformer {
             macro,
             args: normalArgs,
             call: call,
+            target,
             defined: {},
             store: {}
         });
@@ -446,7 +471,7 @@ export class MacroTransformer {
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
         this.macroStack.pop();
-        return result;
+        return [...result];
     }
 
     makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
@@ -465,7 +490,7 @@ export class MacroTransformer {
             }
             else return ts.visitEachChild(node, visitor, this.context);
         };
-        return ts.visitNodes(statements, visitor);
+        return ts.visitNodes(ts.factory.createNodeArray(statements), visitor);
     }
 
     getMarker(param: ts.ParameterDeclaration) : MacroParamMarkers {
@@ -682,6 +707,18 @@ export class MacroTransformer {
 
     addEscapeScope() : void {
         this.escapedStatements.push([]);
+    }
+
+    strToAST(str: string) : ts.NodeArray<ts.Statement> {
+        const file = ts.createSourceFile("", str, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TSX);
+        const uniquelize: (node: ts.Node) => ts.Node = (node: ts.Node) => {
+            if (ts.isNumericLiteral(node)) return ts.factory.createNumericLiteral(node.text);
+            else if (ts.isStringLiteral(node)) return ts.factory.createStringLiteral(node.text);
+            else if (ts.isRegularExpressionLiteral(node)) return ts.factory.createRegularExpressionLiteral(node.text);
+            else if (ts.isIdentifier(node)) return ts.factory.createIdentifier(node.text);
+            else return ts.visitEachChild(node, uniquelize, this.context);
+        };
+        return ts.visitEachChild(file, uniquelize, this.context).statements;
     }
 
 }

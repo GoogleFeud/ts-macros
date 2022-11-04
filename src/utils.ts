@@ -80,7 +80,7 @@ export function getNameFromBindingName(obj: ts.BindingName) : string|undefined {
 }
 
 export function isStatement(obj: ts.Node) : obj is ts.Statement {
-    return obj.kind >= ts.SyntaxKind.Block && obj.kind <= ts.SyntaxKind.DebuggerStatement;
+    return obj.kind >= ts.SyntaxKind.Block && obj.kind <= ts.SyntaxKind.MissingDeclaration;
 }
 
 export function createObject(record: Record<string, ts.Expression|ts.Statement|undefined>) : ts.ObjectLiteralExpression {
