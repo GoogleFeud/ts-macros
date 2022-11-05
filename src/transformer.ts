@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 
 export const enum MacroParamMarkers {
@@ -188,11 +188,9 @@ export class MacroTransformer {
                 if (ts.isCallExpression(decorator.expression) && ts.isNonNullExpression(decorator.expression.expression)) {
                     const res = this.runMacro(decorator.expression, decorator.expression.expression.expression, prev || decorator.parent);
                     if (res && res.length) {
-                        if (ts.isReturnStatement(res[res.length - 1])) {
-                            const returnSttm = res.pop() as ts.ReturnStatement;
-                            if (returnSttm.expression) prev = ts.visitNode(returnSttm.expression, this.boundVisitor);
-                            extra.push(...res);
-                        }
+                        const [deExpanded, last] = deExpandMacroResults(res);
+                        if (last) prev = ts.visitNode(last, this.boundVisitor);
+                        extra.push(...deExpanded);
                     }
                 }
             }

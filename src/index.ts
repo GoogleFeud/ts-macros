@@ -421,10 +421,8 @@ export interface RawContext {
  * access to the parameters as AST nodes, not actual values.
  * 
  * This macro can only be used inside other macros, and the parameters of the arrow function should
- * match the macro's, except in AST form. The only exception to this rule is rest operators, those get
+ * match the macro's, except in AST form. The only exception to this are rest operators, those get
  * turned into an array of expressions.
- * 
- * You also cannot use other macros or any typescript features inside the arrow function.
  * 
  * The first parameter of the function is a [[RawContext]], which gives you access to the everything
  * exported by typescript so you don't have to import it.
@@ -522,6 +520,8 @@ export type Accumulator = number & { __marker?: "Accumulator" };
  * ```
  */
 export type Save<T> = T & { __marker?: "Save" }
+
+export type EmptyDecorator = (...props: any) => void;
 
 export const enum LabelKinds {
     If,

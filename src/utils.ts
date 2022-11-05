@@ -3,9 +3,11 @@
 import * as ts from "typescript";
 import { MacroParam, MacroTransformer } from "./transformer";
 
-export function flattenBody(body: ts.ConciseBody) : Array<ts.Node> {
-    if ("statements" in body) return [...body.statements];
-    return [body];
+export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
+    if ("statements" in body) {
+        return [...body.statements];
+    }
+    return [ts.factory.createExpressionStatement(body)];
 }
 
 export function wrapExpressions(exprs: Array<ts.Statement>) : ts.Expression {
@@ -222,4 +224,28 @@ export function resolveTypeArguments(checker: ts.TypeChecker, call: ts.CallExpre
     default:
         return [];
     }
+}
+
+/**
+ * When a macro gets called, no matter if it's built-in or not, it must expand to a valid expression.
+ * If the macro expands to multiple statements, it gets wrapped in an IIFE.
+ * This helper function does the opposite, it de-expands the expanded valid expression to an array
+ * of statements.
+ */
+export function deExpandMacroResults(nodes: Array<ts.Statement>) : [Array<ts.Statement>, ts.Node?] {
+    const cloned = [...nodes];
+    const lastNode = cloned[nodes.length - 1];
+    if (!lastNode) return [nodes];
+    if (ts.isReturnStatement(lastNode)) {
+        const expression = (cloned.pop() as ts.ReturnStatement).expression;
+        if (!expression) return [nodes];
+        if (ts.isCallExpression(expression) && ts.isParenthesizedExpression(expression.expression) && ts.isArrowFunction(expression.expression.expression)) {
+            const flattened = flattenBody(expression.expression.expression.body);
+            let last: ts.Node|undefined = flattened.pop();
+            if (last && ts.isReturnStatement(last) && last.expression) last = last.expression;
+            return [[...cloned, ...flattened], last];
+        }
+        else return [cloned, expression];
+    }
+    return [cloned, cloned[cloned.length - 1]];
 }

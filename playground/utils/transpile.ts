@@ -32,7 +32,8 @@ declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.
 declare function $$setStore(key: string, value: any) : void;
 declare function $$getStore<T>(key: string) : T;
 type Accumulator = number & { __marker?: "Accumulator" };
-type Save<T> = T & { __marker?: "Save" }
+type Save<T> = T & { __marker?: "Save" };
+type EmptyDecorator = (...props: any) => void;
 const enum LabelKinds {
     If,
     ForIter,
