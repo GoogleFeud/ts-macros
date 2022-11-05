@@ -92,3 +92,19 @@ class C {
 }
 C.value = "C";
 ```
+
+## Spread expression
+
+You can concat array literals with the spread syntax, like you do in regular javascript:
+
+```ts --Macro
+function $concatArrayLiterals(a: Array<number>, b: Array<number>) : Array<number> {
+    return [...a, ...b];
+}
+```
+```ts --Call
+$concatArrayLiterals!([1, 2, 3], [4, 5, 6]);
+```
+```ts --Result
+[1, 2, 3, 4, 5, 6];
+```

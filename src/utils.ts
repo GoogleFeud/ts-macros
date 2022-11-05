@@ -46,7 +46,7 @@ export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
     const thirdElement = rep.elements[2];
     if (thirdElement && ts.isArrowFunction(thirdElement)) res.function = thirdElement;
 
-    if (!res.function) throw new Error("Repetition must include arrow function.");
+    if (!res.function) throw MacroError(rep, "Repetition must include arrow function.");
     return res as ReturnType<typeof getRepetitionParams>;
 }
 

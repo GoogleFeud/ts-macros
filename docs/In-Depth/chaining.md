@@ -50,12 +50,12 @@ console.log(addedVec[0], addedVec[1], 1);
 
 The ts-macros transformer keeps tracks of macros using their unique **symbol**. Since you must declare the type for the macros yourself (see the `Vector` example above), the macro function declaration and the type declaration do not share a symbol, so the transformer needs another way to see which macro you're really trying to call. 
 
-This is why the transformer compares the types of the parameters from the macro call site to all macros of the same name. For example:
+This is why the transformer compares the types of the parameters from the macro call site to all macros of the same name. Two types are considered equal if the type of the argument is **assignable** to the macro parameter type. For example:
 
 ```ts
-// In file A
+// ./A
 function $create(name: string, age: number) { ... }
-// In file B
+// ./B
 function $create(id: string, createdAt: number) { ... }
 ```
 
@@ -75,4 +75,4 @@ The only ways to fix this are to either:
 
 - Rename one of the macros
 - Switch the order of the parameters
-
+- Possibly brand one of the types

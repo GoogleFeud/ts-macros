@@ -71,7 +71,32 @@ const arr = [1, 3, 4, 5, 6];
 $ToInterval:
 while (arr.length !== 0) {
     console.log(arr.pop());
-}`
+}`,
+`
+function $renameClass(newName: string) : EmptyDecorator {
+    return $$raw!((ctx, newNameNode) => {
+       const target = ctx.thisMacro.target;
+       return ctx.factory.updateClassDeclaration(
+            target,
+            target.modifiers?.filter(m => m.kind !== ctx.ts.SyntaxKind.Decorator),
+            ctx.factory.createIdentifier(newNameNode.text),
+            target.typeParameters,
+            target.heritageClauses,
+            target.members
+        )
+    });
+}
+
+@$renameClass!("NewTest")
+class Test {
+    propA: number
+    propB: string
+    constructor(a: number, b: string) {
+        this.propA = a;
+        this.propB = b;
+    }
+}
+`
 ]
 
 const SetupCode = `

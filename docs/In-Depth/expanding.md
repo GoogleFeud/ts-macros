@@ -5,7 +5,7 @@ order: 3
 
 # Expanding macros
 
-Every macro **expands** into the code that it contains. How it'll expand depends entirely on how the macro is used. Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Since macro calls are plain function calls, macros can never be used as a statement, but...
+Every macro **expands** into the code that it contains. How it'll expand depends entirely on how the macro is used. Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Since macro calls are plain function calls, macros can never be used as a statement.
 
 |> Expanded macros are **always** hygienic!
 
