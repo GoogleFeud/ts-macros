@@ -181,7 +181,7 @@ function $logArgs(): EmptyDecorator {
 }
 ```
 ```ts --Call
-@$extendClass!("NewTest")
+@$renameClass!("NewTest")
 @$addDebugMethod!()
 class Test {
     propA: number
@@ -224,7 +224,7 @@ function $renameMethod(newName: string) : EmptyDecorator {
 }
 ```
 ```ts --Call
-@$extendClass!("NewTest")
+@$renameClass!("NewTest")
 @$addDebugMethod!()
 class Test {
     propA: number
@@ -260,7 +260,7 @@ First `logArgs` gets the declaration and instead of it returns two new ones: `ad
 To make this work, we'll have to switch the orders of the decorators:
 
 ```ts
-@$extendClass!("NewTest")
+@$renameClass!("NewTest")
 @$addDebugMethod!()
 class Test {
     propA: number

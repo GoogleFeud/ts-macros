@@ -79,16 +79,16 @@ type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
 `;
 
 export const CompilerOptions: ts.CompilerOptions = {
-    ...ts.getDefaultCompilerOptions(),                    
+    //...ts.getDefaultCompilerOptions(),                    
     noImplicitAny: true,                          
     strictNullChecks: true,
-    target: ts.ScriptTarget.ESNext     
+    target: ts.ScriptTarget.ESNext,
+    experimentalDecorators: true
 };
 
 export function genTranspile(lib: string) : (str: string) => { code?: string, error?: unknown} {
     const LibFile = ts.createSourceFile("lib.d.ts", lib, CompilerOptions.target || ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);
     return (str) => {
-        console.log("HMM?:", str);
         const SourceFile = ts.createSourceFile("module.ts", Markers + str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
         let output = "";
         const CompilerHost: ts.CompilerHost = {
