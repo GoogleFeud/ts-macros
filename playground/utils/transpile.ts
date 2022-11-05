@@ -21,10 +21,19 @@ declare function $$escape(code: () => void) : any;
 declare function $$typeToString<T>() : string;
 declare function $$propsOfType<T>() : Array<string>;
 declare function $$comptime(fn: () => void) : void;
+interface RawContext {
+    ts: any,
+    factory: any,
+    transformer: any,
+    checker: any,
+    thisMacro: any
+}
+declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
+declare function $$setStore(key: string, value: any) : void;
+declare function $$getStore<T>(key: string) : T;
 type Accumulator = number & { __marker?: "Accumulator" };
-declare const var_sym: unique symbol;
-type Var = (null | undefined | string | number | {} | typeof var_sym) & { __marker?: "Var" };
-type Save<T> = T & { __marker?: "Save" }
+type Save<T> = T & { __marker?: "Save" };
+type EmptyDecorator = (...props: any) => void;
 const enum LabelKinds {
     If,
     ForIter,
@@ -70,10 +79,11 @@ type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
 `;
 
 export const CompilerOptions: ts.CompilerOptions = {
-    ...ts.getDefaultCompilerOptions(),                    
+    //...ts.getDefaultCompilerOptions(),                    
     noImplicitAny: true,                          
     strictNullChecks: true,
-    target: ts.ScriptTarget.ESNext     
+    target: ts.ScriptTarget.ESNext,
+    experimentalDecorators: true
 };
 
 export function genTranspile(lib: string) : (str: string) => { code?: string, error?: unknown} {

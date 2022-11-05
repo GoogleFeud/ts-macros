@@ -16,6 +16,10 @@ export function TextEditor(props: {
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
             ...CompilerOptions as unknown as languages.typescript.CompilerOptions
         });
+        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+            diagnosticCodesToIgnore: [1219]
+          });
+
         const filename = "ts:ts-macros/index.d.ts";
         monaco.languages.typescript.javascriptDefaults.addExtraLib(Markers, filename);
         monaco.editor.createModel(Markers, "typescript", monaco.Uri.parse(filename));

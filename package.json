@@ -1,6 +1,6 @@
 {
   "name": "ts-macros",
-  "version": "1.3.6",
+  "version": "2.0.0",
   "description": "",
   "main": "dist/index.js",
   "devDependencies": {
@@ -17,7 +17,10 @@
     "eslint": "^7.30.0",
     "mocha": "^9.2.2",
     "ttypescript": "^1.5.13",
-    "typescript": "^4.8.3"
+    "typescript": "^4.8.4"
+  },
+  "peerDependencies": {
+    "typescript": "4.3.x || 4.4.x || 4.5.x || 4.6.x || 4.7.x || 4.8.x"
   },
   "scripts": {
     "build": "tsc",
