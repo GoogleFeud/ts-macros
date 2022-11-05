@@ -5,9 +5,13 @@ import { MacroExpand, MacroTransformer } from "./transformer";
 
 export const macros = new Map();
 
-export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
+export interface TsMacrosConfig {
+    noComptime?: boolean
+}
+
+export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
     const typeChecker = program.getTypeChecker();
-    const transformer = new MacroTransformer(ctx, typeChecker, macros);
+    const transformer = new MacroTransformer(ctx, typeChecker, macros, config);
     return firstNode => {
         return transformer.run(firstNode as ts.SourceFile);
     };

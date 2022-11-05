@@ -3,6 +3,7 @@ import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
 import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
+import { TsMacrosConfig } from ".";
 
 export const enum MacroParamMarkers {
     None,
@@ -62,7 +63,8 @@ export class MacroTransformer {
     macros: MacroMap;
     escapedStatements: Array<Array<ts.Statement>>;
     comptimeSignatures: Map<ts.Node, (...params: Array<unknown>) => void>;
-    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap) {
+    config: TsMacrosConfig;
+    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap, config?: TsMacrosConfig) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.repeat = [];
@@ -72,6 +74,7 @@ export class MacroTransformer {
         this.checker = checker;
         this.macros = macroMap;
         this.comptimeSignatures = new Map();
+        this.config = config || {};
     }
 
     run(node: ts.SourceFile): ts.Node {

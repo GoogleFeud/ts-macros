@@ -237,6 +237,7 @@ export default {
     },
     "$$comptime": {
         call: (_, transformer, callSite) => {
+            if (transformer.config.noComptime) return;
             if (transformer.macroStack.length) throw MacroError(callSite, "`comptime` macro cannot be called inside macros.");
             const fn = callSite.arguments[0];
             if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`comptime` macro expects an arrow function as the first parameter.");
@@ -257,6 +258,7 @@ export default {
     },
     "$$raw": {
         call: ([fn], transformer, callSite) => {
+            if (transformer.config.noComptime) return;
             if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`raw` macro expects an arrow function as the first parameter.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`raw` macro must be called inside another macro.");
