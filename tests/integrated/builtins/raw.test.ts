@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import ts from "typescript";
 const { $$raw } = require("../../../../dist/index");
 
 describe("$$raw", () => {
