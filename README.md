@@ -8,7 +8,7 @@ All macro names must start with a dollar sign (`$`) and must be declared using t
 
 ```ts
 function $contains<T>(value: T, ...possible: Array<T>) {
-    return +["||", (possible: T) => value === possible];
+    return +["||", [possible], (item: T) => value === item];
 }
 
 const searchItem = "google";
@@ -37,7 +37,7 @@ To read more about ts-macros features, visit the [documentation](https://googlef
 - Create abstractions without the runtime cost
 
 **What you can't do with ts-macros**:
-- Generate types which you can use in your code. ts-docs is only a transformer, it's ran **after** typechecking, so generating different types has no effect. However, the code inside the macro itself still gets typechecked
+- Generate types which you can use in your code. ts-macros is only a transformer, it's ran **after** typechecking, so generating different types has no effect. However, the code inside the macro itself still gets typechecked
 
 ## Install
 
@@ -72,8 +72,8 @@ then transpile your code with `ttsc`.
 const TsMacros = require("ts-macros").default;
 
 options: {
-      getCustomTransformers: program => {
+    getCustomTransformers: (program) => ({
         before: [TsMacros(program)]
-      }
+    }),
 }
 ```

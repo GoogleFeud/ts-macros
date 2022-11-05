@@ -19,7 +19,7 @@ $add!(5, 10);
 15
 ```
 
-This works for all binary and unary operators.
+This works for almost all binary and unary operators.
 
 ## Logic
 
@@ -91,4 +91,20 @@ B.value = "B";
 class C {
 }
 C.value = "C";
+```
+
+## Spread expression
+
+You can concat array literals with the spread syntax, like you do in regular javascript:
+
+```ts --Macro
+function $concatArrayLiterals(a: Array<number>, b: Array<number>) : Array<number> {
+    return [...a, ...b];
+}
+```
+```ts --Call
+$concatArrayLiterals!([1, 2, 3], [4, 5, 6]);
+```
+```ts --Result
+[1, 2, 3, 4, 5, 6];
 ```

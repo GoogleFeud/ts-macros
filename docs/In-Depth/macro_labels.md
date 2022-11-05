@@ -1,6 +1,6 @@
 ---
 name: Macro labels
-order: 9
+order: 10
 ---
 
 # Macro labels

@@ -1,10 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { MacroTransformer } from "./transformer";
+import { MacroParam, MacroTransformer } from "./transformer";
 
-export function flattenBody(body: ts.ConciseBody) : Array<ts.Node> {
-    if ("statements" in body) return [...body.statements];
-    return [body];
+export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
+    if ("statements" in body) {
+        return [...body.statements];
+    }
+    return [ts.factory.createExpressionStatement(body)];
 }
 
 export function wrapExpressions(exprs: Array<ts.Statement>) : ts.Expression {
@@ -43,7 +46,7 @@ export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
     const thirdElement = rep.elements[2];
     if (thirdElement && ts.isArrowFunction(thirdElement)) res.function = thirdElement;
 
-    if (!res.function) throw new Error("Repetition must include arrow function.");
+    if (!res.function) throw MacroError(rep, "Repetition must include arrow function.");
     return res as ReturnType<typeof getRepetitionParams>;
 }
 
@@ -79,7 +82,7 @@ export function getNameFromBindingName(obj: ts.BindingName) : string|undefined {
 }
 
 export function isStatement(obj: ts.Node) : obj is ts.Statement {
-    return obj.kind >= ts.SyntaxKind.Block && obj.kind <= ts.SyntaxKind.DebuggerStatement;
+    return obj.kind >= ts.SyntaxKind.Block && obj.kind <= ts.SyntaxKind.MissingDeclaration;
 }
 
 export function createObject(record: Record<string, ts.Expression|ts.Statement|undefined>) : ts.ObjectLiteralExpression {
@@ -141,13 +144,13 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
         else ts.forEachChild(node, visitor);
     };
     ts.forEachChild(fn.body, visitor);
-    return code + ts.transpile(fn.body.getText());
+    return code + ts.transpile((fn.body.original || fn.body).getText());
 }
 
 
-export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknown> = []) : void {
+export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknown> = []) : any {
     try {
-        fn(...args);
+        return fn(...args);
     } catch(err: unknown) {
         if (err instanceof Error) {
             const { line, col } = (err.stack || "").match(/<anonymous>:(?<line>\d+):(?<col>\d+)/)?.groups || {};
@@ -164,4 +167,85 @@ export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknow
             MacroErrorWrapper(node.pos, node.end - node.pos, err.message, file);
         } else throw err;
     }
+}
+
+export function macroParamsToArray<T>(params: Array<MacroParam>, values: Array<T>) : Array<T|Array<T>> {
+    const result = [];
+    for (let i=0; i < params.length; i++) {
+        if (params[i].spread) result.push(values.slice(i));
+        else result.push(values[i]);
+    }
+    return result;
+}
+
+export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.TypeParameter[], replacementTypes: ts.Type[]) : ts.Type {
+    // Access type
+    if ("indexType" in providedType && "objectType" in providedType) {
+        const indexType = resolveTypeWithTypeParams((providedType as any).indexType as ts.Type, typeParams, replacementTypes);
+        const objectType = resolveTypeWithTypeParams((providedType as any).objectType as ts.Type, typeParams, replacementTypes);
+        const foundType = indexType.isTypeParameter() ? replacementTypes[typeParams.findIndex(t => t === indexType)] : indexType;
+        if (!foundType || !foundType.isLiteral()) return providedType;
+        const realType = objectType.getProperty(foundType.value.toString());
+        if (!realType) return providedType;
+        return providedType.checker.getTypeOfSymbol(realType);
+    }
+    // Conditional type
+    else if ("checkType" in providedType && "extendsType" in providedType) {
+        const checkType = resolveTypeWithTypeParams((providedType as any).checkType as ts.Type, typeParams, replacementTypes);
+        const extendsType = resolveTypeWithTypeParams((providedType as any).extendsType as ts.Type, typeParams, replacementTypes);
+        const trueType = resolveTypeWithTypeParams((providedType as any).resolvedTrueType as ts.Type, typeParams, replacementTypes);
+        const falseType = resolveTypeWithTypeParams((providedType as any).resolvedFalseType as ts.Type, typeParams, replacementTypes);
+        if (providedType.checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
+        else return falseType;
+    }
+    // Intersections
+    else if (providedType.isIntersection()) {
+        const symTable = new Map();
+        for (const unresolvedType of providedType.types) {
+            const resolved = resolveTypeWithTypeParams(unresolvedType, typeParams, replacementTypes);
+            for (const prop of resolved.getProperties()) {
+                symTable.set(prop.name, prop);
+            }
+        }
+        return providedType.checker.createAnonymousType(undefined, symTable, [], [], []);
+    }
+    else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
+    return providedType;
+}
+
+export function resolveTypeArguments(checker: ts.TypeChecker, call: ts.CallExpression) : ts.Type[] {
+    const sig = checker.getResolvedSignature(call);
+    if (!sig || !sig.mapper) return [];
+    switch (sig.mapper.kind) {
+    case ts.TypeMapKind.Simple:
+        return [sig.mapper.target];
+    case ts.TypeMapKind.Array:
+        return sig.mapper.targets?.filter(t => t) || [];
+    default:
+        return [];
+    }
+}
+
+/**
+ * When a macro gets called, no matter if it's built-in or not, it must expand to a valid expression.
+ * If the macro expands to multiple statements, it gets wrapped in an IIFE.
+ * This helper function does the opposite, it de-expands the expanded valid expression to an array
+ * of statements.
+ */
+export function deExpandMacroResults(nodes: Array<ts.Statement>) : [Array<ts.Statement>, ts.Node?] {
+    const cloned = [...nodes];
+    const lastNode = cloned[nodes.length - 1];
+    if (!lastNode) return [nodes];
+    if (ts.isReturnStatement(lastNode)) {
+        const expression = (cloned.pop() as ts.ReturnStatement).expression;
+        if (!expression) return [nodes];
+        if (ts.isCallExpression(expression) && ts.isParenthesizedExpression(expression.expression) && ts.isArrowFunction(expression.expression.expression)) {
+            const flattened = flattenBody(expression.expression.expression.body);
+            let last: ts.Node|undefined = flattened.pop();
+            if (last && ts.isReturnStatement(last) && last.expression) last = last.expression;
+            return [[...cloned, ...flattened], last];
+        }
+        else return [cloned, expression];
+    }
+    return [cloned, cloned[cloned.length - 1]];
 }

@@ -11,4 +11,10 @@ describe("$$propsOfType", () => {
             return parameter;
         })()).to.be.deep.equal({ a: 123 });
     });
+    it("Should work with complex type", () => {
+        (0, chai_1.expect)("a", "a");
+        (0, chai_1.expect)("b", "b");
+        (0, chai_1.expect)("e", "e");
+        (0, chai_1.expect)("d", "d");
+    });
 });

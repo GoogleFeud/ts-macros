@@ -5,7 +5,7 @@ order: 3
 
 # Expanding macros
 
-Every macro **expands** into the code that it contains. How it'll expand depends entirely on how the macro is used. Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Since macro calls are plain function calls, macros can never be used as a statement, but...
+Every macro **expands** into the code that it contains. How it'll expand depends entirely on how the macro is used. Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Since macro calls are plain function calls, macros can never be used as a statement.
 
 |> Expanded macros are **always** hygienic!
 
@@ -89,55 +89,44 @@ If you want part of the code to be ran **outside** of the IIFE (for example you 
 
 ```ts --Macro
 function $if<T>(comparison: any, then: () => T, _else?: () => T) {
-   $$escape!(() => {
-    var val;
-    if (_else) {
-        if (comparison) {
-            val = $$inlineFunc!(then);
+    return $$escape!(() => {
+        var val;
+        if ($$kindof!(_else) === ts.SyntaxKind.ArrowFunction) {
+            if (comparison) {
+                val = $$escape!(then);
+            } else {
+                val = $$escape!(_else!);
+            }
         } else {
-            val = $$inlineFunc!(_else);
+            if (comparison) {
+                val = $$escape!(then);
+            }
         }
-    } else {
-        if (comparison) {
-            val = $$inlineFunc!(then);
-        }
-    }
-   });
-   return $$ident!("val");
+        return val;
+    });
 }
 ```
 ```ts --Call
-(() => {
-    const variable: number = 54;
-    console.log($if!<string>(1 === variable, () => {
-        // Do something...
-        console.log("1 === variable");
-        return "A";
-    }, () => {
-        // Do something...
-        console.log("1 !== variable");
-        return "B";
-    }));
-})();
+const variable: number = 54;
+console.log($if!<string>(1 === variable, () => {
+    console.log("variable is 1");
+    return "A";
+}, () => {
+    console.log("variable is not 1");
+    return "B";
+}));
 ```
 ```ts --Result
-(() => {
-    const variable = 54;
-    var val;
-    {
-        if (1 === variable) {
-            val = (() => {
-                console.log("1 === variable");
-                return "A";
-            })();
-        }
-        else {
-            val = (() => {
-                console.log("1 !== variable");
-                return "B";
-            })();
-        }
-    }
-    console.log(val);
-})();
+const variable = 54;
+var val_1;
+if (1 === variable) {
+    // Do something...
+    console.log("variable is 1");
+    val_1 = "A";
+}
+else {
+    console.log("variable is not 1");
+    val_1 = "B";
+}
+console.log(val_1);
 ```

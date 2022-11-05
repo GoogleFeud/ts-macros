@@ -29,33 +29,6 @@ $num!();
 2
 ```
 
-## Var
-
-Acts like a variable. You can save any expression into it, and when you reference it the saved expression is inserted instead.
-
-```ts --Macro
-import { Var, $$kindof } from "ts-macros";
-import { SyntaxKind } from "typescript";
-
-function $num(name: string|number, variable?: Var<string|number>) : string  {
-    if ($$kindof!(name) === SyntaxKind.StringLiteral || $$kindof!(name) === SyntaxKind.Identifier) variable = "Hi";
-    else variable = 10;
-    return name + (variable as string);
-} 
-```
-```ts --Call
-$num!("Hello");
-$num!(25);
-const variable = 30; 
-$num!(variable);
-```
-```js --Result
-"HelloHi";
-35;
-const variable = 30;
-"30Hi";
-```
-
 ## Save
 
 Saves the provided expression in a hygienic variable. This guarantees that the parameter will expand to an identifier. The declaration statement is also not considered part of the expanded code.
