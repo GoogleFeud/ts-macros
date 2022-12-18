@@ -255,6 +255,9 @@ export class MacroTransformer {
             else if (ts.isNumericLiteral(node)) return ts.factory.createNumericLiteral(node.text);
             else if (ts.isStringLiteral(node)) return ts.factory.createStringLiteral(node.text);
             else if (ts.isRegularExpressionLiteral(node)) return ts.factory.createRegularExpressionLiteral(node.text);
+            else if (ts.isTemplateHead(node)) return ts.factory.createTemplateHead(node.text, node.rawText, node.templateFlags);
+            else if (ts.isTemplateMiddle(node)) return ts.factory.createTemplateMiddle(node.text, node.rawText, node.templateFlags);
+            else if (ts.isTemplateTail(node)) return ts.factory.createTemplateTail(node.text, node.rawText, node.templateFlags);
 
             // Detects use of a macro parameter and replaces it with a literal
             else if (ts.isIdentifier(node)) {
