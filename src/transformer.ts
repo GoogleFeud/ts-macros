@@ -451,7 +451,15 @@ export class MacroTransformer {
             macro = this.macros.get(resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name))!);
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
-        if (!macro || !macro.body) return;
+        if (!macro || !macro.body) {
+            const calledSym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name));
+            if (calledSym?.declarations?.length) {
+                this.boundVisitor(calledSym.declarations[0]);
+                return this.runMacro(call, name, target);
+            } else {
+                return;
+            }
+        }
         this.macroStack.push({
             macro,
             args: normalArgs,
