@@ -344,7 +344,14 @@ export declare function $$propsOfType<T>() : Array<string>;
  * @category Built-in Macros
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export declare function $$typeToString<T>() : string;
+export declare function $$typeToString<T>(
+    /**
+     * If provided, literals like "abc" will turn to "String", 123 to "Number", "true" to "Boolean", etc.
+     * **The first letter of the type will ALWAYS be uppercase if this argument is set to true.**   
+     * **Objects and tuples do not get simplified to Object / Array.**
+     */
+    simplify?: boolean
+) : string;
 
 /**
  * This macro allows you to run typescript code during transpilation. It should only be used as an expression statement, because it expands to nothing. Additionally, you **cannot** use macros inside the arrow function's body.
