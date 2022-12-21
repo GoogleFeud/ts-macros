@@ -18,7 +18,7 @@ declare function $$slice<T>(str: Array<T>, start?: number, end?: number) : Array
 declare function $$slice(str: string, start?: number, end?: number) : string;
 declare function $$ts<T = unknown>(code: string) : T;
 declare function $$escape(code: () => void) : any;
-declare function $$typeToString<T>() : string;
+declare function $$typeToString<T>(simplify?: boolean) : string;
 declare function $$propsOfType<T>() : Array<string>;
 declare function $$comptime(fn: () => void) : void;
 interface RawContext {

@@ -216,21 +216,23 @@ export default {
         }
     },
     "$$typeToString": {
-        call: (_args, transformer, callSite) => {
+        call: ([simplifyType], transformer, callSite) => {
             if (!callSite.typeArguments || !callSite.typeArguments[0]) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
+            const simplify = transformer.getBoolFromNode(simplifyType);
             const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
             if (type.isTypeParameter()) {
                 const param = transformer.getTypeParam(type);
                 if (!param) return ts.factory.createStringLiteral("");
-                return ts.factory.createStringLiteral(transformer.checker.typeToString(param));
+                return ts.factory.createStringLiteral(transformer.checker.typeToString(simplify ? transformer.checker.getApparentType(param) : param));
             }
             else {
                 const lastMacro = transformer.getLastMacro();
                 if (lastMacro) {
                     const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
                     const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
-                    return ts.factory.createStringLiteral(transformer.checker.typeToString(resolveTypeWithTypeParams(type, allParams, replacementTypes)));
-                } else return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
+                    return ts.factory.createStringLiteral(transformer.checker.typeToString(simplify ? transformer.checker.getApparentType(resolveTypeWithTypeParams(type, allParams, replacementTypes)) : resolveTypeWithTypeParams(type, allParams, replacementTypes)));
+                } 
+                else return ts.factory.createStringLiteral(transformer.checker.typeToString(simplify ? transformer.checker.getApparentType(type) : type));
             }
         }
     },

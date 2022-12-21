@@ -595,7 +595,8 @@ export class MacroTransformer {
         else return NO_LIT_FOUND;
     }
 
-    getBoolFromNode(node: ts.Expression) : boolean|undefined {
+    getBoolFromNode(node: ts.Expression|undefined) : boolean|undefined {
+        if (!node) return undefined;
         if (node.kind === ts.SyntaxKind.FalseKeyword || node.kind === ts.SyntaxKind.NullKeyword) return false;
         else if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
         else if (ts.isNumericLiteral(node)) {
