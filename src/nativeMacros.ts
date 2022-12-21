@@ -123,9 +123,8 @@ export default {
     "$$ident": {
         call: ([thing], transformer, callSite) => {
             if (!thing) throw MacroError(callSite, "`ident` macro expects a string literal as the first parameter.");
-            const lastMacro = transformer.getLastMacro()?.defined || {};
             const strVal = transformer.getStringFromNode(thing, true, true);
-            if (strVal) return lastMacro[strVal] || ts.factory.createIdentifier(strVal);
+            if (strVal) return transformer.getLastMacro()?.defined?.get(strVal) || ts.factory.createIdentifier(strVal);
             else return thing;
         }
     },

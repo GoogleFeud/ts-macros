@@ -31,7 +31,7 @@ export interface MacroExpand {
     macro: Macro,
     call?: ts.CallExpression,
     args: ts.NodeArray<ts.Expression>,
-    defined: Record<string, ts.Identifier>,
+    defined: Map<string, ts.Identifier>,
     /**
     * The item which has the decorator
     */
@@ -89,6 +89,7 @@ export class MacroTransformer {
                 else statements.push(res);
             }
         }
+        //console.dir(statements[2], { depth: 4 });
         this.removeEscapeScope();
         return ts.factory.updateSourceFile(node, statements);
     }
@@ -98,6 +99,7 @@ export class MacroTransformer {
             if (!node.body) return node;
             const sym = this.checker.getSymbolAtLocation(node.name);
             if (!sym) return node;
+            if (this.macros.has(sym)) return;
             const macroName = sym.name;
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
@@ -159,7 +161,7 @@ export class MacroTransformer {
                 macro,
                 call: undefined,
                 args: ts.factory.createNodeArray([labelAction(statementNode)]),
-                defined: {},
+                defined: new Map(),
                 store: {}
             });
             results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
@@ -465,7 +467,7 @@ export class MacroTransformer {
             args: normalArgs,
             call: call,
             target,
-            defined: {},
+            defined: new Map(),
             store: {}
         });
         const pre = [];
@@ -487,18 +489,18 @@ export class MacroTransformer {
     }
 
     makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
-        const defined = this.getLastMacro()?.defined || {};
+        const defined = this.getLastMacro()?.defined || new Map();
         const visitor = (node: ts.Node) : ts.Node => {
             if (ts.isVariableDeclaration(node) && node.pos !== -1) {
                 const name = getNameFromBindingName(node.name);
                 if (!name) return node;
                 const newName = ts.factory.createUniqueName(name);
-                defined[name] = newName;
+                defined.set(name, newName);
                 return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, ts.visitNode(node.initializer, visitor));
             }
             else if (ts.isIdentifier(node)) {
                 if (node.parent && ts.isPropertyAccessExpression(node.parent) && node.parent.expression !== node) return node;
-                else return defined[node.text] || node;
+                else return defined.get(node.text) || node;
             }
             else return ts.visitEachChild(node, visitor, this.context);
         };
