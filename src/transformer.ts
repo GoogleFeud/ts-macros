@@ -89,7 +89,6 @@ export class MacroTransformer {
                 else statements.push(res);
             }
         }
-        //console.dir(statements[2], { depth: 4 });
         this.removeEscapeScope();
         return ts.factory.updateSourceFile(node, statements);
     }
