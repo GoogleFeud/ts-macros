@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun, deExpandMacroResults, createMacroObject } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
+import { getExternalMacro } from "./lib";
 
 export const enum MacroParamMarkers {
     None,
@@ -50,6 +51,7 @@ export interface MacroTransformerBuiltinProps {
 }
 
 export type MacroMap = Map<ts.Symbol, Macro>;
+export type ExternalMacroMap = Map<string, Map<string, Macro>>;
 
 export const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
 
@@ -61,10 +63,11 @@ export class MacroTransformer {
     props: MacroTransformerBuiltinProps;
     checker: ts.TypeChecker;
     macros: MacroMap;
+    external: ExternalMacroMap;
     escapedStatements: Array<Array<ts.Statement>>;
     comptimeSignatures: Map<ts.Node, (...params: Array<unknown>) => void>;
     config: TsMacrosConfig;
-    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap, config?: TsMacrosConfig) {
+    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap, externalMap: ExternalMacroMap, config?: TsMacrosConfig) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.repeat = [];
@@ -74,6 +77,7 @@ export class MacroTransformer {
         this.checker = checker;
         this.macros = macroMap;
         this.comptimeSignatures = new Map();
+        this.external = externalMap;
         this.config = config || {};
     }
 
@@ -99,26 +103,7 @@ export class MacroTransformer {
             const sym = this.checker.getSymbolAtLocation(node.name);
             if (!sym) return node;
             if (this.macros.has(sym)) return;
-            const macroName = sym.name;
-            const params: Array<MacroParam> = [];
-            for (let i = 0; i < node.parameters.length; i++) {
-                const param = node.parameters[i];
-                if (!ts.isIdentifier(param.name)) throw MacroError(param, "You cannot use deconstruction patterns in macros.");
-                const marker = this.getMarker(param);
-                params.push({
-                    spread: Boolean(param.dotDotDotToken),
-                    marker,
-                    start: i,
-                    name: param.name.getText(),
-                    defaultVal: param.initializer
-                });
-            }
-            this.macros.set(sym, {
-                name: macroName,
-                params,
-                body: node.body,
-                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
-            });
+            this.macros.set(sym, createMacroObject(sym.name, node, this.getMarker.bind(this)));
             return;
         }
 
@@ -453,13 +438,17 @@ export class MacroTransformer {
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
         if (!macro || !macro.body) {
-            const calledSym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name));
-            if (calledSym?.declarations?.length) {
+            const baseSymbol = this.checker.getSymbolAtLocation(name);
+            const calledSym = resolveAliasedSymbol(this.checker, baseSymbol);
+            if (!baseSymbol || !calledSym) return;
+            const foundExternal = getExternalMacro(this, baseSymbol);
+            if (foundExternal) {
+                macro = foundExternal;
+                normalArgs = ts.visitNodes(args, this.boundVisitor);
+            } else if (calledSym.declarations?.[0] && ts.isFunctionDeclaration(calledSym.declarations[0])) {
                 this.boundVisitor(calledSym.declarations[0]);
                 return this.runMacro(call, name, target);
-            } else {
-                return;
-            }
+            } else return;
         }
         this.macroStack.push({
             macro,
@@ -480,7 +469,7 @@ export class MacroTransformer {
             }
         }
         if (pre.length) this.escapeStatement(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
-        const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
+        const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context)!.statements;
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
         this.macroStack.pop();

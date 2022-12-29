@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { MacroParam, MacroTransformer } from "./transformer";
+import { Macro, MacroParam, MacroParamMarkers, MacroTransformer } from "./transformer";
 
 export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     if ("statements" in body) {
@@ -248,4 +248,26 @@ export function deExpandMacroResults(nodes: Array<ts.Statement>) : [Array<ts.Sta
         else return [cloned, expression];
     }
     return [cloned, cloned[cloned.length - 1]];
+}
+
+export function createMacroObject(macroName: string, node: ts.FunctionDeclaration, markerResolution: (param: ts.ParameterDeclaration) => MacroParamMarkers) : Macro {
+    const params: Array<MacroParam> = [];
+    for (let i = 0; i < node.parameters.length; i++) {
+        const param = node.parameters[i];
+        if (!ts.isIdentifier(param.name)) throw MacroError(param, "You cannot use deconstruction patterns in macros.");
+        const marker = markerResolution(param);
+        params.push({
+            spread: Boolean(param.dotDotDotToken),
+            marker,
+            start: i,
+            name: param.name.getText(),
+            defaultVal: param.initializer
+        });
+    }
+    return {
+        name: macroName,
+        params,
+        body: node.body,
+        typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
+    };
 }
