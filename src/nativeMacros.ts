@@ -270,7 +270,7 @@ export default {
             }
             let stringified = transformer.comptimeSignatures.get(fn);
             if (!stringified) {
-                stringified = new Function( "ctx", ...renamedParameters, fnBodyToString(transformer.checker, fn)) as (...params: unknown[]) => void;
+                stringified = new Function("ctx", ...renamedParameters, fnBodyToString(transformer.checker, fn)) as (...params: unknown[]) => void;
                 transformer.comptimeSignatures.set(fn, stringified);
             }
             return tryRun(stringified, [{

@@ -129,15 +129,17 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
         if (ts.isCallExpression(node)) {
             const signature = checker.getResolvedSignature(node);
             if (signature && 
-                signature.declaration && 
+                signature.declaration &&
+                signature.declaration !== fn &&
+                signature.declaration.parent.parent !== fn &&
                 (ts.isFunctionDeclaration(signature.declaration) ||
                 ts.isArrowFunction(signature.declaration) ||
                 ts.isFunctionExpression(signature.declaration)    
                 )) {
                 const name = signature.declaration.name ? signature.declaration.name.text : ts.isIdentifier(node.expression) ? node.expression.text : undefined;
                 if (!name || includedFns.has(name)) return;
-                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration)}}`;
                 includedFns.add(name);
+                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration)}}`;
             }
             ts.forEachChild(node, visitor);
         } 
