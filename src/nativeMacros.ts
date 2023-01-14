@@ -249,11 +249,10 @@ export default {
                 if ("body" in parent) {
                     const signature = transformer.checker.getSignatureFromDeclaration(parent as ts.SignatureDeclaration);
                     if (!signature || !signature.declaration) return;
-                    transformer.comptimeSignatures.set(signature.declaration, new Function(...signature.parameters.map(p => p.name), fnBodyToString(transformer.checker, fn)) as (...args: Array<unknown>) => void);
+                    transformer.addComptimeSignature(signature.declaration, fnBodyToString(transformer.checker, fn), signature.parameters.map(p => p.name));
                     return;
                 }
             }
-            tryRun(new Function(fnBodyToString(transformer.checker, fn)) as (...args: Array<unknown>) => void);
         },
         preserveParams: true
     },
@@ -268,18 +267,14 @@ export default {
                 if (!ts.isIdentifier(param.name)) throw MacroError(callSite, "`raw` macro parameters cannot be deconstructors.");
                 renamedParameters.push(param.name.text);
             }
-            let stringified = transformer.comptimeSignatures.get(fn);
-            if (!stringified) {
-                stringified = new Function("ctx", ...renamedParameters, fnBodyToString(transformer.checker, fn)) as (...params: unknown[]) => void;
-                transformer.comptimeSignatures.set(fn, stringified);
-            }
+            const stringified = transformer.addComptimeSignature(fn, fnBodyToString(transformer.checker, fn), ["ctx", ...renamedParameters]);
             return tryRun(stringified, [{
                 ts,
                 factory: ts.factory,
                 transformer,
                 checker: transformer.checker,
                 thisMacro: lastMacro
-            }, ...macroParamsToArray(lastMacro.macro.params, [...lastMacro.args])]);
+            }, ...macroParamsToArray(lastMacro.macro.params, [...lastMacro.args])], `$$raw in ${lastMacro.macro.name}: `);
         },
         preserveParams: true
     },

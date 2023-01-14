@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { MacroParam, MacroTransformer } from "./transformer";
+import { ComptimeFunction, MacroParam, MacroTransformer } from "./transformer";
 
 export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     if ("statements" in body) {
@@ -55,14 +55,14 @@ export function MacroError(callSite: ts.Node, msg: string) : void {
     process.exit();
 }
 
-export function MacroErrorWrapper(start: number, end: number, msg: string, file: ts.SourceFile) : void {
+export function MacroErrorWrapper(start: number, length: number, msg: string, file: ts.SourceFile) : void {
     if (!ts.sys || typeof process !== "object") throw new Error(msg);
     console.error(ts.formatDiagnosticsWithColorAndContext([{
         category: ts.DiagnosticCategory.Error,
         code: 8000,
         file,
         start,
-        length: end,
+        length,
         messageText: msg
     }], {
         getNewLine: () => "\r\n",
@@ -149,24 +149,18 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
     return code + ts.transpile((fn.body.original || fn.body).getText());
 }
 
-
-export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknown> = []) : any {
+export function tryRun(comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {
     try {
-        return fn(...args);
+        return comptime(...args);
     } catch(err: unknown) {
         if (err instanceof Error) {
             const { line, col } = (err.stack || "").match(/<anonymous>:(?<line>\d+):(?<col>\d+)/)?.groups || {};
             const lineNum = line ? (+line - 1) : 0;
-            const colNum = (col ? (+col - 1) : 0);
-            const file = ts.createSourceFile("comptime", fn.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
+            const colNum = col ? (+col - 1) : 0;
+            const file = ts.createSourceFile("comptime", comptime.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
             const startLoc = ts.getPositionOfLineAndCharacter(file, lineNum, colNum);
-            let node: ts.Node = file;
-            const visitor = (visitedNode: ts.Node) => {
-                if (visitedNode.pos === startLoc) node = visitedNode;
-                else ts.forEachChild(visitedNode, visitor);
-            };
-            ts.forEachChild(file, visitor);
-            MacroErrorWrapper(node.pos, node.end - node.pos, err.message, file);
+            const node = ts.getTokenAtPosition(file, startLoc);
+            MacroErrorWrapper(node.pos, node.end - node.pos, (additionalMessage || "") + err.message, file);
         } else throw err;
     }
 }

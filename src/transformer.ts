@@ -49,6 +49,8 @@ export interface MacroTransformerBuiltinProps {
     optimizeEnv?: boolean
 }
 
+export type ComptimeFunction = (...params: Array<unknown>) => void;
+
 export type MacroMap = Map<ts.Symbol, Macro>;
 
 export const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
@@ -62,7 +64,7 @@ export class MacroTransformer {
     checker: ts.TypeChecker;
     macros: MacroMap;
     escapedStatements: Array<Array<ts.Statement>>;
-    comptimeSignatures: Map<ts.Node, (...params: Array<unknown>) => void>;
+    comptimeSignatures: Map<ts.Node, ComptimeFunction>;
     config: TsMacrosConfig;
     constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap, config?: TsMacrosConfig) {
         this.context = context;
@@ -721,6 +723,13 @@ export class MacroTransformer {
 
     addEscapeScope() : void {
         this.escapedStatements.push([]);
+    }
+
+    addComptimeSignature(sym: ts.Node, fn: string, args: Array<string>) : ComptimeFunction {
+        if (this.comptimeSignatures.has(sym)) return this.comptimeSignatures.get(sym) as ComptimeFunction;
+        const comptime = new Function(...args, fn) as (...args: Array<unknown>) => void;
+        this.comptimeSignatures.set(sym, comptime);
+        return comptime;
     }
 
     strToAST(str: string) : ts.NodeArray<ts.Statement> {
