@@ -84,7 +84,7 @@ export default {
             };
             transformer.context.suspendLexicalEnvironment();
             const newFn = ts.visitFunctionBody(fn.body, visitor, transformer.context);
-            if (ts.isBlock(newFn)) return transformer.context.factory.createImmediatelyInvokedArrowFunction(newFn.statements);
+            if (ts.isBlock(newFn)) newFn.statements;
             return newFn;
         }
     },
@@ -175,15 +175,14 @@ export default {
                 const lastStatement = hygienicBody.pop();
                 transformer.escapeStatement(...hygienicBody);
                 if (lastStatement) {
+                    if (!hygienicBody.length) return lastStatement;
                     if (ts.isReturnStatement(lastStatement)) {
                         return lastStatement.expression;
                     } else {
                         transformer.escapeStatement(lastStatement);
                     }
                 }
-            } else {
-                transformer.escapeStatement(ts.factory.createExpressionStatement(maybeFn.body));
-            }
+            } else return maybeFn.body;
         }
     },
     "$$slice": {

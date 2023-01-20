@@ -100,6 +100,7 @@ export declare function $$readFile<T = Record<string, unknown>>(path: string, pa
  * })());
  * ```
  * @category Built-in Macros
+ * @deprecated
  */
 // eslint-disable-next-line @typescript-eslint/ban-types
 export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
