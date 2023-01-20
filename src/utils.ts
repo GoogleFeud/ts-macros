@@ -246,3 +246,9 @@ export function deExpandMacroResults(nodes: Array<ts.Statement>) : [Array<ts.Sta
     }
     return [cloned, cloned[cloned.length - 1]];
 }
+
+export function normalizeFunctionNode(checker: ts.TypeChecker, fnNode: ts.Expression) : ts.FunctionLikeDeclaration | undefined {
+    if (ts.isArrowFunction(fnNode) || ts.isFunctionExpression(fnNode) || ts.isFunctionDeclaration(fnNode)) return fnNode;
+    const origin = checker.getSymbolAtLocation(fnNode);
+    if (origin && origin.declarations?.length && ts.isFunctionLikeDeclaration(origin.declarations[0])) return origin.declarations[0];
+}

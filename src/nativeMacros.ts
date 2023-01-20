@@ -2,7 +2,7 @@ import ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { fnBodyToString, MacroError, macroParamsToArray, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
+import { fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -167,18 +167,18 @@ export default {
     },
     "$$escape": {
         call: ([code], transformer, callSite) => {
-            if (!code) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
-            const maybeFn = ts.visitNode(code, transformer.boundVisitor);
-            if (!ts.isArrowFunction(maybeFn)) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
+            if (!code) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
+            const maybeFn = normalizeFunctionNode(transformer.checker, ts.visitNode(code, transformer.boundVisitor));
+            if (!maybeFn || !maybeFn.body) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
             if (ts.isBlock(maybeFn.body)) {
                 const hygienicBody = [...transformer.makeHygienic(maybeFn.body.statements)];
                 const lastStatement = hygienicBody.pop();
                 transformer.escapeStatement(...hygienicBody);
                 if (lastStatement) {
-                    if (!hygienicBody.length) return lastStatement;
                     if (ts.isReturnStatement(lastStatement)) {
                         return lastStatement.expression;
                     } else {
+                        if (!hygienicBody.length) return lastStatement;
                         transformer.escapeStatement(lastStatement);
                     }
                 }
