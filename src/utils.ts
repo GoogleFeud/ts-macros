@@ -169,6 +169,7 @@ export function macroParamsToArray<T>(params: Array<MacroParam>, values: Array<T
     const result = [];
     for (let i=0; i < params.length; i++) {
         if (params[i].spread) result.push(values.slice(i));
+        else if (!values[i] && params[i].defaultVal) result.push(params[i].defaultVal as T);
         else result.push(values[i]);
     }
     return result;

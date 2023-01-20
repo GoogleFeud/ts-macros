@@ -112,7 +112,7 @@ export class MacroTransformer {
                     marker,
                     start: i,
                     name: param.name.getText(),
-                    defaultVal: param.initializer
+                    defaultVal: param.initializer || param.questionToken ? ts.factory.createIdentifier("undefined") : undefined
                 });
             }
             this.macros.set(sym, {
@@ -472,7 +472,8 @@ export class MacroTransformer {
             store: {}
         });
         const pre = [];
-        for (const param of macro.params) {
+        for (let i=0; i < macro.params.length; i++) {
+            const param = macro.params[i];
             if (param.marker === MacroParamMarkers.Save) {
                 const value = param.spread ? ts.factory.createArrayLiteralExpression(normalArgs.slice(param.start)) : (normalArgs[param.start] || param.defaultVal);
                 if (!ts.isIdentifier(value)) {
@@ -561,7 +562,10 @@ export class MacroTransformer {
         else if (ts.isStringLiteral(node)) return node.text;
         else if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
         else if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
-        else if (handleIdents && ts.isIdentifier(node)) return node.text;
+        else if (ts.isIdentifier(node)) {
+            if (node.text === "undefined") return undefined;
+            else if (handleIdents) return node.text;
+        }
         else if (handleTemplates && ts.isTemplateExpression(node)) {
             let res = node.head.text;
             for (const span of node.templateSpans) {
