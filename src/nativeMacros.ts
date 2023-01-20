@@ -273,7 +273,10 @@ export default {
                 factory: ts.factory,
                 transformer,
                 checker: transformer.checker,
-                thisMacro: lastMacro
+                thisMacro: lastMacro,
+                error: (node: ts.Node, message: string) => {
+                    throw MacroError(node, message);
+                }
             }, ...macroParamsToArray(lastMacro.macro.params, [...lastMacro.args])], `$$raw in ${lastMacro.macro.name}: `);
         },
         preserveParams: true

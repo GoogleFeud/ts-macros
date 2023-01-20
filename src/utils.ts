@@ -160,7 +160,7 @@ export function tryRun(comptime: ComptimeFunction, args: Array<unknown> = [], ad
             const file = ts.createSourceFile("comptime", comptime.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
             const startLoc = ts.getPositionOfLineAndCharacter(file, lineNum, colNum);
             const node = ts.getTokenAtPosition(file, startLoc);
-            MacroErrorWrapper(node.pos, node.end - node.pos, (additionalMessage || "") + err.message, file);
+            MacroError(node, (additionalMessage || "") + err.message);
         } else throw err;
     }
 }

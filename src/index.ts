@@ -423,7 +423,8 @@ export interface RawContext {
     factory: ts.NodeFactory,
     transformer: MacroTransformer,
     checker: ts.TypeChecker,
-    thisMacro: MacroExpand
+    thisMacro: MacroExpand,
+    error: (node: ts.Node, message: string) => void
 }
 
 /**
