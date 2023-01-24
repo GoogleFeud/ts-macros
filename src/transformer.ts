@@ -226,7 +226,7 @@ export class MacroTransformer {
 
         // If this is true then we're in the context of a macro call
         if (this.macroStack.length) {
-            const { macro, args } = this.getLastMacro()!;
+            const { macro, args, store } = this.getLastMacro()!;
 
             // Detects property / element access and tries to remove it if possible
             if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
@@ -264,11 +264,25 @@ export class MacroTransformer {
 
             // Detects use of a macro parameter and replaces it with a literal
             else if (ts.isIdentifier(node)) {
+                if (store[node.text]) return store[node.text];
                 const paramMacro = this.getMacroParam(node.text, macro, args);
                 if (!paramMacro) return node;
                 if (ts.isStringLiteral(paramMacro) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(paramMacro.text);
                 if (ts.isIdentifier(paramMacro)) return paramMacro;
                 return ts.visitNode(paramMacro, this.boundVisitor);
+            }
+
+            else if (ts.isVariableStatement(node)) {
+                const leftovers = [];
+                for (const varNode of node.declarationList.declarations) {
+                    if (ts.isIdentifier(varNode.name) && varNode.name.text.startsWith("$")) {
+                        store[varNode.name.text] = ts.visitNode(varNode.initializer, this.boundVisitor) || ts.factory.createIdentifier("undefined");
+                    } else {
+                        leftovers.push(varNode);
+                    }
+                }
+                if (leftovers.length) return ts.factory.createVariableStatement(node.modifiers, ts.factory.createVariableDeclarationList(leftovers, node.declarationList.flags));
+                else return undefined;
             }
             
             else if (ts.isArrayLiteralExpression(node) && node.elements.some(t => ts.isSpreadElement(t))) {

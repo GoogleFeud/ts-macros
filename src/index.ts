@@ -498,6 +498,7 @@ export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Nod
  * it won't stay across macro calls.
  * 
  * @category Built-in Macros
+ * @deprecated
  */
 export declare function $$setStore(key: string, value: any) : void;
 
@@ -506,6 +507,7 @@ export declare function $$setStore(key: string, value: any) : void;
  * it will expand to `null`.
  * 
  * @category Built-in Macros
+ * @deprecated
  */
 export declare function $$getStore<T>(key: string) : T;
 
