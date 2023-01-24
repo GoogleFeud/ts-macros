@@ -377,7 +377,11 @@ export declare function $$typeToString<T>(
      * **The first letter of the type will ALWAYS be uppercase if this argument is set to true.**   
      * **Objects and tuples do not get simplified to Object / Array.**
      */
-    simplify?: boolean
+    simplify?: boolean,
+    /**
+     * If provided, the "null" and "undefined" types will be ignored, so "string | undefined" will turn to "string".
+     */
+    nonNull?: boolean
 ) : string;
 
 /**

@@ -334,8 +334,9 @@ export class MacroTransformer {
 
             // Detects a typeof expression and tries to remove it if possible
             else if (ts.isTypeOfExpression(node)) {
-                const val = this.getLiteralFromNode(ts.visitNode(node.expression, this.boundVisitor));
-                if (val === NO_LIT_FOUND) return node;
+                const visitedNode = ts.visitNode(node.expression, this.boundVisitor);
+                const val = this.getLiteralFromNode(visitedNode);
+                if (val === NO_LIT_FOUND) return visitedNode;
                 return ts.factory.createStringLiteral(typeof val);
             }
 
