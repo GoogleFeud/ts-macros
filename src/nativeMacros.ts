@@ -63,6 +63,34 @@ export default {
             }
         }
     },
+    "$$inline": {
+        call: ([func, params, doNotCall], transformer, callSite) => {
+            if (!func) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
+            if (!params || !ts.isArrayLiteralExpression(params)) throw MacroError(callSite, "`inline` macro expects an array of expressions as the second argument.");
+            const fn = normalizeFunctionNode(transformer.checker, ts.visitNode(func, transformer.boundVisitor));
+            if (!fn || !fn.body) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
+            let newBody: ts.ConciseBody;
+            if (!fn.parameters.length) newBody = fn.body;
+            else {
+                const replacements = new Map();
+                for (let i=0; i < fn.parameters.length; i++) {
+                    const param = fn.parameters[i];
+                    if (ts.isIdentifier(param.name)) replacements.set(param.name.text, params.elements[i]);
+                }
+                const visitor = (node: ts.Node): ts.Node|undefined => {
+                    if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
+                    return ts.visitEachChild(node, visitor, transformer.context);
+                };
+                transformer.context.suspendLexicalEnvironment();
+                newBody = ts.visitFunctionBody(fn.body, visitor, transformer.context);
+            }
+            if (doNotCall) return ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, newBody);
+            else {
+                if (ts.isBlock(newBody)) return newBody.statements;
+                else return newBody;
+            }
+        }
+    },
     "$$inlineFunc": {
         call: (args, transformer, callSite) => {
             const argsArr = [...args].reverse();

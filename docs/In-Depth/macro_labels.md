@@ -13,7 +13,7 @@ function $NormalizeFor(info: ForIterLabel) : void {
     if ($$kindof!(info.initializer) === ts.SyntaxKind.Identifier) {
         const iter = (info.iterator).length;
         for ($$define!(info.initializer, 0, true); info.initializer < iter; info.initializer++) {
-            $$inlineFunc!(info.statement);
+            $$inline!(info.statement);
         }
     }
 }
@@ -33,7 +33,7 @@ for (let item = 0; item < iter; item++) {
 }
 ```
 
-Only catch is that these macros cannot accept any other parameters - their first parameter will **always** be an object with information about the statement. Even though you cannot provide parameters yourself, you can still use the `Var` and `Accumulator` markers. All statements are wrapped in an arrow function, you can either call it or inline it with `$$inlineFunc`.
+Only catch is that these macros cannot accept any other parameters - their first parameter will **always** be an object with information about the statement. Even though you cannot provide parameters yourself, you can still use the `Var` and `Accumulator` markers. All statements are wrapped in an arrow function, you can either call it or inline it with `$$inline`.
 
 ## Usable statements
 
@@ -44,7 +44,7 @@ If statements. Check out the [[IfLabel]] interface to see all information expose
 ```ts --Macro
 // Macro for turning an if statement to a ternary expression
 function $ToTernary(label: IfLabel) : void {
-    label.condition ? $$inlineFunc!(label.then) : $$inlineFunc!(label.else);
+    label.condition ? $$inline!(label.then) : $$inline!(label.else);
 }
 ```
 ```ts --Call
@@ -72,7 +72,7 @@ function $ToForEach(info: ForIterLabel, variable: Var) : void {
         // a Var marker.
         variable = info.initializer;
         (info.iterator).forEach((variable: any) => {
-            $$inlineFunc!(info.statement);
+            $$inline!(info.statement);
         })
     }
 }
@@ -107,7 +107,7 @@ function $ForToWhile(info: ForLabel) {
     }
     else info.initializer.expression;
     while(info.condition) {
-        $$inlineFunc!(info.statement);
+        $$inline!(info.statement);
         info.increment;
     }
 }
@@ -140,7 +140,7 @@ A `do...while` or a `while` loop. Check out the [[WhileLabel]] interface for all
 function $ToInterval(info: WhileLabel, intervalTimer = 1000) {
     const interval = setInterval(() => {
         if (info.condition) {
-            $$inlineFunc!(info.statement);
+            $$inline!(info.statement);
         } else {
             clearInterval(interval);
         }
@@ -174,7 +174,7 @@ A block, or a collection of statements, wrapped in an arrow function. See [[Bloc
 // Wraps a block in a try/catch, ignoring the error
 function $TrySilence(info: BlockLabel) {
     try {
-        $$inlineFunc!(info.statement);
+        $$inline!(info.statement);
     } catch(err) {};
 }
 ```
@@ -221,7 +221,7 @@ You can also call label macros just like regular macros!
 function $ToInterval(info: WhileLabel, intervalTimer = 1000) {
     const interval = setInterval(() => {
         if (info.condition) {
-            $$inlineFunc!(info.statement);
+            $$inline!(info.statement);
         } else {
             clearInterval(interval);
         }

@@ -12,7 +12,7 @@ ts-macros provides you with a lot of useful built-in macros which you can use in
 [[$$loadEnv]] - Loads an env file from the provided path.     
 [[$$readFile]] - Reads from the provided file and expands to the file's contents.     
 [[$$kindof]] - Expands to the `kind` of the AST node.     
-[[$$inlineFunc]] - Inlines the provided arrow function.     
+[[$$inlineFunc]], [[$$inline]] - Inlines the provided arrow function.     
 [[$$define]] - Creates a const variable with the provided name and initializer.     
 [[$$i]] - Gives you the repetition count.     
 [[$$length]] - Gets the length of an array / string literal.     

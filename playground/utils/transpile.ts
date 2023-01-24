@@ -6,6 +6,8 @@ export const Markers = `
 declare function $$loadEnv(path?: string) : void;
 declare function $$readFile(path: string, parseJSON?: false) : string;
 declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
+declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>, doNotCall: any) : () => ReturnType<F>;
+declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>) : ReturnType<F>;
 declare function $$kindof(ast: unknown) : number;
 declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
 declare function $$i() : number;
@@ -75,7 +77,6 @@ interface BlockLabel {
     statement: any
 }
 type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
-
 `;
 
 export const CompilerOptions: ts.CompilerOptions = {
@@ -87,9 +88,9 @@ export const CompilerOptions: ts.CompilerOptions = {
 };
 
 export function genTranspile(lib: string) : (str: string) => { code?: string, error?: unknown} {
-    const LibFile = ts.createSourceFile("lib.d.ts", lib, CompilerOptions.target || ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);
+    const LibFile = ts.createSourceFile("lib.d.ts", lib + Markers, CompilerOptions.target || ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);
     return (str) => {
-        const SourceFile = ts.createSourceFile("module.ts", Markers + str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
+        const SourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
         let output = "";
         const CompilerHost: ts.CompilerHost = {
             getSourceFile: (fileName) => {

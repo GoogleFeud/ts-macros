@@ -104,6 +104,32 @@ export declare function $$readFile<T = Record<string, unknown>>(path: string, pa
  */
 // eslint-disable-next-line @typescript-eslint/ban-types
 export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
+
+/**
+ * Inlines the provided function, replacing any argument occurances with the corresponding values inside the `params` array, and executes the code. 
+ * 
+ * If the function consists of a single expression, the call to `$$inline` expands to that expression, otherwise it expands to an IIFE. Passing any value
+ * to the `doNotCall` parameter will make it so it always expands to an arrow function, so the code will NEVER be executed. 
+ * 
+ * @example
+ * ```ts --Macro
+ * function $map<T>(arr: Save<Array<T>>, cb: (item: T) => T) : Array<T> {
+ *     const res = [];
+ *     for (let i=0; i < arr.length; i++) {
+ *        res.push($$inline!(cb, [arr[i]]));
+ *     }
+ *     return res;
+ * }
+ * ```
+ * ```ts --Call
+ * console.log($map!([1, 2, 3, 4, 5], (num: number) => num * 2));
+ * ```
+ * @param func The function to inline
+ * @param params An array literal with the argument values
+ * @param doNotCall If any value is passed, this macro will always expand to an arrow function with the new code inside of it.
+ */
+export declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>, doNotCall: any) : () => ReturnType<F>;
+export declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>) : ReturnType<F>;
 /**
  * Returns the `kind` of the expression.
  * @param ast Any expression
