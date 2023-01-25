@@ -76,11 +76,6 @@ export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
     else return undefined;
 }
 
-export function getNameFromBindingName(obj: ts.BindingName) : string|undefined {
-    if (ts.isIdentifier(obj)) return obj.text;
-    return;
-}
-
 export function isStatement(obj: ts.Node) : obj is ts.Statement {
     return obj.kind >= ts.SyntaxKind.Block && obj.kind <= ts.SyntaxKind.MissingDeclaration;
 }

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, getNameFromBindingName, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -278,7 +278,7 @@ export class MacroTransformer {
                     if (ts.isIdentifier(varNode.name) && varNode.name.text.startsWith("$")) {
                         store[varNode.name.text] = ts.visitNode(varNode.initializer, this.boundVisitor) || ts.factory.createIdentifier("undefined");
                     } else {
-                        leftovers.push(varNode);
+                        leftovers.push(ts.visitNode(varNode, this.boundVisitor));
                     }
                 }
                 if (leftovers.length) return ts.factory.createVariableStatement(node.modifiers, ts.factory.createVariableDeclarationList(leftovers, node.declarationList.flags));
@@ -505,15 +505,24 @@ export class MacroTransformer {
         return [...result];
     }
 
+
     makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
         const defined = this.getLastMacro()?.defined || new Map();
+
+        const makeBindingElementHygienic = (name: ts.BindingName) : ts.BindingName => {
+            if (ts.isIdentifier(name)) {
+                const newName = ts.factory.createUniqueName(name.text);
+                defined.set(name.text, newName);
+                return newName;
+            }
+            else if (ts.isArrayBindingPattern(name)) return ts.factory.createArrayBindingPattern(name.elements.map(el => ts.isBindingElement(el) ? ts.factory.createBindingElement(el.dotDotDotToken, el.propertyName, makeBindingElementHygienic(el.name), ts.visitNode(el.initializer, visitor)) : el));
+            else if (ts.isObjectBindingPattern(name)) return ts.factory.createObjectBindingPattern(name.elements.map(el => ts.factory.createBindingElement(el.dotDotDotToken, el.propertyName, makeBindingElementHygienic(el.name), ts.visitNode(el.initializer, visitor))));
+            else return name;
+        };
+
         const visitor = (node: ts.Node) : ts.Node => {
             if (ts.isVariableDeclaration(node) && node.pos !== -1) {
-                const name = getNameFromBindingName(node.name);
-                if (!name) return node;
-                const newName = ts.factory.createUniqueName(name);
-                defined.set(name, newName);
-                return ts.factory.updateVariableDeclaration(node, newName, undefined, undefined, ts.visitNode(node.initializer, visitor));
+                return ts.factory.updateVariableDeclaration(node, makeBindingElementHygienic(node.name), undefined, undefined, ts.visitNode(node.initializer, visitor));
             }
             else if (ts.isIdentifier(node)) {
                 if (node.parent && ts.isPropertyAccessExpression(node.parent) && node.parent.expression !== node) return node;
