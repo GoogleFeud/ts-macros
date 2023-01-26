@@ -111,8 +111,8 @@ export class MacroTransformer {
                     spread: Boolean(param.dotDotDotToken),
                     marker,
                     start: i,
-                    name: param.name.getText(),
-                    defaultVal: param.initializer || param.questionToken ? ts.factory.createIdentifier("undefined") : undefined
+                    name: param.name.text,
+                    defaultVal: param.initializer || (param.questionToken ? ts.factory.createIdentifier("undefined") : undefined)
                 });
             }
             this.macros.set(sym, {
