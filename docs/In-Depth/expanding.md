@@ -3,13 +3,15 @@ name: Expanding macros
 order: 3
 ---
 
-# Expanding macros
+# Expanding
+
+## Expanding macros
 
 Every macro **expands** into the code that it contains. How it'll expand depends entirely on how the macro is used. Javascript has 3 main constructs: `Expression`, `ExpressionStatement` and `Statement`. Since macro calls are plain function calls, macros can never be used as a statement.
 
 |> Expanded macros are **always** hygienic!
 
-## ExpressionStatement
+### ExpressionStatement
 
 If a macro is an `ExpressionStatement`, then it's going to be "flattened" - the macro call will literally be replaced by the macro body, but all the new declared variables will have their names changed to a unique name.
 
@@ -37,11 +39,11 @@ array_1;
 
 You may have noticed that the return statement got omitted from the final result. `return` will be removed **only** if the macro is ran in the global scope. Anywhere else and `return` will be there.
 
-## Expression
+### Expression
 
 Expanding inside an expression can do two different things depending on the what the macro expands to.
 
-### Single expression
+#### Single expression
 
 If the macro expands to a single expression, then the macro call is directly replaced with the expression.
 
@@ -61,7 +63,7 @@ const newSize = (arr.push(1), arr.push(2), arr.push(3));
 
 `return` gets removed if the macro is used as an expression.
 
-### Multiple expressions
+#### Multiple expressions
 
 If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned automatically.
 
@@ -83,7 +85,7 @@ const newSize = (() => {
 })();
 ```
 
-#### Escaping the IIFE
+##### Escaping the IIFE
 
 If you want part of the code to be ran **outside** of the IIFE (for example you want to `return`, or `yield`, etc.) you can use the [[$$escape]] built-in macro. For example, here's a fully working macro which expands to a completely normal if statement, but it can be used as an expression:
 
@@ -129,4 +131,29 @@ else {
     val_1 = "B";
 }
 console.log(val_1);
+```
+
+## Macro variables
+
+You can define **macro variables** inside macros, which save an expression and expand to that same expression when they are referenced. They can be used to make your macros more readable:
+
+```ts --Macro
+function $test<T>(value: T) {
+    const $type = $$typeToString!<T>();
+    if ($type === "string") return "Value is a string.";
+    else if ($type === "number") return "Value is a number.";
+    else if ($type === "symbol") return "Value is a symbol.";
+    else if ($type === "undefined" || $type === "null") return "Value is undefined / null.";
+    else return "Value is an object.";
+}
+```
+```ts --Call
+const a = $test!(null);
+const c = $test!(123);
+const f = $test!({value: 123});
+```
+```ts --Result
+const a = "Value is undefined / null.";
+const c = "Value is a number.";
+const f = "Value is an object.";
 ```

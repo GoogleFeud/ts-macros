@@ -1,6 +1,6 @@
 # ts-macros
 
-ts-macros is a custom typescript transformer which allows you to create function macros. This library is heavily inspired by Rust's `macro_rules!` macro, and it's just as powerful! 
+ts-macros is a custom typescript transformer which allows you to create function macros. This library is heavily inspired by Rust's `macro_rules!` macro, and it's just as powerful!
 
 ## Basic usage
 

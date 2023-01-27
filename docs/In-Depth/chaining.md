@@ -9,11 +9,13 @@ Macros can also be **chained** with any javascript expression. This doesn't sit 
 
 ```ts --Macros
 export namespace Vector {
+    // Macro for creating a new Vector
     export function $new(): Vector {
         return [0, 0] as unknown as Vector;
     }
 }
 
+// interface to represent the Vector, which is actually just an array with 2 elements
 export interface Vector {
     $x(): number;
     $y(): number;
@@ -38,7 +40,7 @@ export function $add(v: Vector, x?: number, y?: number) : Vector {
 
 const myVec = Vector.$new!();
 const addedVec = myVec.$add!(1, 2);
-console.log(addedVec.$x!(), addedVec.$y!(), $asVec!([1, 2]).$x!());
+console.log(addedVec.$x!(), addedVec.$y!());
 ```
 ```ts --Result
 const myVec = [0, 0];
