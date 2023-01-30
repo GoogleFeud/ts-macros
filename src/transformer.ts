@@ -337,15 +337,6 @@ export class MacroTransformer {
                 else return binaryActions[op]?.(left, right, leftVal, rightVal) ?? ts.factory.createBinaryExpression(left, op, right);
             }
 
-            // Detects a unary expression and tries to remove it if possible
-            else if (ts.isPrefixUnaryExpression(node) && node.operator !== 39) {
-                const op = node.operator;
-                const value: ts.Expression = ts.visitNode(node.operand, this.boundVisitor);
-                const val = this.getLiteralFromNode(value);
-                if (val === NO_LIT_FOUND) return node;
-                return unaryActions[op]?.(val) || value;
-            }
-
             // Detects a typeof expression and tries to remove it if possible
             else if (ts.isTypeOfExpression(node)) {
                 const visitedNode = ts.visitNode(node.expression, this.boundVisitor);
@@ -358,12 +349,21 @@ export class MacroTransformer {
             else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
                 return this.execRepetition(fn, args, macro, literals, separator);
-            } 
-            else if (ts.isPrefixUnaryExpression(node) && node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
-                const { separator, function: fn, literals} = getRepetitionParams(node.operand);
-                if (!separator) throw MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
-                return this.execRepetition(fn, args, macro, literals, separator, true);
-            } 
+            }
+            else if (ts.isPrefixUnaryExpression(node)) {
+                if (node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
+                    const { separator, function: fn, literals} = getRepetitionParams(node.operand);
+                    if (!separator) throw MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
+                    return this.execRepetition(fn, args, macro, literals, separator, true);
+                } else {
+                    // Detects a unary expression and tries to remove it if possible
+                    const op = node.operator;
+                    const value: ts.Expression = ts.visitNode(node.operand, this.boundVisitor);
+                    const val = this.getLiteralFromNode(value);
+                    if (val === NO_LIT_FOUND) return node;
+                    return unaryActions[op]?.(val) || value;
+                }
+            }
             else if (ts.isCallExpression(node)) {
                 const repNodeIndex = node.arguments.findIndex(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === 39 && ts.isArrayLiteralExpression(arg.operand));
                 if (repNodeIndex !== -1) {
@@ -379,7 +379,7 @@ export class MacroTransformer {
                         return ts.visitNode(ts.factory.createCallExpression(node.expression, node.typeArguments, finalArgs as Array<ts.Expression>), this.boundVisitor);
                     }
                 }
-            }
+            }         
             return ts.visitEachChild(node, this.boundVisitor, this.context);
         }
         return ts.visitEachChild(node, this.boundVisitor, this.context);
