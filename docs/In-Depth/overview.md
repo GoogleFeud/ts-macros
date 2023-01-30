@@ -63,6 +63,12 @@ options: {
 }
 ```
 
+## Transformer options
+
+### `noComptime`
+
+Disables the built-in macros (`$$raw` and `$$comptime`) which can execute arbitrary code during transpile time. If this option is turned on, calls to these macros expand to `null`.
+
 ## Contributing
 
 `ts-macros` is being maintained by a single person. Contributions are welcome and appreciated. Feel free to open an issue or create a pull request at https://github.com/GoogleFeud/ts-macros.

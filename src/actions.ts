@@ -46,6 +46,10 @@ export const unaryActions: Record<number, (val: unknown) => ts.Expression|undefi
     [ts.SyntaxKind.TildeToken]: (val: unknown) => {
         if (typeof val !== "number") return;
         return ts.factory.createNumericLiteral(~val);
+    },
+    [ts.SyntaxKind.PlusToken]: (val: unknown) => {
+        if (typeof val !== "number" && typeof val !== "string") return;
+        return ts.factory.createNumericLiteral(+val);
     }
 };
 

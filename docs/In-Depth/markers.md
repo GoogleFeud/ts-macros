@@ -37,7 +37,7 @@ Saves the provided expression in a hygienic variable. This guarantees that the p
 function $map(arr: Save<Array<number>>, cb: Function) : Array<number> {
     const res = [];
     for (let i=0; i < arr.length; i++) {
-        res.push($$inlineFunc!(cb, arr[i]));
+        res.push($$inline!(cb, [arr[i]]));
     }
     return $$ident!("res");
 }

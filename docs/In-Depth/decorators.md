@@ -20,7 +20,7 @@ class Test {}
 (3)
 ```
 
-The macro expands and replaces the entire class declaration! Since macros are just plain functions, they cannot get access to the class itself and manipulate it. This is why for decorator macros to work, we need to use the [[$$raw]] built-in macro, which allows us to manipulate the typescript AST directly!
+The macro expands and replaces the entire class declaration. Since macros are just plain functions, they cannot get access to the class itself and manipulate it. This is why for decorator macros to work, we need to use the [[$$raw]] built-in macro, which allows us to manipulate the typescript AST directly!
 
 Let's write a macro which creates a copy of the class, except with a name of our choosing. With the `$$raw` macro, we get access to the class AST node thanks to the `ctx` object:
 
