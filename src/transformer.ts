@@ -586,6 +586,7 @@ export class MacroTransformer {
         else if (ts.isStringLiteral(node)) return node.text;
         else if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
         else if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+        else if (node.kind === ts.SyntaxKind.NullKeyword) return null;
         else if (ts.isIdentifier(node)) {
             if (node.text === "undefined") return undefined;
             else if (handleIdents) return node.text;
