@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { MacroParam, MacroTransformer } from "./transformer";
+import { ComptimeFunction, MacroParam, MacroTransformer } from "./transformer";
 
 export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     if ("statements" in body) {
@@ -55,14 +55,14 @@ export function MacroError(callSite: ts.Node, msg: string) : void {
     process.exit();
 }
 
-export function MacroErrorWrapper(start: number, end: number, msg: string, file: ts.SourceFile) : void {
+export function MacroErrorWrapper(start: number, length: number, msg: string, file: ts.SourceFile) : void {
     if (!ts.sys || typeof process !== "object") throw new Error(msg);
     console.error(ts.formatDiagnosticsWithColorAndContext([{
         category: ts.DiagnosticCategory.Error,
         code: 8000,
         file,
         start,
-        length: end,
+        length,
         messageText: msg
     }], {
         getNewLine: () => "\r\n",
@@ -74,11 +74,6 @@ export function MacroErrorWrapper(start: number, end: number, msg: string, file:
 export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
     if (ts.isIdentifier(obj) || ts.isStringLiteral(obj) || ts.isPrivateIdentifier(obj) || ts.isNumericLiteral(obj)) return obj.text;
     else return undefined;
-}
-
-export function getNameFromBindingName(obj: ts.BindingName) : string|undefined {
-    if (ts.isIdentifier(obj)) return obj.text;
-    return;
 }
 
 export function isStatement(obj: ts.Node) : obj is ts.Statement {
@@ -129,15 +124,17 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
         if (ts.isCallExpression(node)) {
             const signature = checker.getResolvedSignature(node);
             if (signature && 
-                signature.declaration && 
+                signature.declaration &&
+                signature.declaration !== fn &&
+                signature.declaration.parent.parent !== fn &&
                 (ts.isFunctionDeclaration(signature.declaration) ||
                 ts.isArrowFunction(signature.declaration) ||
                 ts.isFunctionExpression(signature.declaration)    
                 )) {
                 const name = signature.declaration.name ? signature.declaration.name.text : ts.isIdentifier(node.expression) ? node.expression.text : undefined;
                 if (!name || includedFns.has(name)) return;
-                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration)}}`;
                 includedFns.add(name);
+                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration)}}`;
             }
             ts.forEachChild(node, visitor);
         } 
@@ -147,24 +144,18 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
     return code + ts.transpile((fn.body.original || fn.body).getText());
 }
 
-
-export function tryRun(fn: (...args: Array<unknown>) => void, args: Array<unknown> = []) : any {
+export function tryRun(comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {
     try {
-        return fn(...args);
+        return comptime(...args);
     } catch(err: unknown) {
         if (err instanceof Error) {
             const { line, col } = (err.stack || "").match(/<anonymous>:(?<line>\d+):(?<col>\d+)/)?.groups || {};
             const lineNum = line ? (+line - 1) : 0;
-            const colNum = (col ? (+col - 1) : 0);
-            const file = ts.createSourceFile("comptime", fn.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
+            const colNum = col ? (+col - 1) : 0;
+            const file = ts.createSourceFile("comptime", comptime.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
             const startLoc = ts.getPositionOfLineAndCharacter(file, lineNum, colNum);
-            let node: ts.Node = file;
-            const visitor = (visitedNode: ts.Node) => {
-                if (visitedNode.pos === startLoc) node = visitedNode;
-                else ts.forEachChild(visitedNode, visitor);
-            };
-            ts.forEachChild(file, visitor);
-            MacroErrorWrapper(node.pos, node.end - node.pos, err.message, file);
+            const node = ts.getTokenAtPosition(file, startLoc);
+            MacroError(node, (additionalMessage || "") + err.message);
         } else throw err;
     }
 }
@@ -173,6 +164,7 @@ export function macroParamsToArray<T>(params: Array<MacroParam>, values: Array<T
     const result = [];
     for (let i=0; i < params.length; i++) {
         if (params[i].spread) result.push(values.slice(i));
+        else if (!values[i] && params[i].defaultVal) result.push(params[i].defaultVal as T);
         else result.push(values[i]);
     }
     return result;
@@ -248,4 +240,14 @@ export function deExpandMacroResults(nodes: Array<ts.Statement>) : [Array<ts.Sta
         else return [cloned, expression];
     }
     return [cloned, cloned[cloned.length - 1]];
+}
+
+export function normalizeFunctionNode(checker: ts.TypeChecker, fnNode: ts.Expression) : ts.FunctionLikeDeclaration | undefined {
+    if (ts.isArrowFunction(fnNode) || ts.isFunctionExpression(fnNode) || ts.isFunctionDeclaration(fnNode)) return fnNode;
+    const origin = checker.getSymbolAtLocation(fnNode);
+    if (origin && origin.declarations?.length) {
+        const originDecl = origin.declarations[0];
+        if (ts.isFunctionLikeDeclaration(originDecl)) return originDecl;
+        else if (ts.isVariableDeclaration(originDecl) && originDecl.initializer && ts.isFunctionLikeDeclaration(originDecl.initializer)) return originDecl.initializer;
+    }
 }

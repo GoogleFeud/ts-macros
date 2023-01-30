@@ -2,7 +2,7 @@ import ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { fnBodyToString, MacroError, macroParamsToArray, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
+import { fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -63,6 +63,34 @@ export default {
             }
         }
     },
+    "$$inline": {
+        call: ([func, params, doNotCall], transformer, callSite) => {
+            if (!func) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
+            if (!params || !ts.isArrayLiteralExpression(params)) throw MacroError(callSite, "`inline` macro expects an array of expressions as the second argument.");
+            const fn = normalizeFunctionNode(transformer.checker, ts.visitNode(func, transformer.boundVisitor));
+            if (!fn || !fn.body) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
+            let newBody: ts.ConciseBody;
+            if (!fn.parameters.length) newBody = fn.body;
+            else {
+                const replacements = new Map();
+                for (let i=0; i < fn.parameters.length; i++) {
+                    const param = fn.parameters[i];
+                    if (ts.isIdentifier(param.name)) replacements.set(param.name.text, params.elements[i]);
+                }
+                const visitor = (node: ts.Node): ts.Node|undefined => {
+                    if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
+                    return ts.visitEachChild(node, visitor, transformer.context);
+                };
+                transformer.context.suspendLexicalEnvironment();
+                newBody = ts.visitFunctionBody(fn.body, visitor, transformer.context);
+            }
+            if (doNotCall) return ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, newBody);
+            else {
+                if (ts.isBlock(newBody)) return newBody.statements;
+                else return newBody;
+            }
+        }
+    },
     "$$inlineFunc": {
         call: (args, transformer, callSite) => {
             const argsArr = [...args].reverse();
@@ -84,7 +112,7 @@ export default {
             };
             transformer.context.suspendLexicalEnvironment();
             const newFn = ts.visitFunctionBody(fn.body, visitor, transformer.context);
-            if (ts.isBlock(newFn)) return transformer.context.factory.createImmediatelyInvokedArrowFunction(newFn.statements);
+            if (ts.isBlock(newFn)) newFn.statements;
             return newFn;
         }
     },
@@ -167,9 +195,9 @@ export default {
     },
     "$$escape": {
         call: ([code], transformer, callSite) => {
-            if (!code) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
-            const maybeFn = ts.visitNode(code, transformer.boundVisitor);
-            if (!ts.isArrowFunction(maybeFn)) throw MacroError(callSite, "`escape` macro expects an arrow function as it's first argument.");
+            if (!code) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
+            const maybeFn = normalizeFunctionNode(transformer.checker, ts.visitNode(code, transformer.boundVisitor));
+            if (!maybeFn || !maybeFn.body) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
             if (ts.isBlock(maybeFn.body)) {
                 const hygienicBody = [...transformer.makeHygienic(maybeFn.body.statements)];
                 const lastStatement = hygienicBody.pop();
@@ -178,12 +206,11 @@ export default {
                     if (ts.isReturnStatement(lastStatement)) {
                         return lastStatement.expression;
                     } else {
+                        if (!hygienicBody.length) return lastStatement;
                         transformer.escapeStatement(lastStatement);
                     }
                 }
-            } else {
-                transformer.escapeStatement(ts.factory.createExpressionStatement(maybeFn.body));
-            }
+            } else return maybeFn.body;
         }
     },
     "$$slice": {
@@ -216,32 +243,37 @@ export default {
         }
     },
     "$$typeToString": {
-        call: ([simplifyType], transformer, callSite) => {
+        call: ([simplifyType, nonNullType], transformer, callSite) => {
             if (!callSite.typeArguments || !callSite.typeArguments[0]) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
-            const simplify = transformer.getBoolFromNode(simplifyType);
+            const getFinalType = (type: ts.Type) => {
+                if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
+                if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
+                return type;
+            };
             const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
             if (type.isTypeParameter()) {
                 const param = transformer.getTypeParam(type);
                 if (!param) return ts.factory.createStringLiteral("");
-                return ts.factory.createStringLiteral(transformer.checker.typeToString(simplify ? transformer.checker.getApparentType(param) : param));
+                return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(param)));
             }
             else {
                 const lastMacro = transformer.getLastMacro();
                 if (lastMacro) {
                     const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
                     const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
-                    return ts.factory.createStringLiteral(transformer.checker.typeToString(simplify ? transformer.checker.getApparentType(resolveTypeWithTypeParams(type, allParams, replacementTypes)) : resolveTypeWithTypeParams(type, allParams, replacementTypes)));
+                    return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(resolveTypeWithTypeParams(type, allParams, replacementTypes))));
                 } 
-                else return ts.factory.createStringLiteral(transformer.checker.typeToString(simplify ? transformer.checker.getApparentType(type) : type));
+                else return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(type)));
             }
         }
     },
     "$$comptime": {
-        call: (_, transformer, callSite) => {
+        call: ([fn], transformer, callSite) => {
             if (transformer.config.noComptime) return;
             if (transformer.macroStack.length) throw MacroError(callSite, "`comptime` macro cannot be called inside macros.");
-            const fn = callSite.arguments[0];
-            if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`comptime` macro expects an arrow function as the first parameter.");
+            if (!fn) throw MacroError(callSite, "`comptime` macro expects a function as the first parameter.");
+            const callableFn = normalizeFunctionNode(transformer.checker, fn);
+            if (!callableFn || !callableFn.body) throw MacroError(callSite, "`comptime` macro expects a function as the first parameter.");
             let parent = callSite.parent;
             if (ts.isExpressionStatement(parent)) {
                 parent = parent.parent;
@@ -249,37 +281,37 @@ export default {
                 if ("body" in parent) {
                     const signature = transformer.checker.getSignatureFromDeclaration(parent as ts.SignatureDeclaration);
                     if (!signature || !signature.declaration) return;
-                    transformer.comptimeSignatures.set(signature.declaration, new Function(...signature.parameters.map(p => p.name), fnBodyToString(transformer.checker, fn)) as (...args: Array<unknown>) => void);
+                    transformer.addComptimeSignature(signature.declaration, fnBodyToString(transformer.checker, callableFn), signature.parameters.map(p => p.name));
                     return;
                 }
             }
-            tryRun(new Function(fnBodyToString(transformer.checker, fn)) as (...args: Array<unknown>) => void);
         },
         preserveParams: true
     },
     "$$raw": {
         call: ([fn], transformer, callSite) => {
             if (transformer.config.noComptime) return;
-            if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`raw` macro expects an arrow function as the first parameter.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`raw` macro must be called inside another macro.");
+            if (!fn) throw MacroError(callSite, "`raw` macro expects a function as the first parameter.");
+            const callableFn = normalizeFunctionNode(transformer.checker, fn);
+            if (!callableFn || !callableFn.body) throw MacroError(callSite, "`raw` macro expects a function as the first parameter.");
             const renamedParameters = [];
-            for (const param of fn.parameters.slice(1)) {
+            for (const param of callableFn.parameters.slice(1)) {
                 if (!ts.isIdentifier(param.name)) throw MacroError(callSite, "`raw` macro parameters cannot be deconstructors.");
                 renamedParameters.push(param.name.text);
             }
-            let stringified = transformer.comptimeSignatures.get(fn);
-            if (!stringified) {
-                stringified = new Function( "ctx", ...renamedParameters, fnBodyToString(transformer.checker, fn)) as (...params: unknown[]) => void;
-                transformer.comptimeSignatures.set(fn, stringified);
-            }
+            const stringified = transformer.addComptimeSignature(callableFn, fnBodyToString(transformer.checker, callableFn), ["ctx", ...renamedParameters]);
             return tryRun(stringified, [{
                 ts,
                 factory: ts.factory,
                 transformer,
                 checker: transformer.checker,
-                thisMacro: lastMacro
-            }, ...macroParamsToArray(lastMacro.macro.params, [...lastMacro.args])]);
+                thisMacro: lastMacro,
+                error: (node: ts.Node, message: string) => {
+                    throw MacroError(node, message);
+                }
+            }, ...macroParamsToArray(lastMacro.macro.params, [...lastMacro.args])], `$$raw in ${lastMacro.macro.name}: `);
         },
         preserveParams: true
     },
