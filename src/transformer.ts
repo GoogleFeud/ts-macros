@@ -99,7 +99,7 @@ export class MacroTransformer {
         if (ts.isFunctionDeclaration(node) && node.name && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && node.name.getText().startsWith("$")) {
             if (!node.body) return node;
             const sym = this.checker.getSymbolAtLocation(node.name);
-            if (!sym) return node;
+            if (!sym) return node; //todo maybe error - require node traversed
             if (this.macros.has(sym)) return;
             const macroName = sym.name;
             const params: Array<MacroParam> = [];
@@ -141,35 +141,37 @@ export class MacroTransformer {
 
         // Check for macro calls in labels
         if (ts.isLabeledStatement(node)) {
-            const macro = this.findMacroByName(node.label, node.label.text);
-            if (!macro || !macro.body) return;
-            let statementNode = node.statement;
-            const results = [];
-            if (ts.isLabeledStatement(statementNode)) {
-                const labelRes = this.visitor(node.statement);
-                if (!labelRes) return node;
-                else if (Array.isArray(labelRes)) {
-                    const foundStmt = labelRes.findIndex(node => labelActions[node.kind]);
-                    if (foundStmt === -1) return node;
-                    results.push(...labelRes.filter((_item, ind) => ind !== foundStmt));
-                    statementNode = labelRes[foundStmt] as ts.Statement;
+            const macro = this.findMacroByName(node.label);
+            if (macro && macro.body) {
+                let statementNode = node.statement;
+                const results = [];
+                if (ts.isLabeledStatement(statementNode)) {
+                    const labelRes = this.visitor(node.statement);
+                    if (!labelRes) return node;//todo maybe error - require node traversed
+                    else if (Array.isArray(labelRes)) {
+                        const foundStmt = labelRes.findIndex(node => labelActions[node.kind]);
+                        if (foundStmt === -1) return node;//todo maybe error - require node traversed
+                        results.push(...labelRes.filter((_item, ind) => ind !== foundStmt));
+                        statementNode = labelRes[foundStmt] as ts.Statement;
+                    }
+                    else statementNode = ts.visitNode(node.statement, this.boundVisitor);
                 }
-                else statementNode = ts.visitNode(node.statement, this.boundVisitor);
+                const labelAction = labelActions[statementNode.kind];
+                if (labelAction) {
+                    this.macroStack.push({
+                        macro,
+                        call: undefined,
+                        args: ts.factory.createNodeArray([labelAction(statementNode)]),
+                        defined: new Map(),
+                        store: {}
+                    });
+                    results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
+                    const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
+                    if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
+                    this.macroStack.pop();
+                    return results;
+                }
             }
-            const labelAction = labelActions[statementNode.kind];
-            if (!labelAction) return node;
-            this.macroStack.push({
-                macro,
-                call: undefined,
-                args: ts.factory.createNodeArray([labelAction(statementNode)]),
-                defined: new Map(),
-                store: {}
-            });
-            results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
-            const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
-            if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
-            this.macroStack.pop();
-            return results;
         }
 
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
@@ -239,7 +241,7 @@ export class MacroTransformer {
                     while (ts.isParenthesizedExpression(exp)) exp = exp.expression;
                     if (ts.isObjectLiteralExpression(exp)) {
                         const name = ts.isPropertyAccessExpression(node) ? getNameFromProperty(node.name) : this.getNumberFromNode(ts.visitNode(node.argumentExpression, this.boundVisitor));
-                        if (!name) return node;
+                        if (!name) return node;//todo maybe error - require node traversed
                         const prop = exp.properties.find(p => p.name && (getNameFromProperty(p.name) === name));
                         if (prop && ts.isPropertyAssignment(prop)) return prop.initializer;
                         return ts.factory.createPropertyAccessExpression(exp, name.toString()); 
@@ -379,8 +381,7 @@ export class MacroTransformer {
                         return ts.visitNode(ts.factory.createCallExpression(node.expression, node.typeArguments, finalArgs as Array<ts.Expression>), this.boundVisitor);
                     }
                 }
-            }         
-            return ts.visitEachChild(node, this.boundVisitor, this.context);
+            }
         }
         return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
@@ -724,12 +725,13 @@ export class MacroTransformer {
         return macros;
     }
 
-    findMacroByName(node: ts.Node, name: string) : Macro|undefined {
+    findMacroByName(node: ts.Identifier): Macro | undefined {
+        if (!node.text.startsWith("$")) return undefined;
         const foundMacros = [];
         for (const [, macro] of this.macros) {
-            if (macro.name === name) foundMacros.push(macro);
+            if (macro.name === node.text) foundMacros.push(macro);
         }
-        if (foundMacros.length > 1) throw MacroError(node, `More than one macro with the name ${name} exists.`);
+        if (foundMacros.length > 1) throw MacroError(node, `More than one macro with the name ${node.text} exists.`);
         return foundMacros[0];
     }
 
