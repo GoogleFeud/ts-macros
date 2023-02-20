@@ -1,48 +1,48 @@
-
-
 .header {
-    background-color: #222;
-    color: white;
-    display: flex;
-    height: 55px;
-    justify-content: space-between;
-    align-items: center;
-    padding-left: 30px;
-    padding-right: 30px;
+  background-color: #222;
+  color: white;
+  display: flex;
+  height: 55px;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 30px;
+  padding-right: 30px;
 }
 
 .footer {
-    background-color: #222;
-    color: white;
-    display: flex;
-    height: 55px;
-    justify-content: center;
-    align-items: center;
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    z-index: 10;
+  background-color: #222;
+  color: white;
+  display: flex;
+  height: 55px;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  z-index: 10;
 }
 
 .button {
-    margin: 15px;
-    background-color: #1e1e1e;
-    color: white;
-    border: solid 1px white;
-    cursor: pointer;
+  margin: 15px;
+  background-color: #1e1e1e;
+  color: white;
+  border: solid 1px white;
+  cursor: pointer;
 }
 
 .runSection {
-    background-color: #1e1e1e;
-    color: white;
-    height: 100%;
+  background-color: #1e1e1e;
+  color: white;
+  height: 100%;
 }
 
 .runSectionResult {
-    margin-left: 30px;
+  margin-left: 30px;
 }
 
-
-.header a, .header a:visited, .footer a, .footer a:visited {
-    color: white !important;
+.header a,
+.header a:visited,
+.footer a,
+.footer a:visited {
+  color: white !important;
 }

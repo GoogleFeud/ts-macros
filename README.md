@@ -8,12 +8,12 @@ All macro names must start with a dollar sign (`$`) and must be declared using t
 
 ```ts
 function $contains<T>(value: T, ...possible: Array<T>) {
-    // repetition which goes over all the elements in the "possible" array
-    return +["||", [possible], (item: T) => value === item];
+  // repetition which goes over all the elements in the "possible" array
+  return +["||", [possible], (item: T) => value === item];
 }
 
 const searchItem = "google";
-console.log($contains!(searchItem, "erwin", "tj")); 
+console.log($contains!(searchItem, "erwin", "tj"));
 // Transpiles to: console.log(false);
 ```
 
@@ -21,9 +21,9 @@ Macros can also be **chained** with any javascript expression.
 
 ```ts
 declare global {
-    interface String {
-        $contains<T>(...possible: Array<T>) : boolean;
-    }
+  interface String {
+    $contains<T>(...possible: Array<T>): boolean;
+  }
 }
 
 "feud".$contains!("google", "feud", "erwin");
@@ -33,11 +33,13 @@ declare global {
 To read more about ts-macros features, visit the [documentation](https://googlefeud.github.io/ts-macros/index.html), or you can check out the [interactive playground](https://googlefeud.github.io/ts-macros/playground/) if you want to play with macros without having to set up an enviourment!
 
 **What you can do with ts-macros**:
+
 - Generate repetitive code
 - Generate code conditionally, based on enviourment variables or other configuration files
 - Create abstractions without the runtime cost
 
 **What you can't do with ts-macros**:
+
 - Generate types which you can use in your code. ts-macros is only a transformer, it's ran **after** typechecking, so generating different types has no effect. However, the code inside the macro itself still gets typechecked
 
 ## Install

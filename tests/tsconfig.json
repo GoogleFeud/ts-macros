@@ -1,14 +1,12 @@
 {
-    "compilerOptions": {
-      "target": "ES2021",
-      "module": "commonjs",
-      "removeComments": true,
-      "outDir": "./dist",
-      "esModuleInterop": true,
-      "strictNullChecks": true, 
-      "plugins": [
-        { "transform": "../dist" }
-      ]
-    },
-    "include": ["./integrated", "./snapshots/index.ts", "integrated/labels"]
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "commonjs",
+    "removeComments": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "strictNullChecks": true,
+    "plugins": [{ "transform": "../dist" }]
+  },
+  "include": ["./integrated", "./snapshots/index.ts", "integrated/labels"]
 }

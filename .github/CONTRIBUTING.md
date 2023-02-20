@@ -1,4 +1,3 @@
-
 # Contributing
 
 Thank you for contributing to ts-macros! Your help is appreciated by the author of this library and everyone using it!
@@ -6,12 +5,12 @@ Thank you for contributing to ts-macros! Your help is appreciated by the author 
 ## Table of Contents
 
 - [How can I contribute?](#how-can-i-contribute)
-    - [Bug Reports](#bug-reports)
-    - [Feature Requests](#feature-requests)
-    - [Pull Requests](#pull-requests)
-        - [Setup](#setup)
-        - [Testing](#testing)
-        - [Finishing up](#finishing-up)
+  - [Bug Reports](#bug-reports)
+  - [Feature Requests](#feature-requests)
+  - [Pull Requests](#pull-requests)
+    - [Setup](#setup)
+    - [Testing](#testing)
+    - [Finishing up](#finishing-up)
 
 ## How can I contribute?
 
@@ -49,7 +48,7 @@ All future changes are made in the `dev` branch, so make sure to work in that br
 
 #### Testing
 
-ts-macros has integrated and snapshot testing implemented. To make sure any changes you've made have not changed the transformer for worse, run `npm test`. This will first run all integrated tests, which test the **transpiled code**, and then ask you to continue with the snapshot testing. 
+ts-macros has integrated and snapshot testing implemented. To make sure any changes you've made have not changed the transformer for worse, run `npm test`. This will first run all integrated tests, which test the **transpiled code**, and then ask you to continue with the snapshot testing.
 
 During snapshot testing, ts-macros compares the **trusted** transpiled integrated tests with the ones on your machine that have just been transpiled in the previous step. If any changes have been detected, it will ask you if you approve of these changes. If you notice some of the generated code is wrong or not up to standards, disprove the changes, make your fixes and run `npm test` again until the latest transpiled code matches the trusted version, or until you're satisfied with the generated code.
 
