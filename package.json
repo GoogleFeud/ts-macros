@@ -16,6 +16,7 @@
     "diff": "^5.1.0",
     "eslint": "^7.32.0",
     "mocha": "^9.2.2",
+    "prettier": "2.8.4",
     "ttypescript": "^1.5.15",
     "typescript": "^4.9.4"
   },
@@ -24,12 +25,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "lint": "npx eslint",
+    "lint": "npx eslint; npx prettier --check .",
     "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
     "manual": "tsc && cd ./test && ttsc",
     "prepublishOnly": "tsc",
-    "docs": "npx ts-docs"
+    "docs": "npx ts-docs",    
   },
   "repository": {
     "type": "git",

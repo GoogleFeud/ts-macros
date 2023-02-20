@@ -7,19 +7,20 @@ order: 1
 
 ts-macros is a custom typescript **transformer** which implements function macros. This library is heavily inspired by Rust's `macro_rules!` macro. Since it's a custom transformer, it can be plugged in into any tool which uses the `typescript` npm package.
 
-
 ## Basic usage
 
 All macro names must start with a dollar sign (`$`) and must be declared using the function keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `$macro!(params)`.
 
 ```ts --Macro
 function $contains<T>(value: T, ...possible: Array<T>) {
-    return +["||", [possible], (item: T) => value === item];
+  return +["||", [possible], (item: T) => value === item];
 }
 ```
+
 ```ts --Call
-console.log($contains!(searchItem, "erwin", "tj")); 
+console.log($contains!(searchItem, "erwin", "tj"));
 ```
+
 ```ts --Result
 console.log(searchItem === "erwin" || searchItem === "tj");
 ```
@@ -57,9 +58,9 @@ then transpile your code with `ttsc`.
 const TsMacros = require("ts-macros").default;
 
 options: {
-      getCustomTransformers: program => {
-        before: [TsMacros(program)]
-      }
+  getCustomTransformers: (program) => {
+    before: [TsMacros(program)];
+  };
 }
 ```
 

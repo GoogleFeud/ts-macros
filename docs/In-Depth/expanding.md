@@ -16,23 +16,25 @@ Every macro **expands** into the code that it contains. How it'll expand depends
 If a macro is an `ExpressionStatement`, then it's going to be "flattened" - the macro call will literally be replaced by the macro body, but all the new declared variables will have their names changed to a unique name.
 
 ```ts --Macro
-function $map<T, R>(arr: Array<T>, cb: (el: T) => R) : Array<R> {
-    const array = arr; 
-    const res = [];
-    for (let i=0; i < array.length; i++) {
-       res.push(cb(array[i]));
-    }
-    return res;
+function $map<T, R>(arr: Array<T>, cb: (el: T) => R): Array<R> {
+  const array = arr;
+  const res = [];
+  for (let i = 0; i < array.length; i++) {
+    res.push(cb(array[i]));
+  }
+  return res;
 }
 ```
+
 ```ts --Call
 $map!([1, 2, 3], (num) => num * 2); // This is an ExpressionStatement
 ```
+
 ```js --Result
 const array_1 = [1, 2, 3];
 const res_1 = [];
 for (let i_1 = 0; i_1 < array_1.length; i_1++) {
-    res_1.push(((num) => num * 2)(array_1[i_1]));
+  res_1.push(((num) => num * 2)(array_1[i_1]));
 }
 array_1;
 ```
@@ -48,14 +50,16 @@ Expanding inside an expression can do two different things depending on the what
 If the macro expands to a single expression, then the macro call is directly replaced with the expression.
 
 ```ts --Macro
-function $push(array: Array<number>, ...nums: Array<number>) : number {
-    return +["()", (nums: number) => array.push(nums)];
+function $push(array: Array<number>, ...nums: Array<number>): number {
+  return +["()", (nums: number) => array.push(nums)];
 }
 ```
+
 ```ts --Call
 const arr: Array<number> = [];
 const newSize = $push!(arr, 1, 2, 3);
 ```
+
 ```js --Result
 const arr = [];
 const newSize = (arr.push(1), arr.push(2), arr.push(3));
@@ -68,20 +72,22 @@ const newSize = (arr.push(1), arr.push(2), arr.push(3));
 If the macro expands to multiple expressions, or has a statement inside it's body, then the body is wrapped inside an IIFE (Immediately Invoked function expression) and the last expression gets returned automatically.
 
 ```ts --Macro
-function $push(array: Array<number>, ...nums: Array<number>) : number {
-    +[(nums: number) => array.push(nums)];
+function $push(array: Array<number>, ...nums: Array<number>): number {
+  +[(nums: number) => array.push(nums)];
 }
 ```
+
 ```ts --Call
 const arr: Array<number> = [];
 const newSize = $push!(arr, 1, 2, 3);
 ```
+
 ```js --Result
 const arr = [];
 const newSize = (() => {
-    arr.push(1)
-    arr.push(2)
-    return arr.push(3);
+  arr.push(1);
+  arr.push(2);
+  return arr.push(3);
 })();
 ```
 
@@ -91,44 +97,51 @@ If you want part of the code to be ran **outside** of the IIFE (for example you 
 
 ```ts --Macro
 function $if<T>(comparison: any, then: () => T, _else?: () => T) {
-    return $$escape!(() => {
-        var val;
-        if ($$kindof!(_else) === ts.SyntaxKind.ArrowFunction) {
-            if (comparison) {
-                val = $$escape!(then);
-            } else {
-                val = $$escape!(_else!);
-            }
-        } else {
-            if (comparison) {
-                val = $$escape!(then);
-            }
-        }
-        return val;
-    });
+  return $$escape!(() => {
+    var val;
+    if ($$kindof!(_else) === ts.SyntaxKind.ArrowFunction) {
+      if (comparison) {
+        val = $$escape!(then);
+      } else {
+        val = $$escape!(_else!);
+      }
+    } else {
+      if (comparison) {
+        val = $$escape!(then);
+      }
+    }
+    return val;
+  });
 }
 ```
+
 ```ts --Call
 const variable: number = 54;
-console.log($if!<string>(1 === variable, () => {
-    console.log("variable is 1");
-    return "A";
-}, () => {
-    console.log("variable is not 1");
-    return "B";
-}));
+console.log(
+  $if!<string>(
+    1 === variable,
+    () => {
+      console.log("variable is 1");
+      return "A";
+    },
+    () => {
+      console.log("variable is not 1");
+      return "B";
+    }
+  )
+);
 ```
+
 ```ts --Result
 const variable = 54;
 var val_1;
 if (1 === variable) {
-    // Do something...
-    console.log("variable is 1");
-    val_1 = "A";
-}
-else {
-    console.log("variable is not 1");
-    val_1 = "B";
+  // Do something...
+  console.log("variable is 1");
+  val_1 = "A";
+} else {
+  console.log("variable is not 1");
+  val_1 = "B";
 }
 console.log(val_1);
 ```
@@ -139,19 +152,22 @@ You can define **macro variables** inside macros, which save an expression and e
 
 ```ts --Macro
 function $test<T>(value: T) {
-    const $type = $$typeToString!<T>();
-    if ($type === "string") return "Value is a string.";
-    else if ($type === "number") return "Value is a number.";
-    else if ($type === "symbol") return "Value is a symbol.";
-    else if ($type === "undefined" || $type === "null") return "Value is undefined / null.";
-    else return "Value is an object.";
+  const $type = $$typeToString!<T>();
+  if ($type === "string") return "Value is a string.";
+  else if ($type === "number") return "Value is a number.";
+  else if ($type === "symbol") return "Value is a symbol.";
+  else if ($type === "undefined" || $type === "null")
+    return "Value is undefined / null.";
+  else return "Value is an object.";
 }
 ```
+
 ```ts --Call
 const a = $test!(null);
 const c = $test!(123);
-const f = $test!({value: 123});
+const f = $test!({ value: 123 });
 ```
+
 ```ts --Result
 const a = "Value is undefined / null.";
 const c = "Value is a number.";
