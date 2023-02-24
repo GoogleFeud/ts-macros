@@ -127,6 +127,8 @@ export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<u
  * @param func The function to inline
  * @param params An array literal with the argument values
  * @param doNotCall If any value is passed, this macro will always expand to an arrow function with the new code inside of it.
+ * 
+ * @category Built-in Macros
  */
 export declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>, doNotCall: any) : () => ReturnType<F>;
 export declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>) : ReturnType<F>;
