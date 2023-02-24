@@ -512,6 +512,44 @@ export declare function $$setStore(key: string, value: any) : void;
 export declare function $$getStore<T>(key: string) : T;
 
 /**
+ * Maps over each individual token of the expression, replacing them with the return value of `mapper`. You
+ * can use this macro to modify any expression without resorting to using [[$$raw]].
+ * 
+ * If the `mapper` function returns `null`, then the node doesn't get replaced.
+ * 
+ * Here is an example which maps over an expression, replacing the identifier "console" with the identifier "debug",
+ * and it also increments any numeric literal it finds.
+ * 
+ * ```ts --Macro
+ * function $test(exp: any) {
+ *   return $$map!(exp, (node: any) => {
+ *      if ($$kindof!(node) === ts.SyntaxKind.Identifier && $$text!(node) === "console") return $$ident!("debug");
+ *      else if ($$kindof!(node) === ts.SyntaxKind.NumericLiteral) return 1 + node;
+ *    })
+ * }
+ * ```
+ * ```ts --Call
+ * $test!(() => {
+ *  console.log(1);
+ * });
+ * ```
+ * ```ts --Result
+ * () => {
+ *   debug.log(2);
+ * };
+ * ```
+ * 
+ * The `mapper` function is considered a macro, so you **can** use [[$$raw]] if you need to, and any other macro functionality like
+ * repetitions.
+ * 
+ * @param exp 
+ * @param mapper 
+ */
+export declare function $$map<T, K = any>(exp: T, mapper: (element: any) => any) : K;
+
+export declare function $$text(exp: any) : string;
+
+/**
  * A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
  * 
  * ```ts --Macro

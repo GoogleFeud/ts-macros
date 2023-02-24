@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, resolveAliasedSymbol, tryRun, deExpandMacroResults, createMacro, makeAlwaysExpression } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -101,26 +101,7 @@ export class MacroTransformer {
             const sym = this.checker.getSymbolAtLocation(node.name);
             if (!sym) return node;
             if (this.macros.has(sym)) return;
-            const macroName = sym.name;
-            const params: Array<MacroParam> = [];
-            for (let i = 0; i < node.parameters.length; i++) {
-                const param = node.parameters[i];
-                if (!ts.isIdentifier(param.name)) throw MacroError(param, "You cannot use deconstruction patterns in macros.");
-                const marker = this.getMarker(param);
-                params.push({
-                    spread: Boolean(param.dotDotDotToken),
-                    marker,
-                    start: i,
-                    name: param.name.text,
-                    defaultVal: param.initializer || (param.questionToken ? ts.factory.createIdentifier("undefined") : undefined)
-                });
-            }
-            this.macros.set(sym, {
-                name: macroName,
-                params,
-                body: node.body,
-                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
-            });
+            this.macros.set(sym, createMacro(this, node, sym.name));
             return;
         }
 
@@ -206,19 +187,7 @@ export class MacroTransformer {
         if (ts.isCallExpression(node)) {
             if (ts.isNonNullExpression(node.expression)) {
                 const statements = this.runMacro(node, node.expression.expression) as unknown as Array<ts.Statement>|undefined;
-                if (!statements || !statements.length) return ts.factory.createNull(); 
-                let last = statements.pop()!;
-                if (statements.length === 0) {
-                    if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;
-                    else if (!isStatement(last)) return last;
-                }
-                if (ts.isExpressionStatement(last)) last = ts.factory.createReturnStatement(last.expression);
-                else if (!isStatement(last)) last = ts.factory.createReturnStatement(last);
-                return ts.factory.createCallExpression(
-                    ts.factory.createParenthesizedExpression(
-                        ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...statements, last], true))
-                    ),
-                    undefined, undefined);
+                return makeAlwaysExpression(statements);
             } else this.callComptimeFunction(node);
         }
 
@@ -478,10 +447,14 @@ export class MacroTransformer {
                 return;
             }
         }
+        return this.execMacro(macro, normalArgs, call, target);
+    }
+
+    execMacro(macro: Macro, args: ts.NodeArray<ts.Expression>, call?: ts.CallExpression, target?: ts.Node) : Array<ts.Statement>|undefined {
         this.macroStack.push({
             macro,
-            args: normalArgs,
-            call: call,
+            args,
+            call,
             target,
             defined: new Map(),
             store: {}
@@ -490,7 +463,7 @@ export class MacroTransformer {
         for (let i=0; i < macro.params.length; i++) {
             const param = macro.params[i];
             if (param.marker === MacroParamMarkers.Save) {
-                const value = param.spread ? ts.factory.createArrayLiteralExpression(normalArgs.slice(param.start)) : (normalArgs[param.start] || param.defaultVal);
+                const value = param.spread ? ts.factory.createArrayLiteralExpression(args.slice(param.start)) : (args[param.start] || param.defaultVal);
                 if (!ts.isIdentifier(value)) {
                     param.realName = ts.factory.createUniqueName(param.name);
                     pre.push(ts.factory.createVariableDeclaration(param.realName, undefined, undefined, value));
@@ -498,7 +471,7 @@ export class MacroTransformer {
             }
         }
         if (pre.length) this.escapeStatement(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
-        const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
+        const result = ts.visitEachChild(macro.body!, this.boundVisitor, this.context).statements;
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
         this.macroStack.pop();
@@ -586,6 +559,7 @@ export class MacroTransformer {
         else if (ts.isStringLiteral(node)) return node.text;
         else if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
         else if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+        else if (node.kind === ts.SyntaxKind.NullKeyword) return null;
         else if (ts.isIdentifier(node)) {
             if (node.text === "undefined") return undefined;
             else if (handleIdents) return node.text;

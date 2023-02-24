@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
-import { ComptimeFunction, MacroParam, MacroTransformer } from "./transformer";
+import { ComptimeFunction, Macro, MacroParam, MacroTransformer } from "./transformer";
 
 export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     if ("statements" in body) {
@@ -250,4 +250,43 @@ export function normalizeFunctionNode(checker: ts.TypeChecker, fnNode: ts.Expres
         if (ts.isFunctionLikeDeclaration(originDecl)) return originDecl;
         else if (ts.isVariableDeclaration(originDecl) && originDecl.initializer && ts.isFunctionLikeDeclaration(originDecl.initializer)) return originDecl.initializer;
     }
+}
+
+export function createMacro(transformer: MacroTransformer, func: ts.FunctionLikeDeclaration, name?: string) : Macro {
+    const finalName = name || "anonymous";
+    const params: Array<MacroParam> = [];
+    for (let i = 0; i < func.parameters.length; i++) {
+        const param = func.parameters[i];
+        if (!ts.isIdentifier(param.name)) throw MacroError(param, "You cannot use deconstruction patterns in macros.");
+        const marker = transformer.getMarker(param);
+        params.push({
+            spread: Boolean(param.dotDotDotToken),
+            marker,
+            start: i,
+            name: param.name.text,
+            defaultVal: param.initializer || (param.questionToken ? ts.factory.createIdentifier("undefined") : undefined)
+        });
+    }
+    return {
+        name: finalName,
+        params,
+        body: ts.isBlock(func.body!) ? func.body : ts.factory.createBlock([ts.factory.createExpressionStatement(func.body!)]),
+        typeParams: (func.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
+    };
+}
+
+export function makeAlwaysExpression(statements?: Array<ts.Statement>) : ts.Expression | undefined {
+    if (!statements || !statements.length) return ts.factory.createNull(); 
+    let last = statements.pop()!;
+    if (statements.length === 0) {
+        if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;
+        else if (!isStatement(last)) return last;
+    }
+    if (ts.isExpressionStatement(last)) last = ts.factory.createReturnStatement(last.expression);
+    else if (!isStatement(last)) last = ts.factory.createReturnStatement(last);
+    return ts.factory.createCallExpression(
+        ts.factory.createParenthesizedExpression(
+            ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...statements, last], true))
+        ),
+        undefined, undefined);
 }

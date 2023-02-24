@@ -2,7 +2,7 @@ import ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
+import { createMacro, fnBodyToString, MacroError, macroParamsToArray, makeAlwaysExpression, normalizeFunctionNode, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -311,6 +311,35 @@ export default {
             }, ...macroParamsToArray(lastMacro.macro.params, [...lastMacro.args])], `$$raw in ${lastMacro.macro.name}: `);
         },
         preserveParams: true
+    },
+    "$$map": {
+        call: ([mapOver, mapper], transformer, callSite) => {
+            if (!mapOver) throw MacroError(callSite, "`map` macro expects something to map over.");
+            if (!mapper) throw MacroError(callSite, "`map` macro expects a mapper.");
+            mapOver = ts.visitNode(mapOver, transformer.boundVisitor);
+            const mapperFn = normalizeFunctionNode(transformer.checker, mapper);
+            if (!mapperFn || !mapperFn.body) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
+            const macroFn = createMacro(transformer, mapperFn);
+            const visitor = (node: ts.Node): ts.Node | undefined => {
+                const transformed = transformer.execMacro(macroFn, ts.factory.createNodeArray([node as ts.Expression]));
+                const exp = makeAlwaysExpression(transformed);
+                if (!exp || exp.kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(node, visitor, transformer.context);
+                return exp;
+            };
+            return ts.visitEachChild(mapOver, visitor, transformer.context);
+        },
+        preserveParams: true
+    },
+    "$$text": {
+        call: ([exp], transformer, callSite) => {
+            if (!exp) throw MacroError(callSite, "`text` macro expects an expression.");
+            else if (ts.isStringLiteral(exp)) return exp;
+            else if (ts.isIdentifier(exp)) return ts.factory.createStringLiteral(exp.text);
+            else if (ts.isNumericLiteral(exp)) return ts.factory.createStringLiteral(exp.text);
+            else if (exp.kind === ts.SyntaxKind.TrueKeyword) return ts.factory.createStringLiteral("true");
+            else if (exp.kind === ts.SyntaxKind.FalseKeyword) return ts.factory.createStringLiteral("false");
+            else if (exp.kind === ts.SyntaxKind.NullKeyword) return ts.factory.createStringLiteral("null");
+        }
     },
     "$$setStore": {
         call: ([key, value], transformer, callSite) => {
