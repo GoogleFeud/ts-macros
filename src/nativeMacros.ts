@@ -267,6 +267,17 @@ export default {
             }
         }
     },
+    "$$text": {
+        call: ([exp], transformer, callSite) => {
+            if (!exp) throw MacroError(callSite, "`text` macro expects an expression.");
+            else if (ts.isStringLiteral(exp)) return exp;
+            else if (ts.isIdentifier(exp)) return ts.factory.createStringLiteral(exp.text);
+            else if (ts.isNumericLiteral(exp)) return ts.factory.createStringLiteral(exp.text);
+            else if (exp.kind === ts.SyntaxKind.TrueKeyword) return ts.factory.createStringLiteral("true");
+            else if (exp.kind === ts.SyntaxKind.FalseKeyword) return ts.factory.createStringLiteral("false");
+            else if (exp.kind === ts.SyntaxKind.NullKeyword) return ts.factory.createStringLiteral("null");
+        }
+    },
     "$$comptime": {
         call: ([fn], transformer, callSite) => {
             if (transformer.config.noComptime) return;

@@ -31,6 +31,7 @@ interface RawContext {
     thisMacro: any
 }
 declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
+declare function $$text(exp: any) : string;
 declare function $$setStore(key: string, value: any) : void;
 declare function $$getStore<T>(key: string) : T;
 type Accumulator = number & { __marker?: "Accumulator" };

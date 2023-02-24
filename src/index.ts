@@ -496,6 +496,22 @@ export interface RawContext {
 export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 
 /**
+ * Expands to a string literal of the expression. If the transformation is not possible, it expands to `undefined`.
+ * 
+ * Expressions that can be transformed:
+ * 
+ * - string literals
+ * - identifiers
+ * - numeric literals
+ * - true / false
+ * - undefined
+ * - null
+ * 
+ * @category Built-in Macros
+ */
+export declare function $$text(exp: any) : string;
+
+/**
  * Stores the expression `value` in `key`. Storage is **not** persistent,
  * it won't stay across macro calls.
  * 
