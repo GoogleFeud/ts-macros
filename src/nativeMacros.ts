@@ -268,11 +268,12 @@ export default {
         }
     },
     "$$comptime": {
-        call: (_, transformer, callSite) => {
+        call: ([fn], transformer, callSite) => {
             if (transformer.config.noComptime) return;
             if (transformer.macroStack.length) throw MacroError(callSite, "`comptime` macro cannot be called inside macros.");
-            const fn = callSite.arguments[0];
-            if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`comptime` macro expects an arrow function as the first parameter.");
+            if (!fn) throw MacroError(callSite, "`comptime` macro expects a function as the first parameter.");
+            const callableFn = normalizeFunctionNode(transformer.checker, fn);
+            if (!callableFn || !callableFn.body) throw MacroError(callSite, "`comptime` macro expects a function as the first parameter.");
             let parent = callSite.parent;
             if (ts.isExpressionStatement(parent)) {
                 parent = parent.parent;
@@ -280,7 +281,7 @@ export default {
                 if ("body" in parent) {
                     const signature = transformer.checker.getSignatureFromDeclaration(parent as ts.SignatureDeclaration);
                     if (!signature || !signature.declaration) return;
-                    transformer.addComptimeSignature(signature.declaration, fnBodyToString(transformer.checker, fn), signature.parameters.map(p => p.name));
+                    transformer.addComptimeSignature(signature.declaration, fnBodyToString(transformer.checker, callableFn), signature.parameters.map(p => p.name));
                     return;
                 }
             }
@@ -290,15 +291,17 @@ export default {
     "$$raw": {
         call: ([fn], transformer, callSite) => {
             if (transformer.config.noComptime) return;
-            if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`raw` macro expects an arrow function as the first parameter.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`raw` macro must be called inside another macro.");
+            if (!fn) throw MacroError(callSite, "`raw` macro expects a function as the first parameter.");
+            const callableFn = normalizeFunctionNode(transformer.checker, fn);
+            if (!callableFn || !callableFn.body) throw MacroError(callSite, "`raw` macro expects a function as the first parameter.");
             const renamedParameters = [];
-            for (const param of fn.parameters.slice(1)) {
+            for (const param of callableFn.parameters.slice(1)) {
                 if (!ts.isIdentifier(param.name)) throw MacroError(callSite, "`raw` macro parameters cannot be deconstructors.");
                 renamedParameters.push(param.name.text);
             }
-            const stringified = transformer.addComptimeSignature(fn, fnBodyToString(transformer.checker, fn), ["ctx", ...renamedParameters]);
+            const stringified = transformer.addComptimeSignature(callableFn, fnBodyToString(transformer.checker, callableFn), ["ctx", ...renamedParameters]);
             return tryRun(stringified, [{
                 ts,
                 factory: ts.factory,
