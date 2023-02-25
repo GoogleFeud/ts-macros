@@ -278,6 +278,18 @@ export default {
             else if (exp.kind === ts.SyntaxKind.NullKeyword) return ts.factory.createStringLiteral("null");
         }
     },
+    "$$decompose": {
+        call: ([exp], transformer) => {
+            if (!exp) return ts.factory.createArrayLiteralExpression([]);
+            const elements: Array<ts.Expression> = [];
+            const visitor = (node: ts.Node) => {
+                if (ts.isExpression(node)) elements.push(node);
+                return node;
+            };
+            ts.visitEachChild(exp, visitor, transformer.context);
+            return ts.factory.createArrayLiteralExpression(elements);
+        }
+    },
     "$$comptime": {
         call: ([fn], transformer, callSite) => {
             if (transformer.config.noComptime) return;

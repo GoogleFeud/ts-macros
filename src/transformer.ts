@@ -348,13 +348,13 @@ export class MacroTransformer {
             // Detects a repetition
             else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
-                return this.execRepetition(fn, args, macro, literals, separator);
+                return this.execRepetition(fn, literals, separator);
             }
             else if (ts.isPrefixUnaryExpression(node)) {
                 if (node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
                     const { separator, function: fn, literals} = getRepetitionParams(node.operand);
                     if (!separator) throw MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
-                    return this.execRepetition(fn, args, macro, literals, separator, true);
+                    return this.execRepetition(fn, literals, separator, true);
                 } else {
                     // Detects a unary expression and tries to remove it if possible
                     const op = node.operator;
@@ -370,7 +370,7 @@ export class MacroTransformer {
                     const repNode = (node.arguments[repNodeIndex] as ts.PrefixUnaryExpression).operand as ts.ArrayLiteralExpression;
                     const { separator, function: fn, literals} = getRepetitionParams(repNode);
                     if (!separator) {
-                        const newBod = this.execRepetition(fn, args, macro, literals, separator, true);
+                        const newBod = this.execRepetition(fn, literals, separator, true);
                         const finalArgs = [];
                         for (let i=0; i < node.arguments.length; i++) {
                             if (i === repNodeIndex) finalArgs.push(...newBod);
@@ -385,7 +385,7 @@ export class MacroTransformer {
         return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
 
-    execRepetition(fn: ts.ArrowFunction, args: ts.NodeArray<ts.Node>, macro: Macro, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
+    execRepetition(fn: ts.ArrowFunction, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
         const newBod = [];
         const repeatNames = fn.parameters.map(p => p.name.getText());
         const elementSlices: Array<Array<ts.Expression>> = Array.from({length: repeatNames.length}, () => []);

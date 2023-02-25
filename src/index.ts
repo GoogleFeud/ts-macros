@@ -529,6 +529,8 @@ export declare function $$setStore(key: string, value: any) : void;
  */
 export declare function $$getStore<T>(key: string) : T;
 
+export declare function $$decompose(exp: any) : any[];
+
 /**
  * A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
  * 
@@ -582,7 +584,7 @@ export type Accumulator = number & { __marker?: "Accumulator" };
  * }
  * ```
  */
-export type Save<T> = T & { __marker?: "Save" }
+export type Save<T> = T & { __marker?: "Save" };
 
 export type EmptyDecorator = (...props: any) => void;
 
