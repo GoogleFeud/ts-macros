@@ -529,6 +529,34 @@ export declare function $$setStore(key: string, value: any) : void;
  */
 export declare function $$getStore<T>(key: string) : T;
 
+
+/**
+ * Separates the passed expression to individual nodes, and expands to an array literal with the nodes inside of it.
+ * 
+ * **Doesn't work on expressions which can contain statements, such as function expressions.**
+ * 
+ * @example
+ * ```ts --Macro
+ * // Stringifies the passed expression without using any typescript API
+ * function $stringify(value: any) : string {
+ *   // Store the array literal in a macro variable
+ *   const $decomposed = $$decompose!(value);
+ *   if ($$kindof!(value) === ts.SyntaxKind.PropertyAccessExpression) return $stringify!($decomposed[0]) + "." + $stringify!($decomposed[1]);
+ *   else if ($$kindof!(value) === ts.SyntaxKind.CallExpression) return $stringify!($decomposed[0]) + "(" + (+["+", [$$slice!($decomposed, 1)], (part: any) => {
+ *       const $len = $$length!($decomposed) - 2;
+ *       return $stringify!(part) + ($$i!() === $len ? "" : ", ");
+ *   }] || "") + ")";
+ *   else if ($$kindof!(value) === ts.SyntaxKind.StringLiteral) return "\"" + value + "\"";
+ *   else return $$text!(value);
+ * }
+ * ```
+ * ```ts --Call
+ * $stringify!(console.log(1, 2, console.log(3)));
+ * ```
+ * ```ts --Result
+ * "console.log(1, 2, console.log(3))";
+ * ```
+ */
 export declare function $$decompose(exp: any) : any[];
 
 /**
