@@ -221,7 +221,7 @@ export default {
             const strVal = transformer.getStringFromNode(thing, false, true);
             if (strVal) return ts.factory.createStringLiteral(strVal.slice(startNum, endNum));
             else if (ts.isArrayLiteralExpression(thing)) return ts.factory.createArrayLiteralExpression(thing.elements.slice(startNum, endNum));
-            else throw MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
+            else throw MacroError(callSite, "`slice` macro expects an array/string literal as the first argument.");
         }
     },
     "$$propsOfType": {

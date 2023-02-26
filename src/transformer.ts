@@ -389,21 +389,30 @@ export class MacroTransformer {
         const newBod = [];
         const repeatNames = fn.parameters.map(p => p.name.getText());
         const elementSlices: Array<Array<ts.Expression>> = Array.from({length: repeatNames.length}, () => []);
+        
+        let totalLoopsNeeded = 0;
+
         for (let i=0; i < elements.length; i++) {
             const lit = elements[i];
             const resolved = ts.visitNode(lit, this.boundVisitor);
-            if (ts.isArrayLiteralExpression(resolved)) elementSlices[i % repeatNames.length].push(...resolved.elements);
+            if (ts.isArrayLiteralExpression(resolved)) {
+                if (resolved.elements.length > totalLoopsNeeded) totalLoopsNeeded = resolved.elements.length;
+                elementSlices[i % repeatNames.length].push(...resolved.elements);
+            }
         }
+
+        if (!totalLoopsNeeded) return [ts.factory.createNull()];
+        
         const ind = this.repeat.push({
             index: 0,
             elementSlices,
             repeatNames
         }) - 1;
 
-        const totalLoopsNeeded = Math.max(...elementSlices.map(s => s.length));
+
         for (; this.repeat[ind].index < totalLoopsNeeded; this.repeat[ind].index++) {
             if ("statements" in fn.body) {
-                if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor))));
+                if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor)).filter(el => el)));
                 else {
                     for (const stmt of fn.body.statements) {
                         const res = this.boundVisitor(stmt);
@@ -426,7 +435,8 @@ export class MacroTransformer {
     getMacroParam(name: string, macro: Macro, params: ts.NodeArray<ts.Node>) : ts.Node|undefined {
         const index = macro.params.findIndex(p => p.name === name);
         if (index === -1) {
-            for (const repeat of this.repeat) {
+            for (let i=this.repeat.length - 1; i >= 0; i--) {
+                const repeat = this.repeat[i];
                 const repeatNameIndex = repeat.repeatNames.indexOf(name);
                 if (repeatNameIndex !== -1) {
                     const repeatCollection = repeat.elementSlices[repeatNameIndex];
