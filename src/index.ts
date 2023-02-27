@@ -560,6 +560,39 @@ export declare function $$getStore<T>(key: string) : T;
 export declare function $$decompose(exp: any) : any[];
 
 /**
+ * Goes over all nodes of an expression and all it's children recursively, calling `mapper` for each node and replacing it
+ * with the result of the function, much like `Array#map`.
+ * 
+ * If `mapper` expands to `null` or nothing, the node doesn't get replaced.
+ * 
+ * @example
+ * ```ts --Macro
+ * function $$replaceIdentifiers(exp: any, identifier: string, replaceWith: string) : any {
+ *  return $$map!(exp, (value) => {
+ *     if ($$kindof!(value) === ts.SyntaxKind.Identifier && $$text!(value) === identifier) return $$ident!(replaceWith);
+ *  });
+ * }
+ * ```
+ * ```ts --Call
+ * $$replaceIdentifiers!(console.log(1), "log", "debug");
+ * const fn = $$replaceIdentifiers!((arr: number[]) => {
+ *   for (const item of arr) {
+ *      console.info(item);
+ *   }
+ * }, "console", "logger");
+ * ```
+ * ```ts --Result
+ * console.debug(1);
+ * const fn = (arr) => {
+ *   for (const item of arr) {
+ *       logger.info(item);
+ *   }
+ * };
+ * ```
+ */
+export declare function $$map<T>(exp: T, mapper: (value: any) => any) : T;
+
+/**
  * A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
  * 
  * ```ts --Macro

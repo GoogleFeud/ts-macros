@@ -386,7 +386,7 @@ export class MacroTransformer {
     }
 
     execRepetition(fn: ts.ArrowFunction, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
-        const newBod = [];
+        const newBod: Array<ts.Node> = [];
         const repeatNames = fn.parameters.map(p => p.name.getText());
         const elementSlices: Array<Array<ts.Expression>> = Array.from({length: repeatNames.length}, () => []);
         
@@ -411,25 +411,32 @@ export class MacroTransformer {
 
 
         for (; this.repeat[ind].index < totalLoopsNeeded; this.repeat[ind].index++) {
-            if ("statements" in fn.body) {
-                if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor)).filter(el => el)));
-                else {
-                    for (const stmt of fn.body.statements) {
-                        const res = this.boundVisitor(stmt);
-                        if (res) {
-                            if (Array.isArray(res)) newBod.push(...res as ts.Statement[]);
-                            else newBod.push(res as ts.Statement);
-                        }
-                    }
-                }
-            }
-            else {
-                const res = ts.visitNode(fn.body, this.boundVisitor);
-                newBod.push(res);
-            }
+            newBod.push(...this.transformFunction(fn, wrapStatements));
         }
         this.repeat.pop();
         return separator && separators[separator] ? [separators[separator](this, newBod)] : newBod;
+    }
+
+    transformFunction(fn: ts.FunctionLikeDeclaration, wrapStatements?: boolean) : Array<ts.Node> {
+        if (!fn.body) return [];
+        const newBod = [];
+        if ("statements" in fn.body) {
+            if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor)).filter(el => el)));
+            else {
+                for (const stmt of fn.body.statements) {
+                    const res = this.boundVisitor(stmt);
+                    if (res) {
+                        if (Array.isArray(res)) newBod.push(...res as ts.Statement[]);
+                        else newBod.push(res as ts.Statement);
+                    }
+                }
+            }
+        }
+        else {
+            const res = ts.visitNode(fn.body, this.boundVisitor);
+            newBod.push(res);
+        }
+        return newBod;
     }
 
     getMacroParam(name: string, macro: Macro, params: ts.NodeArray<ts.Node>) : ts.Node|undefined {
@@ -785,7 +792,7 @@ export class MacroTransformer {
 
 }
 
-const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>) => ts.Expression> = {
+const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Node>) => ts.Expression> = {
     "[]": (_transformer, body) => ts.factory.createArrayLiteralExpression(body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression))),
     "+": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.PlusToken),
     "-": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.MinusToken),

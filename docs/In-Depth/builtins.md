@@ -26,6 +26,7 @@ ts-macros provides you with a lot of useful built-in macros which you can use in
 [[$$typeToString]] - Turns a type to a string literal.     
 [[$$text]] - Turns an expression into a string literal.     
 [[$$decompose]] - Expands to an array literal containing the nodes that make up an expression.      
+[[$$map]] - Takes a function which acts as a macro and goes over all nodes of an expression with it, replacing each node with the expanded value of the macro function.     
 [[$$comptime]] - Allows you to run code during transpilation.     
 [[$$raw]] - Allows you to interact with the raw typescript APIs.    
 [[$$getStore]], [[$$setStore]] - Allow you to store variables in a macro call.

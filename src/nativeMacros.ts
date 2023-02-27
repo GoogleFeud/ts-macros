@@ -290,6 +290,27 @@ export default {
             return ts.factory.createArrayLiteralExpression(elements);
         }
     },
+    "$$map": {
+        call: ([exp, visitor], transformer, callSite) => {
+            const lastMacro = transformer.getLastMacro();
+            if (!lastMacro) throw MacroError(callSite, "`$$map` macro can only be used inside other macros.");
+            if (!exp) throw MacroError(callSite, "`$$map` macro expects an expression as it's first argument.");
+            if (!visitor) throw MacroError(callSite, "`$$map` macro expects a function expression as it's second argument.");
+            const fn = normalizeFunctionNode(transformer.checker, visitor);
+            if (!fn || !fn.body) throw MacroError(callSite, "`$$map` macro expects a function as it's second argument.");
+            if (!fn.parameters.length || !ts.isIdentifier(fn.parameters[0].name)) throw MacroError(callSite, "`$$map` macro expects the function to have a parameter.");
+            const paramName = fn.parameters[0].name.text;
+            const visitorFn = (node: ts.Node) : ts.Node|Array<ts.Node> => {
+                if (!ts.isExpression(node)) return ts.visitEachChild(node, visitorFn, transformer.context);
+                lastMacro.store[paramName] = node;
+                const newNodes = transformer.transformFunction(fn, true);
+                if (newNodes.length === 1 && newNodes[0].kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(node, visitorFn, transformer.context);
+                return newNodes;
+            };
+            return ts.visitNode(ts.visitNode(exp, transformer.boundVisitor), visitorFn);
+        },
+        preserveParams: true
+    },
     "$$comptime": {
         call: ([fn], transformer, callSite) => {
             if (transformer.config.noComptime) return;
