@@ -66,13 +66,11 @@ A `for...of` or a `for...in` loop. Check out the [[ForIterLabel]] interface for 
 
 ```ts --Macro
 // A macro which turns a for...of loop to a forEach
-function $ToForEach(info: ForIterLabel, variable: Var) : void {
-    if ($$kindof!(info.initializer) === ts.SyntaxKind.Identifier) {
-        // In order to make it so info.initializer replaces the argument, we need to use
-        // a Var marker.
-        variable = info.initializer;
-        (info.iterator).forEach((variable: any) => {
-            $$inline!(info.statement);
+function $ToForEach(info: ForIterLabel) : void {
+    const $initializerName = info.initializer;
+    if ($$kindof!($initializerName) === ts.SyntaxKind.Identifier) {
+        info.iterator.forEach(($initializerName: any) => {
+            $$escape!(info.statement);
         })
     }
 }
