@@ -206,7 +206,7 @@ export default {
                     if (ts.isReturnStatement(lastStatement)) {
                         return lastStatement.expression;
                     } else {
-                        if (!hygienicBody.length) return lastStatement;
+                        if (!hygienicBody.length && ts.isExpression(lastStatement)) return lastStatement;
                         transformer.escapeStatement(lastStatement);
                     }
                 }

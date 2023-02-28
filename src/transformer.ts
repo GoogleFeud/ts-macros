@@ -173,16 +173,14 @@ export class MacroTransformer {
         }
 
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
-            if (ts.isNonNullExpression(node.expression.expression)) {
-                const statements = this.runMacro(node.expression, node.expression.expression.expression);
-                if (!statements) return;
-                const prepared = this.makeHygienic(ts.factory.createNodeArray(statements)) as unknown as Array<ts.Statement>;
-                if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
-                    const exp = prepared.pop() as ts.ReturnStatement;
-                    if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
-                }
-                else return prepared;
+            const statements = this.runMacro(node.expression, node.expression.expression.expression);
+            if (!statements) return;
+            const prepared = this.makeHygienic(ts.factory.createNodeArray(statements)) as unknown as Array<ts.Statement>;
+            if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
+                const exp = prepared.pop() as ts.ReturnStatement;
+                if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
             }
+            else return prepared;
         }
 
         if (ts.canHaveDecorators(node) && ts.getDecorators(node)?.length) {
@@ -503,6 +501,7 @@ export class MacroTransformer {
             defined: new Map(),
             store: {}
         });
+
         const pre = [];
         for (let i=0; i < macro.params.length; i++) {
             const param = macro.params[i];
@@ -515,6 +514,7 @@ export class MacroTransformer {
             }
         }
         if (pre.length) this.escapeStatement(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
+
         const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);

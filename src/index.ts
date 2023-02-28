@@ -187,7 +187,7 @@ export declare function $$define(varname: string, initializer: unknown, let?: bo
  * import { $$i } from "ts-macros";
  * 
  * function $arr(...els: Array<number>) {
- *    +["[]", (els: number) => els + $$i!()];
+ *    +["[]", [els], (element: number) => element + $$i!()];
  * }
  * ```
  * ```ts --Call
