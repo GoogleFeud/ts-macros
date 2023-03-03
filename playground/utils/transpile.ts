@@ -2,7 +2,7 @@
 import ts from "typescript";
 import TsMacros, { macros } from "../../dist";
 
-export const Markers = `
+export let Markers = `
 declare function $$loadEnv(path?: string) : void;
 declare function $$readFile(path: string, parseJSON?: false) : string;
 declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
@@ -81,6 +81,12 @@ interface BlockLabel {
 }
 type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
 `;
+
+Markers += "enum SyntaxKind {\n";
+for (const kind in Object.keys(ts.SyntaxKind)) {
+    if (ts.SyntaxKind[kind]) Markers += `${ts.SyntaxKind[kind]} = ${kind},\n`;
+}
+Markers += "\n}\n";
 
 export const CompilerOptions: ts.CompilerOptions = {
     //...ts.getDefaultCompilerOptions(),                    

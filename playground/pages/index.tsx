@@ -8,6 +8,7 @@ import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from
 import styles from "../css/App.module.css";
 import fs from "fs";
 import path from "path";
+import ts from "typescript";
 
 const SetupCodes = [
     `function $contains<T>(value: T, possible: Array<T>) {
