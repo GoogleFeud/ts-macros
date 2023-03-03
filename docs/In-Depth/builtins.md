@@ -24,6 +24,7 @@ ts-macros provides you with a lot of useful built-in macros which you can use in
 [[$$escape]] - Places a block of code in the parent block.     
 [[$$propsOfType]] - Expands to an array with all properties of a type.     
 [[$$typeToString]] - Turns a type to a string literal.     
+[[$$typeAssignableTo]] - Compares two types.    
 [[$$text]] - Turns an expression into a string literal.     
 [[$$decompose]] - Expands to an array literal containing the nodes that make up an expression.      
 [[$$map]] - Takes a function that acts as a macro and goes over all the nodes of an expression with it, replacing each node with the expanded result of the macro function.     

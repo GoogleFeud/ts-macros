@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -678,16 +678,23 @@ export class MacroTransformer {
         return undefined;
     }
 
-    getTypeParam(type: ts.Type) : ts.Type | undefined {
+    resolveTypeArgumentOfCall(macroCall: ts.CallExpression, typeIndex: number) : ts.Type | undefined {
+        if (!macroCall.typeArguments || !macroCall.typeArguments[typeIndex]) return;
+        const type = this.checker.getTypeAtLocation(macroCall.typeArguments[typeIndex]);
         const lastMacroCall = this.getLastMacro();
-        if (!lastMacroCall) return;
-        const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
-        if (resolvedTypeParameterIndex === -1) return;
-        if (lastMacroCall.call) {
-            const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
-            if (!resolvedTypeParam) return this.checker.getResolvedSignature(lastMacroCall.call)?.getTypeParameterAtPosition(resolvedTypeParameterIndex);
-
-            return this.checker.getTypeAtLocation(resolvedTypeParam);
+        if (!lastMacroCall) return type;
+        if (type.isTypeParameter()) {
+            const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
+            if (resolvedTypeParameterIndex === -1) return;
+            if (lastMacroCall.call) {
+                const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
+                if (!resolvedTypeParam) return this.checker.getResolvedSignature(lastMacroCall.call)?.getTypeParameterAtPosition(resolvedTypeParameterIndex);
+                return this.checker.getTypeAtLocation(resolvedTypeParam);
+            } else return;
+        } else {
+            const allParams = lastMacroCall.macro.typeParams.map(p => this.checker.getTypeAtLocation(p));
+            const replacementTypes = resolveTypeArguments(this.checker, lastMacroCall.call as ts.CallExpression);
+            return resolveTypeWithTypeParams(type, allParams, replacementTypes);
         }
     }
 

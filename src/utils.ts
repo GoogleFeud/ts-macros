@@ -184,7 +184,7 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         return providedType.checker.getTypeOfSymbol(realType);
     }
     // Conditional type
-    else if ("checkType" in providedType && "extendsType" in providedType) {
+    else if ("checkType" in providedType && "extendsType" in providedType && "resolvedTrueType" in providedType && "resolvedFalseType" in providedType) {
         const checkType = resolveTypeWithTypeParams((providedType as any).checkType as ts.Type, typeParams, replacementTypes);
         const extendsType = resolveTypeWithTypeParams((providedType as any).extendsType as ts.Type, typeParams, replacementTypes);
         const trueType = resolveTypeWithTypeParams((providedType as any).resolvedTrueType as ts.Type, typeParams, replacementTypes);

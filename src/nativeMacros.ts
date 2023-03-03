@@ -2,7 +2,7 @@ import ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
+import { fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -226,45 +226,26 @@ export default {
     },
     "$$propsOfType": {
         call: (_args, transformer, callSite) => {
-            if (!callSite.typeArguments || !callSite.typeArguments[0]) throw MacroError(callSite, "`propsOfType` macro expects one type parameter.");
-            const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
-            if (type.isTypeParameter()) {
-                const param = transformer.getTypeParam(type);
-                if (!param) return ts.factory.createArrayLiteralExpression();
-                return ts.factory.createArrayLiteralExpression(param.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
-            } else {
-                const lastMacro = transformer.getLastMacro();
-                if (lastMacro) {
-                    const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
-                    const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
-                    return ts.factory.createArrayLiteralExpression(resolveTypeWithTypeParams(type, allParams, replacementTypes).getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
-                } else return ts.factory.createArrayLiteralExpression(type.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
-            }
+            const type = transformer.resolveTypeArgumentOfCall(callSite, 0);
+            if (!type) throw MacroError(callSite, "`propsOfType` macro expects one type parameter.");
+            return ts.factory.createArrayLiteralExpression(type.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
         }
     },
     "$$typeToString": {
         call: ([simplifyType, nonNullType], transformer, callSite) => {
-            if (!callSite.typeArguments || !callSite.typeArguments[0]) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
-            const getFinalType = (type: ts.Type) => {
-                if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
-                if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
-                return type;
-            };
-            const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
-            if (type.isTypeParameter()) {
-                const param = transformer.getTypeParam(type);
-                if (!param) return ts.factory.createStringLiteral("");
-                return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(param)));
-            }
-            else {
-                const lastMacro = transformer.getLastMacro();
-                if (lastMacro) {
-                    const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
-                    const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
-                    return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(resolveTypeWithTypeParams(type, allParams, replacementTypes))));
-                } 
-                else return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(type)));
-            }
+            let type = transformer.resolveTypeArgumentOfCall(callSite, 0);
+            if (!type) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
+            if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
+            if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
+            return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
+        }
+    },
+    "$$typeAssignableTo": {
+        call: (_args, transformer, callSite) => {
+            const type = transformer.resolveTypeArgumentOfCall(callSite, 0);
+            const compareTo = transformer.resolveTypeArgumentOfCall(callSite, 1);
+            if (!type || !compareTo) throw MacroError(callSite, "`typeAssignableTo` macro expects two type parameters.");
+            return transformer.checker.isTypeAssignableTo(type, compareTo) ? ts.factory.createTrue() : ts.factory.createFalse();
         }
     },
     "$$text": {

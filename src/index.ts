@@ -556,6 +556,7 @@ export declare function $$getStore<T>(key: string) : T;
  * ```ts --Result
  * "console.log(1, 2, console.log(3))";
  * ```
+ * @category Built-in Macros
  */
 export declare function $$decompose(exp: any) : any[];
 
@@ -589,8 +590,18 @@ export declare function $$decompose(exp: any) : any[];
  *   }
  * };
  * ```
+ * @category Built-in Macros
  */
 export declare function $$map<T>(exp: T, mapper: (value: any) => any) : T;
+
+
+/**
+ * Checks if type `T` is assignable to type `K`.
+ * 
+ * @category Built-in Macros
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare function $$typeAssignableTo<T, K>() : boolean;
 
 /**
  * A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.

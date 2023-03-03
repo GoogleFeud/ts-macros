@@ -22,6 +22,7 @@ declare function $$ts<T = unknown>(code: string) : T;
 declare function $$escape<T>(code: () => T) : T;
 declare function $$typeToString<T>(simplify?: boolean, nonNull?: boolean) : string;
 declare function $$propsOfType<T>() : Array<string>;
+declare function $$typeAssignableTo<T, K>() : boolean;
 declare function $$comptime(fn: () => void) : void;
 interface RawContext {
     ts: any,
