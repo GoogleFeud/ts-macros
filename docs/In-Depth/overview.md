@@ -63,6 +63,11 @@ options: {
 }
 ```
 
+### Usage with vite
+
+If you want to use ts-macros with vite, you'll have to use the `...` plguin. [Here](https://github.com/GoogleFeud/ts-macros-vite-example) is an
+example repository which sets up a basic vite project which includes ts-macros.
+
 ## Transformer options
 
 ### `noComptime`
