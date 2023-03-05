@@ -115,6 +115,20 @@ export class MacroTransformer {
                     defaultVal: param.initializer || (param.questionToken ? ts.factory.createIdentifier("undefined") : undefined)
                 });
             }
+
+            // There cannot be 2 macros that have the same name and come from the same source file,
+            // which means that if the if statement is true, it's very likely the files are being watched
+            // for changes and transpiled every time there's a change, so it's a good idea to clean up the
+            // macros map for 2 important reasons:
+            // - To not excede the max capacity of the map
+            // - To allow for macro chaining to work, because it uses macro names only.
+            for (const [oldSym, macro] of this.macros) {
+                if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName) {
+                    this.macros.delete(oldSym);
+                    break;
+                }
+            }
+
             this.macros.set(sym, {
                 name: macroName,
                 params,
