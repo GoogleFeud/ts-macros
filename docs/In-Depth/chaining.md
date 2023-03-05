@@ -5,7 +5,7 @@ order: 2
 
 # Chaining macros
 
-Macros can also be **chained** with any javascript expression. This doesn't sit well with the typescript compiler, so you'll have to create types for the macros yourself by creating custom types. Here's an example of a vector data type, except the inner data of the vector is completely hidden - macros are used to abstract away the underlying data source - the array. As you can see, there's no trace of the `Vector` in the compiled code.
+Macros can be **chained** with any javascript expression. This doesn't sit well with the typescript compiler, so you'll have to create types for the macros yourself by creating custom types. Here's an example of a vector data type, except the inner data of the vector is completely hidden - macros are used to abstract away the underlying data source - the array. As you can see, there's no trace of the `Vector` in the compiled code.
 
 ```ts --Macros
 export namespace Vector {
@@ -15,7 +15,7 @@ export namespace Vector {
     }
 }
 
-// interface to represent the Vector, which is actually just an array with 2 elements
+// Interface to represent the Vector, which is actually just an array with 2 elements
 export interface Vector {
     $x(): number;
     $y(): number;
@@ -45,7 +45,7 @@ console.log(addedVec.$x!(), addedVec.$y!());
 ```ts --Result
 const myVec = [0, 0];
 const addedVec = [myVec[0] + (1), myVec[1] + (2)];
-console.log(addedVec[0], addedVec[1], 1);
+console.log(addedVec[0], addedVec[1]);
 ```
 
 ## Macro resolution

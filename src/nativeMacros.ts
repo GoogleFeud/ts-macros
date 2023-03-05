@@ -283,7 +283,7 @@ export default {
             const paramName = fn.parameters[0].name.text;
             const visitorFn = (node: ts.Node) : ts.Node|Array<ts.Node> => {
                 if (!ts.isExpression(node)) return ts.visitEachChild(node, visitorFn, transformer.context);
-                lastMacro.store[paramName] = node;
+                lastMacro.store.set(paramName, node);
                 const newNodes = transformer.transformFunction(fn, true);
                 if (newNodes.length === 1 && newNodes[0].kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(node, visitorFn, transformer.context);
                 return newNodes;
@@ -345,7 +345,7 @@ export default {
             if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`setStore` macro expects a string literal as the key.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`setStore` macro must be called inside another macro.");
-            lastMacro.store[key.text] = value;
+            lastMacro.store.set(key.text, value);
         }
     },
     "$$getStore": {
@@ -353,7 +353,7 @@ export default {
             if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`getStore` macro expects a string literal as the key.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`getStore` macro must be called inside another macro.");
-            return lastMacro.store[key.text];
+            return lastMacro.store.get(key.text);
         }
     }
 } as Record<string, NativeMacro>;

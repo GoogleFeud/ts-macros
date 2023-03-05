@@ -36,7 +36,7 @@ export interface MacroExpand {
     * The item which has the decorator
     */
     target?: ts.Node,
-    store: Record<string, ts.Expression>
+    store: Map<string, ts.Expression>
 }
 
 export interface MacroRepeat {
@@ -177,7 +177,7 @@ export class MacroTransformer {
                 call: undefined,
                 args: ts.factory.createNodeArray([labelAction(statementNode)]),
                 defined: new Map(),
-                store: {}
+                store: new Map()
             });
             results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
             const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
@@ -276,7 +276,7 @@ export class MacroTransformer {
 
             // Detects use of a macro parameter and replaces it with a literal
             else if (ts.isIdentifier(node)) {
-                if (store[node.text]) return store[node.text];
+                if (store.has(node.text)) return store.get(node.text);
                 const paramMacro = this.getMacroParam(node.text, macro, args);
                 if (!paramMacro) return node;
                 if (ts.isStringLiteral(paramMacro) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(paramMacro.text);
@@ -288,7 +288,7 @@ export class MacroTransformer {
                 const leftovers = [];
                 for (const varNode of node.declarationList.declarations) {
                     if (ts.isIdentifier(varNode.name) && varNode.name.text.startsWith("$")) {
-                        store[varNode.name.text] = ts.visitNode(varNode.initializer, this.boundVisitor) || ts.factory.createIdentifier("undefined");
+                        store.set(varNode.name.text, ts.visitNode(varNode.initializer, this.boundVisitor) || ts.factory.createIdentifier("undefined"));
                     } else {
                         leftovers.push(ts.visitNode(varNode, this.boundVisitor));
                     }
@@ -513,7 +513,7 @@ export class MacroTransformer {
             call: call,
             target,
             defined: new Map(),
-            store: {}
+            store: new Map()
         });
 
         const pre = [];

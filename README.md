@@ -84,6 +84,8 @@ options: {
 If you want to use ts-macros with vite, you'll have to use the `...` plguin. [Here](https://github.com/GoogleFeud/ts-macros-vite-example) is an
 example repository which sets up a basic vite project which includes ts-macros.
 
+**Note:** Macros and `dev` mode do not work well together. If your macros is in one file, and you're using it in a different file, and you want to change some code inside the macro, you'll also have to change some code in the file the macro's used in so you can see the change. It could be adding an empty line or a space somewhere, the change doesn't matter, the file just needs to be recompiled.
+
 ## Contributing
 
 `ts-macros` is being maintained by a single person. Contributions are welcome and appreciated. Feel free to open an issue or create a pull request at https://github.com/GoogleFeud/ts-macros.
