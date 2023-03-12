@@ -204,6 +204,13 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         return providedType.checker.createAnonymousType(undefined, symTable, [], [], []);
     }
     else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
+    //@ts-expect-error Private API
+    else if (providedType.resolvedTypeArguments) {
+        const newType = {...providedType};
+        //@ts-expect-error Private API
+        newType.resolvedTypeArguments = providedType.resolvedTypeArguments.map(arg => resolveTypeWithTypeParams(arg, typeParams, replacementTypes));
+        return newType;
+    }
     return providedType;
 }
 
