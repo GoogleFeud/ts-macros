@@ -260,3 +260,13 @@ export function normalizeFunctionNode(checker: ts.TypeChecker, fnNode: ts.Expres
         else if (ts.isVariableDeclaration(originDecl) && originDecl.initializer && ts.isFunctionLikeDeclaration(originDecl.initializer)) return originDecl.initializer;
     }
 }
+
+export function expressionToStringLiteral(exp: ts.Expression) : ts.Expression {
+    if (ts.isParenthesizedExpression(exp)) return expressionToStringLiteral(exp.expression);
+    else if (ts.isStringLiteral(exp)) return exp;
+    else if (ts.isIdentifier(exp)) return ts.factory.createStringLiteral(exp.text);
+    else if (ts.isNumericLiteral(exp)) return ts.factory.createStringLiteral(exp.text);
+    else if (exp.kind === ts.SyntaxKind.TrueKeyword) return ts.factory.createStringLiteral("true");
+    else if (exp.kind === ts.SyntaxKind.FalseKeyword) return ts.factory.createStringLiteral("false");
+    else return ts.factory.createStringLiteral("null");
+}

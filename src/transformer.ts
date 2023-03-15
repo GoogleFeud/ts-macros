@@ -24,7 +24,8 @@ export interface Macro {
     name: string,
     params: Array<MacroParam>,
     typeParams: Array<ts.TypeParameterDeclaration>,
-    body?: ts.FunctionBody
+    body?: ts.FunctionBody,
+    namespace?: ts.ModuleDeclaration
 }
 
 export interface MacroExpand {
@@ -116,6 +117,8 @@ export class MacroTransformer {
                 });
             }
 
+            const namespace = ts.isModuleBlock(node.parent) ? node.parent.parent : undefined;
+
             // There cannot be 2 macros that have the same name and come from the same source file,
             // which means that if the if statement is true, it's very likely the files are being watched
             // for changes and transpiled every time there's a change, so it's a good idea to clean up the
@@ -123,7 +126,7 @@ export class MacroTransformer {
             // - To not excede the max capacity of the map
             // - To allow for macro chaining to work, because it uses macro names only.
             for (const [oldSym, macro] of this.macros) {
-                if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName) {
+                if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName && macro.namespace === namespace) {
                     this.macros.delete(oldSym);
                     break;
                 }
@@ -133,7 +136,8 @@ export class MacroTransformer {
                 name: macroName,
                 params,
                 body: node.body,
-                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
+                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| [],
+                namespace
             });
             return;
         }
@@ -722,12 +726,9 @@ export class MacroTransformer {
             // If the names are different, continue to the next macro
             if (macro.name !== name) continue;
             const fnType = this.checker.getTypeOfSymbolAtLocation(sym, sym.valueDeclaration!).getCallSignatures()[0];
-            const fnArgs = fnType.parameters.map(p => {
-                const type = this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!);
-                // Treat type parameters as their constraint or any if there is none
-                if (type.isTypeParameter()) return type.getConstraint() || this.checker.getAnyType();
-                else return type;
-            });
+            const fnTypeParams = macro.typeParams.map(p => this.checker.getTypeAtLocation(p));
+            const anyArray = fnTypeParams.map(p => p.getConstraint() || this.checker.getAnyType());
+            const fnArgs = fnTypeParams.length ? fnType.parameters.map(p => resolveTypeWithTypeParams(this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!), fnTypeParams, anyArray)) : fnType.parameters.map(p => this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!));
             const firstArg = fnArgs.shift()!;
             // If the first parameter matches type
             if (this.checker.isTypeAssignableTo(firstType, firstArg)) {

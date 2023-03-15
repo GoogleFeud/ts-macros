@@ -2,7 +2,7 @@ import ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
+import { expressionToStringLiteral, fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -251,12 +251,7 @@ export default {
     "$$text": {
         call: ([exp], transformer, callSite) => {
             if (!exp) throw MacroError(callSite, "`text` macro expects an expression.");
-            else if (ts.isStringLiteral(exp)) return exp;
-            else if (ts.isIdentifier(exp)) return ts.factory.createStringLiteral(exp.text);
-            else if (ts.isNumericLiteral(exp)) return ts.factory.createStringLiteral(exp.text);
-            else if (exp.kind === ts.SyntaxKind.TrueKeyword) return ts.factory.createStringLiteral("true");
-            else if (exp.kind === ts.SyntaxKind.FalseKeyword) return ts.factory.createStringLiteral("false");
-            else if (exp.kind === ts.SyntaxKind.NullKeyword) return ts.factory.createStringLiteral("null");
+            return expressionToStringLiteral(exp);
         }
     },
     "$$decompose": {
