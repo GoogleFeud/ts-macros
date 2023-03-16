@@ -566,11 +566,14 @@ export declare function $$decompose(exp: any) : any[];
  * 
  * If `mapper` expands to `null` or nothing, the node doesn't get replaced.
  * 
+ * The first parameter of the mapper function is the expression that's currently being visited, and the second
+ * parameter is the **kind** of the expression.
+ * 
  * @example
  * ```ts --Macro
  * function $$replaceIdentifiers(exp: any, identifier: string, replaceWith: string) : any {
- *  return $$map!(exp, (value) => {
- *     if ($$kindof!(value) === ts.SyntaxKind.Identifier && $$text!(value) === identifier) return $$ident!(replaceWith);
+ *  return $$map!(exp, (value, kind) => {
+ *     if (kind === ts.SyntaxKind.Identifier && $$text!(value) === identifier) return $$ident!(replaceWith);
  *  });
  * }
  * ```
@@ -592,7 +595,7 @@ export declare function $$decompose(exp: any) : any[];
  * ```
  * @category Built-in Macros
  */
-export declare function $$map<T>(exp: T, mapper: (value: any) => any) : T;
+export declare function $$map<T>(exp: T, mapper: (value: any, kind: number) => any) : T;
 
 
 /**

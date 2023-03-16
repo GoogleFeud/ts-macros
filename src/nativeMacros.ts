@@ -276,9 +276,11 @@ export default {
             if (!fn || !fn.body) throw MacroError(callSite, "`$$map` macro expects a function as it's second argument.");
             if (!fn.parameters.length || !ts.isIdentifier(fn.parameters[0].name)) throw MacroError(callSite, "`$$map` macro expects the function to have a parameter.");
             const paramName = fn.parameters[0].name.text;
+            const kindParamName = fn.parameters[1] && ts.isIdentifier(fn.parameters[1].name) && fn.parameters[1].name.text;
             const visitorFn = (node: ts.Node) : ts.Node|Array<ts.Node> => {
                 if (!ts.isExpression(node)) return ts.visitEachChild(node, visitorFn, transformer.context);
                 lastMacro.store.set(paramName, node);
+                if (kindParamName) lastMacro.store.set(kindParamName, ts.factory.createNumericLiteral(node.kind));
                 const newNodes = transformer.transformFunction(fn, true);
                 if (newNodes.length === 1 && newNodes[0].kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(node, visitorFn, transformer.context);
                 return newNodes;
