@@ -173,6 +173,7 @@ export function macroParamsToArray<T>(params: Array<MacroParam>, values: Array<T
 }
 
 export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.TypeParameter[], replacementTypes: ts.Type[]) : ts.Type {
+    const checker = providedType.checker;
     // Access type
     if ("indexType" in providedType && "objectType" in providedType) {
         const indexType = resolveTypeWithTypeParams((providedType as any).indexType as ts.Type, typeParams, replacementTypes);
@@ -181,7 +182,7 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         if (!foundType || !foundType.isLiteral()) return providedType;
         const realType = objectType.getProperty(foundType.value.toString());
         if (!realType) return providedType;
-        return providedType.checker.getTypeOfSymbol(realType);
+        return checker.getTypeOfSymbol(realType);
     }
     // Conditional type
     else if ("checkType" in providedType && "extendsType" in providedType && "resolvedTrueType" in providedType && "resolvedFalseType" in providedType) {
@@ -189,7 +190,7 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         const extendsType = resolveTypeWithTypeParams((providedType as any).extendsType as ts.Type, typeParams, replacementTypes);
         const trueType = resolveTypeWithTypeParams((providedType as any).resolvedTrueType as ts.Type, typeParams, replacementTypes);
         const falseType = resolveTypeWithTypeParams((providedType as any).resolvedFalseType as ts.Type, typeParams, replacementTypes);
-        if (providedType.checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
+        if (checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
         else return falseType;
     }
     // Intersections
@@ -201,7 +202,7 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
                 symTable.set(prop.name, prop);
             }
         }
-        return providedType.checker.createAnonymousType(undefined, symTable, [], [], []);
+        return checker.createAnonymousType(undefined, symTable, [], [], []);
     }
     else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
     //@ts-expect-error Private API
@@ -209,6 +210,21 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         const newType = {...providedType};
         //@ts-expect-error Private API
         newType.resolvedTypeArguments = providedType.resolvedTypeArguments.map(arg => resolveTypeWithTypeParams(arg, typeParams, replacementTypes));
+        return newType;
+    }
+    else if (providedType.getCallSignatures().length) {
+        const newType = {...providedType};
+        const originalCallSignature = providedType.getCallSignatures()[0];
+        const callSignature = {...originalCallSignature};
+        callSignature.resolvedReturnType = resolveTypeWithTypeParams(originalCallSignature.getReturnType(), typeParams, replacementTypes);
+        callSignature.parameters = callSignature.parameters.map(p => {
+            if (!p.valueDeclaration || !(p.valueDeclaration as ts.ParameterDeclaration).type) return p;
+            const newParam = checker.createSymbol(p.flags, p.escapedName);
+            newParam.type = resolveTypeWithTypeParams(checker.getTypeAtLocation((p.valueDeclaration as ts.ParameterDeclaration).type as ts.Node), typeParams, replacementTypes);
+            return newParam;
+        });
+        //@ts-expect-error Private API
+        newType.callSignatures = [callSignature];
         return newType;
     }
     return providedType;
