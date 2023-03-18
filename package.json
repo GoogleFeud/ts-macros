@@ -17,10 +17,10 @@
     "eslint": "^7.32.0",
     "mocha": "^9.2.2",
     "ttypescript": "^1.5.15",
-    "typescript": "^4.9.4"
+    "typescript": "^4.9.5"
   },
   "peerDependencies": {
-    "typescript": "4.3.x || 4.4.x || 4.5.x || 4.6.x || 4.7.x || 4.8.x || 4.9.x"
+    "typescript": "^5.0.2"
   },
   "scripts": {
     "build": "tsc",

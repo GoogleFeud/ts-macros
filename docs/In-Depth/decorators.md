@@ -1,5 +1,5 @@
 ---
-name: Macro Decorators
+name: Macro decorators
 order: 9
 ---
 

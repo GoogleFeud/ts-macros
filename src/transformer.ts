@@ -376,7 +376,7 @@ export class MacroTransformer {
                     const op = node.operator;
                     const value: ts.Expression = ts.visitNode(node.operand, this.boundVisitor);
                     const val = this.getLiteralFromNode(value);
-                    if (val === NO_LIT_FOUND) return node;
+                    if (val === NO_LIT_FOUND) return ts.factory.createPrefixUnaryExpression(node.operator, value);
                     return unaryActions[op]?.(val) || value;
                 }
             }

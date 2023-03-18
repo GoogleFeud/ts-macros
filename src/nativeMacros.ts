@@ -67,7 +67,7 @@ export default {
         call: ([func, params, doNotCall], transformer, callSite) => {
             if (!func) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
             if (!params || !ts.isArrayLiteralExpression(params)) throw MacroError(callSite, "`inline` macro expects an array of expressions as the second argument.");
-            const fn = normalizeFunctionNode(transformer.checker, ts.visitNode(func, transformer.boundVisitor));
+            const fn = normalizeFunctionNode(transformer.checker, func);
             if (!fn || !fn.body) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
             let newBody: ts.ConciseBody;
             if (!fn.parameters.length) newBody = fn.body;
