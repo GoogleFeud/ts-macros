@@ -216,7 +216,7 @@ export class MacroTransformer {
                     }
                 }
             }
-            return [...(extra as Array<ts.Node>), (prev as ts.Node)];
+            if (prev) return [...(extra as Array<ts.Node>), (prev as ts.Node)];
         }
 
         if (ts.isCallExpression(node)) {
