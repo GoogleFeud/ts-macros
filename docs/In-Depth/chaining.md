@@ -89,9 +89,6 @@ const myVector = Vector.$new!().$add!(1).$add!(undefined, 10);
 console.log(myVector.$x!(), myVector.$y!());
 ```
 ```ts --Result
-var Vector;
-(function (Vector) {
-})(Vector || (Vector = {}));
 const myVector = [1, 10];
 console.log(myVector[0], myVector[1]);
 ```

@@ -158,6 +158,12 @@ export class MacroTransformer {
             return;
         }
 
+        if (ts.isModuleDeclaration(node) && node.body) {
+            const bod = ts.visitNode(node.body, this.boundVisitor) as ts.ModuleBlock;
+            if (!bod.statements.length) return;
+            else ts.factory.updateModuleDeclaration(node, node.modifiers, node.name, bod);
+        }
+
         if (ts.isBlock(node)) {
             const statements: Array<ts.Statement> = [];
             this.addEscapeScope();
