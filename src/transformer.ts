@@ -85,6 +85,23 @@ export class MacroTransformer {
         const statements: Array<ts.Statement> = [];
         this.addEscapeScope();
         for (const stmt of node.statements) {
+
+            if (ts.isImportDeclaration(stmt) && stmt.importClause) {
+                if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
+                    const filtered = stmt.importClause.namedBindings.elements.filter(el => {
+                        const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(el.name));
+                        return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name]);
+                    });
+                    if (filtered.length) statements.push(ts.factory.createImportDeclaration(stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
+                    continue;
+                }
+                else if (!stmt.importClause.namedBindings && stmt.importClause.name) {
+                    const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(stmt.importClause.name));
+                    if (!sym || !this.macros.has(sym)) statements.push(stmt);
+                    continue;
+                }
+            }
+
             const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
             this.saveAndClearEscapedStatements(statements);
             if (res) {
