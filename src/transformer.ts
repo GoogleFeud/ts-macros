@@ -843,5 +843,14 @@ const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.
     "*": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AsteriskToken),
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
-    "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken))
+    "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken)),
+    ".": (transformer, body) => {
+        let last = ts.visitNode(body[0], transformer.boundVisitor) as ts.Expression;
+        for (let i=1; i < body.length; i++) {
+            const el = ts.visitNode(body[i], transformer.boundVisitor) as ts.Expression;
+            if (ts.isIdentifier(el)) last = ts.factory.createPropertyAccessExpression(last, el);
+            else last = ts.factory.createElementAccessExpression(last, el);
+        }
+        return last;
+    }
 };

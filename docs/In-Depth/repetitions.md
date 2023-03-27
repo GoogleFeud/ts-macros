@@ -78,6 +78,7 @@ You can use the following separators:
 - `+` - Adds all the values.
 - `-` - Subtracts all the values.
 - `*` - Multiplies all the values.
+- `.` - Creates a property / element access chain from the expressions.
 - `()` - Creates a comma list expression from all expressions.
 - `||` - Creates an OR chain with the expressions. 
 - `&&` - Creates an AND chain with the expressions.
