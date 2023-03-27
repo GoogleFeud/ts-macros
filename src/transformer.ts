@@ -92,14 +92,13 @@ export class MacroTransformer {
                         const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(el.name));
                         return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name]);
                     });
-                    if (filtered.length) statements.push(ts.factory.createImportDeclaration(stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
-                    continue;
+                    if (filtered.length) statements.push(ts.factory.updateImportDeclaration(stmt, stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
                 }
                 else if (!stmt.importClause.namedBindings && stmt.importClause.name) {
                     const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(stmt.importClause.name));
                     if (!sym || !this.macros.has(sym)) statements.push(stmt);
-                    continue;
                 }
+                continue;
             }
 
             const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
