@@ -844,13 +844,23 @@ const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
     "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken)),
-    ".": (transformer, body) => {
-        let last = ts.visitNode(body[0], transformer.boundVisitor) as ts.Expression;
+    ".": (_, body) => {
+        let last = body[0] as ts.Expression;
         for (let i=1; i < body.length; i++) {
-            const el = ts.visitNode(body[i], transformer.boundVisitor) as ts.Expression;
+            const el = body[i] as ts.Expression;
             if (ts.isIdentifier(el)) last = ts.factory.createPropertyAccessExpression(last, el);
             else last = ts.factory.createElementAccessExpression(last, el);
         }
         return last;
+    },
+    "{}": (transformer, body) => {
+        return ts.factory.createObjectLiteralExpression(body.filter(el => ts.isArrayLiteralExpression(el)).map((el) => {
+            const arr = el as ts.ArrayLiteralExpression;
+            if (arr.elements.length < 2) return ts.factory.createPropertyAssignment("undefined", ts.factory.createIdentifier("undefined"));
+            const string = transformer.getStringFromNode(arr.elements[0], false, true);
+            if (!string) return ts.factory.createPropertyAssignment("undefined", ts.factory.createIdentifier("undefined"));
+            return ts.factory.createPropertyAssignment(string, arr.elements[1]);
+        }));
     }
 };
+
