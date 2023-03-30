@@ -74,10 +74,12 @@ Here `firstArr` goes through the first array and the third array, and `secondArr
 
 You can use the following separators:
 
-- `[]` - Puts all the values in an array.
 - `+` - Adds all the values.
 - `-` - Subtracts all the values.
 - `*` - Multiplies all the values.
+- `.` - Creates a property / element access chain from the values.
+- `[]` - Puts all the values in an array.
+- `{}` - Creates an object literal from the values. For this separator to work, the result of the repetition callback must be an array literal with 2 elements, the key and the value (`[key, value]`).
 - `()` - Creates a comma list expression from all expressions.
 - `||` - Creates an OR chain with the expressions. 
 - `&&` - Creates an AND chain with the expressions.

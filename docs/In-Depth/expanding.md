@@ -1,6 +1,6 @@
 ---
 name: Expanding macros
-order: 3
+order: 2
 ---
 
 # Expanding

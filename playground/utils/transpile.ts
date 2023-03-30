@@ -2,7 +2,7 @@
 import ts from "typescript";
 import TsMacros, { macros } from "../../dist";
 
-export const Markers = `
+export let Markers = `
 declare function $$loadEnv(path?: string) : void;
 declare function $$readFile(path: string, parseJSON?: false) : string;
 declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
@@ -22,6 +22,7 @@ declare function $$ts<T = unknown>(code: string) : T;
 declare function $$escape<T>(code: () => T) : T;
 declare function $$typeToString<T>(simplify?: boolean, nonNull?: boolean) : string;
 declare function $$propsOfType<T>() : Array<string>;
+declare function $$typeAssignableTo<T, K>() : boolean;
 declare function $$comptime(fn: () => void) : void;
 interface RawContext {
     ts: any,
@@ -31,6 +32,9 @@ interface RawContext {
     thisMacro: any
 }
 declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
+declare function $$text(exp: any) : string;
+declare function $$decompose(exp: any) : any[];
+declare function $$map<T>(exp: T, mapper: (value: any, parent: number) => any) : T;
 declare function $$setStore(key: string, value: any) : void;
 declare function $$getStore<T>(key: string) : T;
 type Accumulator = number & { __marker?: "Accumulator" };
@@ -78,6 +82,12 @@ interface BlockLabel {
 }
 type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
 `;
+
+Markers += "enum SyntaxKind {\n";
+for (const kind in Object.keys(ts.SyntaxKind)) {
+    if (ts.SyntaxKind[kind]) Markers += `${ts.SyntaxKind[kind]} = ${kind},\n`;
+}
+Markers += "\n}\n";
 
 export const CompilerOptions: ts.CompilerOptions = {
     //...ts.getDefaultCompilerOptions(),                    
