@@ -278,14 +278,15 @@ export default {
             const paramName = fn.parameters[0].name.text;
             const kindParamName = fn.parameters[1] && ts.isIdentifier(fn.parameters[1].name) && fn.parameters[1].name.text;
             const visitorFn = (node: ts.Node) : ts.Node|Array<ts.Node> => {
-                if (!ts.isExpression(node)) return ts.visitEachChild(node, visitorFn, transformer.context);
-                lastMacro.store.set(paramName, node);
-                if (kindParamName) lastMacro.store.set(kindParamName, ts.factory.createNumericLiteral(node.kind));
+                const visitedNode = ts.visitNode(node, transformer.boundVisitor);
+                if (!ts.isExpression(visitedNode)) return ts.visitEachChild(visitedNode, visitorFn, transformer.context);
+                lastMacro.store.set(paramName, visitedNode);
+                if (kindParamName) lastMacro.store.set(kindParamName, ts.factory.createNumericLiteral(visitedNode.kind));
                 const newNodes = transformer.transformFunction(fn, true);
-                if (newNodes.length === 1 && newNodes[0].kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(node, visitorFn, transformer.context);
+                if (newNodes.length === 1 && newNodes[0].kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(visitedNode, visitorFn, transformer.context);
                 return newNodes;
             };
-            return ts.visitNode(ts.visitNode(exp, transformer.boundVisitor), visitorFn);
+            return ts.visitNode(exp, visitorFn);
         },
         preserveParams: true
     },
