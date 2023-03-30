@@ -2,7 +2,7 @@ import ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, resolveTypeArguments, resolveTypeWithTypeParams, tryRun } from "./utils";
+import { expressionToStringLiteral, fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -67,7 +67,7 @@ export default {
         call: ([func, params, doNotCall], transformer, callSite) => {
             if (!func) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
             if (!params || !ts.isArrayLiteralExpression(params)) throw MacroError(callSite, "`inline` macro expects an array of expressions as the second argument.");
-            const fn = normalizeFunctionNode(transformer.checker, ts.visitNode(func, transformer.boundVisitor));
+            const fn = normalizeFunctionNode(transformer.checker, func);
             if (!fn || !fn.body) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
             let newBody: ts.ConciseBody;
             if (!fn.parameters.length) newBody = fn.body;
@@ -206,7 +206,7 @@ export default {
                     if (ts.isReturnStatement(lastStatement)) {
                         return lastStatement.expression;
                     } else {
-                        if (!hygienicBody.length) return lastStatement;
+                        if (!hygienicBody.length && ts.isExpression(lastStatement)) return lastStatement;
                         transformer.escapeStatement(lastStatement);
                     }
                 }
@@ -221,51 +221,74 @@ export default {
             const strVal = transformer.getStringFromNode(thing, false, true);
             if (strVal) return ts.factory.createStringLiteral(strVal.slice(startNum, endNum));
             else if (ts.isArrayLiteralExpression(thing)) return ts.factory.createArrayLiteralExpression(thing.elements.slice(startNum, endNum));
-            else throw MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
+            else throw MacroError(callSite, "`slice` macro expects an array/string literal as the first argument.");
         }
     },
     "$$propsOfType": {
         call: (_args, transformer, callSite) => {
-            if (!callSite.typeArguments || !callSite.typeArguments[0]) throw MacroError(callSite, "`propsOfType` macro expects one type parameter.");
-            const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
-            if (type.isTypeParameter()) {
-                const param = transformer.getTypeParam(type);
-                if (!param) return ts.factory.createArrayLiteralExpression();
-                return ts.factory.createArrayLiteralExpression(param.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
-            } else {
-                const lastMacro = transformer.getLastMacro();
-                if (lastMacro) {
-                    const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
-                    const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
-                    return ts.factory.createArrayLiteralExpression(resolveTypeWithTypeParams(type, allParams, replacementTypes).getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
-                } else return ts.factory.createArrayLiteralExpression(type.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
-            }
+            const type = transformer.resolveTypeArgumentOfCall(callSite, 0);
+            if (!type) throw MacroError(callSite, "`propsOfType` macro expects one type parameter.");
+            return ts.factory.createArrayLiteralExpression(type.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
         }
     },
     "$$typeToString": {
         call: ([simplifyType, nonNullType], transformer, callSite) => {
-            if (!callSite.typeArguments || !callSite.typeArguments[0]) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
-            const getFinalType = (type: ts.Type) => {
-                if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
-                if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
-                return type;
-            };
-            const type = transformer.checker.getTypeAtLocation(callSite.typeArguments[0]);
-            if (type.isTypeParameter()) {
-                const param = transformer.getTypeParam(type);
-                if (!param) return ts.factory.createStringLiteral("");
-                return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(param)));
-            }
-            else {
-                const lastMacro = transformer.getLastMacro();
-                if (lastMacro) {
-                    const allParams = lastMacro.macro.typeParams.map(p => transformer.checker.getTypeAtLocation(p));
-                    const replacementTypes = resolveTypeArguments(transformer.checker, lastMacro.call as ts.CallExpression);
-                    return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(resolveTypeWithTypeParams(type, allParams, replacementTypes))));
-                } 
-                else return ts.factory.createStringLiteral(transformer.checker.typeToString(getFinalType(type)));
-            }
+            let type = transformer.resolveTypeArgumentOfCall(callSite, 0);
+            if (!type) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
+            if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
+            if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
+            return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
         }
+    },
+    "$$typeAssignableTo": {
+        call: (_args, transformer, callSite) => {
+            const type = transformer.resolveTypeArgumentOfCall(callSite, 0);
+            const compareTo = transformer.resolveTypeArgumentOfCall(callSite, 1);
+            if (!type || !compareTo) throw MacroError(callSite, "`typeAssignableTo` macro expects two type parameters.");
+            return transformer.checker.isTypeAssignableTo(type, compareTo) ? ts.factory.createTrue() : ts.factory.createFalse();
+        }
+    },
+    "$$text": {
+        call: ([exp], transformer, callSite) => {
+            if (!exp) throw MacroError(callSite, "`text` macro expects an expression.");
+            return expressionToStringLiteral(exp);
+        }
+    },
+    "$$decompose": {
+        call: ([exp], transformer) => {
+            if (!exp) return ts.factory.createArrayLiteralExpression([]);
+            const elements: Array<ts.Expression> = [];
+            const visitor = (node: ts.Node) => {
+                if (ts.isExpression(node)) elements.push(node);
+                return node;
+            };
+            ts.visitEachChild(exp, visitor, transformer.context);
+            return ts.factory.createArrayLiteralExpression(elements);
+        }
+    },
+    "$$map": {
+        call: ([exp, visitor], transformer, callSite) => {
+            const lastMacro = transformer.getLastMacro();
+            if (!lastMacro) throw MacroError(callSite, "`$$map` macro can only be used inside other macros.");
+            if (!exp) throw MacroError(callSite, "`$$map` macro expects an expression as it's first argument.");
+            if (!visitor) throw MacroError(callSite, "`$$map` macro expects a function expression as it's second argument.");
+            const fn = normalizeFunctionNode(transformer.checker, visitor);
+            if (!fn || !fn.body) throw MacroError(callSite, "`$$map` macro expects a function as it's second argument.");
+            if (!fn.parameters.length || !ts.isIdentifier(fn.parameters[0].name)) throw MacroError(callSite, "`$$map` macro expects the function to have a parameter.");
+            const paramName = fn.parameters[0].name.text;
+            const kindParamName = fn.parameters[1] && ts.isIdentifier(fn.parameters[1].name) && fn.parameters[1].name.text;
+            const visitorFn = (node: ts.Node) : ts.Node|Array<ts.Node> => {
+                const visitedNode = ts.visitNode(node, transformer.boundVisitor);
+                if (!ts.isExpression(visitedNode)) return ts.visitEachChild(visitedNode, visitorFn, transformer.context);
+                lastMacro.store.set(paramName, visitedNode);
+                if (kindParamName) lastMacro.store.set(kindParamName, ts.factory.createNumericLiteral(visitedNode.kind));
+                const newNodes = transformer.transformFunction(fn, true);
+                if (newNodes.length === 1 && newNodes[0].kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(visitedNode, visitorFn, transformer.context);
+                return newNodes;
+            };
+            return ts.visitNode(exp, visitorFn);
+        },
+        preserveParams: true
     },
     "$$comptime": {
         call: ([fn], transformer, callSite) => {
@@ -320,7 +343,7 @@ export default {
             if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`setStore` macro expects a string literal as the key.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`setStore` macro must be called inside another macro.");
-            lastMacro.store[key.text] = value;
+            lastMacro.store.set(key.text, value);
         }
     },
     "$$getStore": {
@@ -328,7 +351,7 @@ export default {
             if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`getStore` macro expects a string literal as the key.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`getStore` macro must be called inside another macro.");
-            return lastMacro.store[key.text];
+            return lastMacro.store.get(key.text);
         }
     }
 } as Record<string, NativeMacro>;

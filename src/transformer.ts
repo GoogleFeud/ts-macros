@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -24,7 +24,8 @@ export interface Macro {
     name: string,
     params: Array<MacroParam>,
     typeParams: Array<ts.TypeParameterDeclaration>,
-    body?: ts.FunctionBody
+    body?: ts.FunctionBody,
+    namespace?: ts.ModuleDeclaration
 }
 
 export interface MacroExpand {
@@ -36,7 +37,7 @@ export interface MacroExpand {
     * The item which has the decorator
     */
     target?: ts.Node,
-    store: Record<string, ts.Expression>
+    store: Map<string, ts.Expression>
 }
 
 export interface MacroRepeat {
@@ -84,6 +85,22 @@ export class MacroTransformer {
         const statements: Array<ts.Statement> = [];
         this.addEscapeScope();
         for (const stmt of node.statements) {
+
+            if (ts.isImportDeclaration(stmt) && stmt.importClause) {
+                if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
+                    const filtered = stmt.importClause.namedBindings.elements.filter(el => {
+                        const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(el.name));
+                        return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name]);
+                    });
+                    if (filtered.length) statements.push(ts.factory.updateImportDeclaration(stmt, stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
+                }
+                else if (!stmt.importClause.namedBindings && stmt.importClause.name) {
+                    const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(stmt.importClause.name));
+                    if (!sym || !this.macros.has(sym)) statements.push(stmt);
+                }
+                continue;
+            }
+
             const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
             this.saveAndClearEscapedStatements(statements);
             if (res) {
@@ -115,13 +132,36 @@ export class MacroTransformer {
                     defaultVal: param.initializer || (param.questionToken ? ts.factory.createIdentifier("undefined") : undefined)
                 });
             }
+
+            const namespace = ts.isModuleBlock(node.parent) ? node.parent.parent : undefined;
+
+            // There cannot be 2 macros that have the same name and come from the same source file,
+            // which means that if the if statement is true, it's very likely the files are being watched
+            // for changes and transpiled every time there's a change, so it's a good idea to clean up the
+            // macros map for 2 important reasons:
+            // - To not excede the max capacity of the map
+            // - To allow for macro chaining to work, because it uses macro names only.
+            for (const [oldSym, macro] of this.macros) {
+                if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName && macro.namespace === namespace) {
+                    this.macros.delete(oldSym);
+                    break;
+                }
+            }
+
             this.macros.set(sym, {
                 name: macroName,
                 params,
                 body: node.body,
-                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| []
+                typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| [],
+                namespace
             });
             return;
+        }
+
+        if (ts.isModuleDeclaration(node) && node.body) {
+            const bod = ts.visitNode(node.body, this.boundVisitor) as ts.ModuleBlock;
+            if (!bod.statements.length) return;
+            else ts.factory.updateModuleDeclaration(node, node.modifiers, node.name, bod);
         }
 
         if (ts.isBlock(node)) {
@@ -163,7 +203,7 @@ export class MacroTransformer {
                 call: undefined,
                 args: ts.factory.createNodeArray([labelAction(statementNode)]),
                 defined: new Map(),
-                store: {}
+                store: new Map()
             });
             results.push(...ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements);
             const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
@@ -173,16 +213,14 @@ export class MacroTransformer {
         }
 
         if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
-            if (ts.isNonNullExpression(node.expression.expression)) {
-                const statements = this.runMacro(node.expression, node.expression.expression.expression);
-                if (!statements) return;
-                const prepared = this.makeHygienic(ts.factory.createNodeArray(statements)) as unknown as Array<ts.Statement>;
-                if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
-                    const exp = prepared.pop() as ts.ReturnStatement;
-                    if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
-                }
-                else return prepared;
+            const statements = this.runMacro(node.expression, node.expression.expression.expression);
+            if (!statements) return;
+            const prepared = this.makeHygienic(ts.factory.createNodeArray(statements)) as unknown as Array<ts.Statement>;
+            if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(node.parent)) {
+                const exp = prepared.pop() as ts.ReturnStatement;
+                if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
             }
+            else return prepared;
         }
 
         if (ts.canHaveDecorators(node) && ts.getDecorators(node)?.length) {
@@ -200,7 +238,7 @@ export class MacroTransformer {
                     }
                 }
             }
-            return [...(extra as Array<ts.Node>), (prev as ts.Node)];
+            if (prev) return [...(extra as Array<ts.Node>), (prev as ts.Node)];
         }
 
         if (ts.isCallExpression(node)) {
@@ -264,7 +302,7 @@ export class MacroTransformer {
 
             // Detects use of a macro parameter and replaces it with a literal
             else if (ts.isIdentifier(node)) {
-                if (store[node.text]) return store[node.text];
+                if (store.has(node.text)) return store.get(node.text);
                 const paramMacro = this.getMacroParam(node.text, macro, args);
                 if (!paramMacro) return node;
                 if (ts.isStringLiteral(paramMacro) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(paramMacro.text);
@@ -276,7 +314,7 @@ export class MacroTransformer {
                 const leftovers = [];
                 for (const varNode of node.declarationList.declarations) {
                     if (ts.isIdentifier(varNode.name) && varNode.name.text.startsWith("$")) {
-                        store[varNode.name.text] = ts.visitNode(varNode.initializer, this.boundVisitor) || ts.factory.createIdentifier("undefined");
+                        store.set(varNode.name.text, ts.visitNode(varNode.initializer, this.boundVisitor) || ts.factory.createIdentifier("undefined"));
                     } else {
                         leftovers.push(ts.visitNode(varNode, this.boundVisitor));
                     }
@@ -348,19 +386,19 @@ export class MacroTransformer {
             // Detects a repetition
             else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
-                return this.execRepetition(fn, args, macro, literals, separator);
+                return this.execRepetition(fn, literals, separator);
             }
             else if (ts.isPrefixUnaryExpression(node)) {
                 if (node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
                     const { separator, function: fn, literals} = getRepetitionParams(node.operand);
                     if (!separator) throw MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
-                    return this.execRepetition(fn, args, macro, literals, separator, true);
+                    return this.execRepetition(fn, literals, separator, true);
                 } else {
                     // Detects a unary expression and tries to remove it if possible
                     const op = node.operator;
                     const value: ts.Expression = ts.visitNode(node.operand, this.boundVisitor);
                     const val = this.getLiteralFromNode(value);
-                    if (val === NO_LIT_FOUND) return node;
+                    if (val === NO_LIT_FOUND) return ts.factory.createPrefixUnaryExpression(node.operator, value);
                     return unaryActions[op]?.(val) || value;
                 }
             }
@@ -370,7 +408,7 @@ export class MacroTransformer {
                     const repNode = (node.arguments[repNodeIndex] as ts.PrefixUnaryExpression).operand as ts.ArrayLiteralExpression;
                     const { separator, function: fn, literals} = getRepetitionParams(repNode);
                     if (!separator) {
-                        const newBod = this.execRepetition(fn, args, macro, literals, separator, true);
+                        const newBod = this.execRepetition(fn, literals, separator, true);
                         const finalArgs = [];
                         for (let i=0; i < node.arguments.length; i++) {
                             if (i === repNodeIndex) finalArgs.push(...newBod);
@@ -385,48 +423,65 @@ export class MacroTransformer {
         return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
 
-    execRepetition(fn: ts.ArrowFunction, args: ts.NodeArray<ts.Node>, macro: Macro, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
-        const newBod = [];
+    execRepetition(fn: ts.ArrowFunction, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
+        const newBod: Array<ts.Node> = [];
         const repeatNames = fn.parameters.map(p => p.name.getText());
         const elementSlices: Array<Array<ts.Expression>> = Array.from({length: repeatNames.length}, () => []);
+        
+        let totalLoopsNeeded = 0;
+
         for (let i=0; i < elements.length; i++) {
             const lit = elements[i];
             const resolved = ts.visitNode(lit, this.boundVisitor);
-            if (ts.isArrayLiteralExpression(resolved)) elementSlices[i % repeatNames.length].push(...resolved.elements);
+            if (ts.isArrayLiteralExpression(resolved)) {
+                if (resolved.elements.length > totalLoopsNeeded) totalLoopsNeeded = resolved.elements.length;
+                elementSlices[i % repeatNames.length].push(...resolved.elements);
+            }
         }
+
+        if (!totalLoopsNeeded) return [ts.factory.createNull()];
+        
         const ind = this.repeat.push({
             index: 0,
             elementSlices,
             repeatNames
         }) - 1;
 
-        const totalLoopsNeeded = Math.max(...elementSlices.map(s => s.length));
+
         for (; this.repeat[ind].index < totalLoopsNeeded; this.repeat[ind].index++) {
-            if ("statements" in fn.body) {
-                if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor))));
-                else {
-                    for (const stmt of fn.body.statements) {
-                        const res = this.boundVisitor(stmt);
-                        if (res) {
-                            if (Array.isArray(res)) newBod.push(...res as ts.Statement[]);
-                            else newBod.push(res as ts.Statement);
-                        }
-                    }
-                }
-            }
-            else {
-                const res = ts.visitNode(fn.body, this.boundVisitor);
-                newBod.push(res);
-            }
+            newBod.push(...this.transformFunction(fn, wrapStatements));
         }
         this.repeat.pop();
         return separator && separators[separator] ? [separators[separator](this, newBod)] : newBod;
     }
 
+    transformFunction(fn: ts.FunctionLikeDeclaration, wrapStatements?: boolean) : Array<ts.Node> {
+        if (!fn.body) return [];
+        const newBod = [];
+        if ("statements" in fn.body) {
+            if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor)).filter(el => el)));
+            else {
+                for (const stmt of fn.body.statements) {
+                    const res = this.boundVisitor(stmt);
+                    if (res) {
+                        if (Array.isArray(res)) newBod.push(...res as ts.Statement[]);
+                        else newBod.push(res as ts.Statement);
+                    }
+                }
+            }
+        }
+        else {
+            const res = ts.visitNode(fn.body, this.boundVisitor);
+            newBod.push(res);
+        }
+        return newBod;
+    }
+
     getMacroParam(name: string, macro: Macro, params: ts.NodeArray<ts.Node>) : ts.Node|undefined {
         const index = macro.params.findIndex(p => p.name === name);
         if (index === -1) {
-            for (const repeat of this.repeat) {
+            for (let i=this.repeat.length - 1; i >= 0; i--) {
+                const repeat = this.repeat[i];
                 const repeatNameIndex = repeat.repeatNames.indexOf(name);
                 if (repeatNameIndex !== -1) {
                     const repeatCollection = repeat.elementSlices[repeatNameIndex];
@@ -484,8 +539,9 @@ export class MacroTransformer {
             call: call,
             target,
             defined: new Map(),
-            store: {}
+            store: new Map()
         });
+
         const pre = [];
         for (let i=0; i < macro.params.length; i++) {
             const param = macro.params[i];
@@ -498,6 +554,7 @@ export class MacroTransformer {
             }
         }
         if (pre.length) this.escapeStatement(ts.factory.createVariableStatement(undefined, ts.factory.createVariableDeclarationList(pre, ts.NodeFlags.Let)) as unknown as ts.Statement);
+
         const result = ts.visitEachChild(macro.body, this.boundVisitor, this.context).statements;
         const acc = macro.params.find(p => p.marker === MacroParamMarkers.Accumulator);
         if (acc) acc.defaultVal = ts.factory.createNumericLiteral(+(acc.defaultVal as ts.NumericLiteral).text + 1);
@@ -661,16 +718,23 @@ export class MacroTransformer {
         return undefined;
     }
 
-    getTypeParam(type: ts.Type) : ts.Type | undefined {
+    resolveTypeArgumentOfCall(macroCall: ts.CallExpression, typeIndex: number) : ts.Type | undefined {
+        if (!macroCall.typeArguments || !macroCall.typeArguments[typeIndex]) return;
+        const type = this.checker.getTypeAtLocation(macroCall.typeArguments[typeIndex]);
         const lastMacroCall = this.getLastMacro();
-        if (!lastMacroCall) return;
-        const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
-        if (resolvedTypeParameterIndex === -1) return;
-        if (lastMacroCall.call) {
-            const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
-            if (!resolvedTypeParam) return this.checker.getResolvedSignature(lastMacroCall.call)?.getTypeParameterAtPosition(resolvedTypeParameterIndex);
-
-            return this.checker.getTypeAtLocation(resolvedTypeParam);
+        if (!lastMacroCall) return type;
+        if (type.isTypeParameter()) {
+            const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
+            if (resolvedTypeParameterIndex === -1) return;
+            if (lastMacroCall.call) {
+                const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
+                if (!resolvedTypeParam) return this.checker.getResolvedSignature(lastMacroCall.call)?.getTypeParameterAtPosition(resolvedTypeParameterIndex);
+                return this.checker.getTypeAtLocation(resolvedTypeParam);
+            } else return;
+        } else {
+            const allParams = lastMacroCall.macro.typeParams.map(p => this.checker.getTypeAtLocation(p));
+            const replacementTypes = resolveTypeArguments(this.checker, lastMacroCall.call as ts.CallExpression);
+            return resolveTypeWithTypeParams(type, allParams, replacementTypes);
         }
     }
 
@@ -684,12 +748,9 @@ export class MacroTransformer {
             // If the names are different, continue to the next macro
             if (macro.name !== name) continue;
             const fnType = this.checker.getTypeOfSymbolAtLocation(sym, sym.valueDeclaration!).getCallSignatures()[0];
-            const fnArgs = fnType.parameters.map(p => {
-                const type = this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!);
-                // Treat type parameters as their constraint or any if there is none
-                if (type.isTypeParameter()) return type.getConstraint() || this.checker.getAnyType();
-                else return type;
-            });
+            const fnTypeParams = macro.typeParams.map(p => this.checker.getTypeAtLocation(p));
+            const anyArray = fnTypeParams.map(p => p.getConstraint() || this.checker.getAnyType());
+            const fnArgs = fnTypeParams.length ? fnType.parameters.map(p => resolveTypeWithTypeParams(this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!), fnTypeParams, anyArray)) : fnType.parameters.map(p => this.checker.getTypeOfSymbolAtLocation(p, p.valueDeclaration!));
             const firstArg = fnArgs.shift()!;
             // If the first parameter matches type
             if (this.checker.isTypeAssignableTo(firstType, firstArg)) {
@@ -775,12 +836,31 @@ export class MacroTransformer {
 
 }
 
-const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>) => ts.Expression> = {
+const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Node>) => ts.Expression> = {
     "[]": (_transformer, body) => ts.factory.createArrayLiteralExpression(body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression))),
     "+": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.PlusToken),
     "-": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.MinusToken),
     "*": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AsteriskToken),
     "||": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.BarBarToken),
     "&&": (transformer, body) => toBinaryExp(transformer, body, ts.SyntaxKind.AmpersandAmpersandToken),
-    "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken))
+    "()": (transformer, body) => ts.factory.createParenthesizedExpression(toBinaryExp(transformer, body, ts.SyntaxKind.CommaToken)),
+    ".": (_, body) => {
+        let last = body[0] as ts.Expression;
+        for (let i=1; i < body.length; i++) {
+            const el = body[i] as ts.Expression;
+            if (ts.isIdentifier(el)) last = ts.factory.createPropertyAccessExpression(last, el);
+            else last = ts.factory.createElementAccessExpression(last, el);
+        }
+        return last;
+    },
+    "{}": (transformer, body) => {
+        return ts.factory.createObjectLiteralExpression(body.filter(el => ts.isArrayLiteralExpression(el)).map((el) => {
+            const arr = el as ts.ArrayLiteralExpression;
+            if (arr.elements.length < 2) return ts.factory.createPropertyAssignment("undefined", ts.factory.createIdentifier("undefined"));
+            const string = transformer.getStringFromNode(arr.elements[0], false, true);
+            if (!string) return ts.factory.createPropertyAssignment("undefined", ts.factory.createIdentifier("undefined"));
+            return ts.factory.createPropertyAssignment(string, arr.elements[1]);
+        }));
+    }
 };
+

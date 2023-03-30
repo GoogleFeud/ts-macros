@@ -71,8 +71,8 @@ If a **string literal** parameter is used as a class / function / enum declarati
 
 ```ts --Macro
 function $createClasses(values: AsRest<Array<string>>, ...names: Array<string>) {
-    +[() => {
-        class names {
+    +[[names], (name) => {
+        class name {
             static value = values
         }
     }]

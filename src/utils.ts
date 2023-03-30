@@ -12,12 +12,14 @@ export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
 
 export function wrapExpressions(exprs: Array<ts.Statement>) : ts.Expression {
     let last = exprs.pop()!;
+    if (!last) return ts.factory.createNull();
+    if (exprs.length === 0 && ts.isReturnStatement(last)) return last.expression || ts.factory.createIdentifier("undefined");
     if (ts.isExpressionStatement(last)) last = ts.factory.createReturnStatement(last.expression);
     else if (!(last.kind > ts.SyntaxKind.EmptyStatement && last.kind < ts.SyntaxKind.DebuggerStatement)) last = ts.factory.createReturnStatement(last as unknown as ts.Expression);
     return ts.factory.createImmediatelyInvokedArrowFunction([...exprs, last as ts.Statement]);
 } 
 
-export function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Expression | ts.Statement>, id: number) : ts.Expression {
+export function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Node>, id: number) : ts.Expression {
     let last;
     for (const element of body.map(m => ts.isExpressionStatement(m) ? m.expression : (m as ts.Expression))) {
         if (!last) last = element;
@@ -171,6 +173,7 @@ export function macroParamsToArray<T>(params: Array<MacroParam>, values: Array<T
 }
 
 export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.TypeParameter[], replacementTypes: ts.Type[]) : ts.Type {
+    const checker = providedType.checker;
     // Access type
     if ("indexType" in providedType && "objectType" in providedType) {
         const indexType = resolveTypeWithTypeParams((providedType as any).indexType as ts.Type, typeParams, replacementTypes);
@@ -179,15 +182,15 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         if (!foundType || !foundType.isLiteral()) return providedType;
         const realType = objectType.getProperty(foundType.value.toString());
         if (!realType) return providedType;
-        return providedType.checker.getTypeOfSymbol(realType);
+        return checker.getTypeOfSymbol(realType);
     }
     // Conditional type
-    else if ("checkType" in providedType && "extendsType" in providedType) {
+    else if ("checkType" in providedType && "extendsType" in providedType && "resolvedTrueType" in providedType && "resolvedFalseType" in providedType) {
         const checkType = resolveTypeWithTypeParams((providedType as any).checkType as ts.Type, typeParams, replacementTypes);
         const extendsType = resolveTypeWithTypeParams((providedType as any).extendsType as ts.Type, typeParams, replacementTypes);
         const trueType = resolveTypeWithTypeParams((providedType as any).resolvedTrueType as ts.Type, typeParams, replacementTypes);
         const falseType = resolveTypeWithTypeParams((providedType as any).resolvedFalseType as ts.Type, typeParams, replacementTypes);
-        if (providedType.checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
+        if (checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
         else return falseType;
     }
     // Intersections
@@ -199,9 +202,31 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
                 symTable.set(prop.name, prop);
             }
         }
-        return providedType.checker.createAnonymousType(undefined, symTable, [], [], []);
+        return checker.createAnonymousType(undefined, symTable, [], [], []);
     }
     else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
+    //@ts-expect-error Private API
+    else if (providedType.resolvedTypeArguments) {
+        const newType = {...providedType};
+        //@ts-expect-error Private API
+        newType.resolvedTypeArguments = providedType.resolvedTypeArguments.map(arg => resolveTypeWithTypeParams(arg, typeParams, replacementTypes));
+        return newType;
+    }
+    else if (providedType.getCallSignatures().length) {
+        const newType = {...providedType};
+        const originalCallSignature = providedType.getCallSignatures()[0];
+        const callSignature = {...originalCallSignature};
+        callSignature.resolvedReturnType = resolveTypeWithTypeParams(originalCallSignature.getReturnType(), typeParams, replacementTypes);
+        callSignature.parameters = callSignature.parameters.map(p => {
+            if (!p.valueDeclaration || !(p.valueDeclaration as ts.ParameterDeclaration).type) return p;
+            const newParam = checker.createSymbol(p.flags, p.escapedName);
+            newParam.type = resolveTypeWithTypeParams(checker.getTypeAtLocation((p.valueDeclaration as ts.ParameterDeclaration).type as ts.Node), typeParams, replacementTypes);
+            return newParam;
+        });
+        //@ts-expect-error Private API
+        newType.callSignatures = [callSignature];
+        return newType;
+    }
     return providedType;
 }
 
@@ -250,4 +275,14 @@ export function normalizeFunctionNode(checker: ts.TypeChecker, fnNode: ts.Expres
         if (ts.isFunctionLikeDeclaration(originDecl)) return originDecl;
         else if (ts.isVariableDeclaration(originDecl) && originDecl.initializer && ts.isFunctionLikeDeclaration(originDecl.initializer)) return originDecl.initializer;
     }
+}
+
+export function expressionToStringLiteral(exp: ts.Expression) : ts.Expression {
+    if (ts.isParenthesizedExpression(exp)) return expressionToStringLiteral(exp.expression);
+    else if (ts.isStringLiteral(exp)) return exp;
+    else if (ts.isIdentifier(exp)) return ts.factory.createStringLiteral(exp.text);
+    else if (ts.isNumericLiteral(exp)) return ts.factory.createStringLiteral(exp.text);
+    else if (exp.kind === ts.SyntaxKind.TrueKeyword) return ts.factory.createStringLiteral("true");
+    else if (exp.kind === ts.SyntaxKind.FalseKeyword) return ts.factory.createStringLiteral("false");
+    else return ts.factory.createStringLiteral("null");
 }

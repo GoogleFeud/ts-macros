@@ -127,6 +127,8 @@ export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<u
  * @param func The function to inline
  * @param params An array literal with the argument values
  * @param doNotCall If any value is passed, this macro will always expand to an arrow function with the new code inside of it.
+ * 
+ * @category Built-in Macros
  */
 export declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>, doNotCall: any) : () => ReturnType<F>;
 export declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>) : ReturnType<F>;
@@ -185,7 +187,7 @@ export declare function $$define(varname: string, initializer: unknown, let?: bo
  * import { $$i } from "ts-macros";
  * 
  * function $arr(...els: Array<number>) {
- *    +["[]", (els: number) => els + $$i!()];
+ *    +["[]", [els], (element: number) => element + $$i!()];
  * }
  * ```
  * ```ts --Call
@@ -494,6 +496,22 @@ export interface RawContext {
 export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 
 /**
+ * Expands to a string literal of the expression. If the transformation is not possible, it expands to `undefined`.
+ * 
+ * Expressions that can be transformed:
+ * 
+ * - string literals
+ * - identifiers
+ * - numeric literals
+ * - true / false
+ * - undefined
+ * - null
+ * 
+ * @category Built-in Macros
+ */
+export declare function $$text(exp: any) : string;
+
+/**
  * Stores the expression `value` in `key`. Storage is **not** persistent,
  * it won't stay across macro calls.
  * 
@@ -510,6 +528,83 @@ export declare function $$setStore(key: string, value: any) : void;
  * @deprecated
  */
 export declare function $$getStore<T>(key: string) : T;
+
+
+/**
+ * Separates the passed expression to individual nodes, and expands to an array literal with the nodes inside of it.
+ * 
+ * **Doesn't work on expressions which can contain statements, such as function expressions.**
+ * 
+ * @example
+ * ```ts --Macro
+ * // Stringifies the passed expression without using any typescript API
+ * function $stringify(value: any) : string {
+ *   // Store the array literal in a macro variable
+ *   const $decomposed = $$decompose!(value);
+ *   if ($$kindof!(value) === ts.SyntaxKind.PropertyAccessExpression) return $stringify!($decomposed[0]) + "." + $stringify!($decomposed[1]);
+ *   else if ($$kindof!(value) === ts.SyntaxKind.CallExpression) return $stringify!($decomposed[0]) + "(" + (+["+", [$$slice!($decomposed, 1)], (part: any) => {
+ *       const $len = $$length!($decomposed) - 2;
+ *       return $stringify!(part) + ($$i!() === $len ? "" : ", ");
+ *   }] || "") + ")";
+ *   else if ($$kindof!(value) === ts.SyntaxKind.StringLiteral) return "\"" + value + "\"";
+ *   else return $$text!(value);
+ * }
+ * ```
+ * ```ts --Call
+ * $stringify!(console.log(1, 2, console.log(3)));
+ * ```
+ * ```ts --Result
+ * "console.log(1, 2, console.log(3))";
+ * ```
+ * @category Built-in Macros
+ */
+export declare function $$decompose(exp: any) : any[];
+
+/**
+ * Goes over all nodes of an expression and all it's children recursively, calling `mapper` for each node and replacing it
+ * with the result of the function, much like `Array#map`.
+ * 
+ * If `mapper` expands to `null` or nothing, the node doesn't get replaced.
+ * 
+ * The first parameter of the mapper function is the expression that's currently being visited, and the second
+ * parameter is the **kind** of the expression.
+ * 
+ * @example
+ * ```ts --Macro
+ * function $$replaceIdentifiers(exp: any, identifier: string, replaceWith: string) : any {
+ *  return $$map!(exp, (value, kind) => {
+ *     if (kind === ts.SyntaxKind.Identifier && $$text!(value) === identifier) return $$ident!(replaceWith);
+ *  });
+ * }
+ * ```
+ * ```ts --Call
+ * $$replaceIdentifiers!(console.log(1), "log", "debug");
+ * const fn = $$replaceIdentifiers!((arr: number[]) => {
+ *   for (const item of arr) {
+ *      console.info(item);
+ *   }
+ * }, "console", "logger");
+ * ```
+ * ```ts --Result
+ * console.debug(1);
+ * const fn = (arr) => {
+ *   for (const item of arr) {
+ *       logger.info(item);
+ *   }
+ * };
+ * ```
+ * @category Built-in Macros
+ */
+export declare function $$map<T>(exp: T, mapper: (value: any, kind: number) => any) : T;
+
+
+/**
+ * Checks if type `T` is assignable to type `K`.
+ * 
+ * @category Built-in Macros
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare function $$typeAssignableTo<T, K>() : boolean;
 
 /**
  * A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
@@ -564,7 +659,7 @@ export type Accumulator = number & { __marker?: "Accumulator" };
  * }
  * ```
  */
-export type Save<T> = T & { __marker?: "Save" }
+export type Save<T> = T & { __marker?: "Save" };
 
 export type EmptyDecorator = (...props: any) => void;
 

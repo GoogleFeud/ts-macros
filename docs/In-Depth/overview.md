@@ -63,11 +63,28 @@ options: {
 }
 ```
 
-## Transformer options
+### Usage with vite
 
-### `noComptime`
+If you want to use ts-macros with vite, you'll have to use the `...` plguin. [Here](https://github.com/GoogleFeud/ts-macros-vite-example) is an
+example repository which sets up a basic vite project which includes ts-macros.
 
-Disables the built-in macros (`$$raw` and `$$comptime`) which can execute arbitrary code during transpile time. If this option is turned on, calls to these macros expand to `null`.
+## Security
+
+This library has 2 built-in macros (`$raw` and `$comptime`) which **can** execute arbitrary code during transpile time. The code is **not** sandboxed in any way and has access to your file system and all node modules.
+
+If you're transpiling an untrusted codebase which uses this library, make sure to turn the `noComptime` option to `true`. Enabling it will replace all calls to these macros with `null` without executing the code inside them.
+
+**ttypescript:**
+```json
+"plugins": [
+        { "transform": "ts-macros", "noComptime": true }
+    ]
+```
+
+**manually creating the factory:**
+```js
+TsMacros(program, { noComptime: true });
+```
 
 ## Contributing
 
