@@ -380,7 +380,7 @@ export class MacroTransformer {
             else if (ts.isTypeOfExpression(node)) {
                 const visitedNode = ts.visitNode(node.expression, this.boundVisitor);
                 const val = this.getLiteralFromNode(visitedNode);
-                if (val === NO_LIT_FOUND) return visitedNode;
+                if (val === NO_LIT_FOUND) return ts.factory.updateTypeOfExpression(node, visitedNode);
                 return ts.factory.createStringLiteral(typeof val);
             }
 
