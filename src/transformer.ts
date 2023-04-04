@@ -93,12 +93,13 @@ export class MacroTransformer {
                         return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name]);
                     });
                     if (filtered.length) statements.push(ts.factory.updateImportDeclaration(stmt, stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
+                    continue;
                 }
                 else if (!stmt.importClause.namedBindings && stmt.importClause.name) {
                     const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(stmt.importClause.name));
                     if (!sym || !this.macros.has(sym)) statements.push(stmt);
+                    continue;
                 }
-                continue;
             }
 
             const res = this.visitor(stmt) as Array<ts.Statement> | ts.Statement | undefined;
@@ -379,7 +380,7 @@ export class MacroTransformer {
             else if (ts.isTypeOfExpression(node)) {
                 const visitedNode = ts.visitNode(node.expression, this.boundVisitor);
                 const val = this.getLiteralFromNode(visitedNode);
-                if (val === NO_LIT_FOUND) return visitedNode;
+                if (val === NO_LIT_FOUND) return ts.factory.updateTypeOfExpression(node, visitedNode);
                 return ts.factory.createStringLiteral(typeof val);
             }
 
