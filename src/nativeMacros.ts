@@ -51,7 +51,7 @@ export default {
             if (shouldParse) {
                 if (jsonFileCache[filePath]) return jsonFileCache[filePath];
             }
-            else if (regFileCache[filePath]) return regFileCache[filePath];
+            else if (regFileCache[filePath]) return ts.factory.createStringLiteral(regFileCache[filePath]);
             const fileContents = fs.readFileSync(filePath, "utf-8");
             if (shouldParse) {
                 const value = primitiveToNode(JSON.parse(fileContents));

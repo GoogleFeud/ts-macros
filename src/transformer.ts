@@ -143,6 +143,7 @@ export class MacroTransformer {
             // - To not excede the max capacity of the map
             // - To allow for macro chaining to work, because it uses macro names only.
             for (const [oldSym, macro] of this.macros) {
+                // Watcher has fed us the same file for this to be true
                 if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName && macro.namespace === namespace) {
                     this.macros.delete(oldSym);
                     break;
@@ -162,7 +163,7 @@ export class MacroTransformer {
         if (ts.isModuleDeclaration(node) && node.body) {
             const bod = ts.visitNode(node.body, this.boundVisitor) as ts.ModuleBlock;
             if (!bod.statements.length) return;
-            else ts.factory.updateModuleDeclaration(node, node.modifiers, node.name, bod);
+            else return ts.factory.updateModuleDeclaration(node, node.modifiers, node.name, bod);
         }
 
         if (ts.isBlock(node)) {

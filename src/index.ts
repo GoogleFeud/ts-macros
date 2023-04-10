@@ -6,7 +6,8 @@ import { MacroExpand, MacroTransformer } from "./transformer";
 export const macros = new Map();
 
 export interface TsMacrosConfig {
-    noComptime?: boolean
+    noComptime?: boolean,
+    watchMode?: boolean
 }
 
 export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
