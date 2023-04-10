@@ -102,7 +102,7 @@ export function primitiveToNode(primitive: unknown) : ts.Expression {
     else {
         const assignments: Array<ts.PropertyAssignment> = [];
         for (const key in (primitive as Record<string, unknown>)) {
-            assignments.push(ts.factory.createPropertyAssignment(key, primitiveToNode((primitive as Record<string, unknown>)[key])));
+            assignments.push(ts.factory.createPropertyAssignment(ts.factory.createStringLiteral(key), primitiveToNode((primitive as Record<string, unknown>)[key])));
         }
         return ts.factory.createObjectLiteralExpression(assignments);
     }
