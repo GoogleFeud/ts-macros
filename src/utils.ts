@@ -10,6 +10,10 @@ export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     return [ts.factory.createExpressionStatement(body)];
 }
 
+export function hasBit(flags: number, bit: number) : boolean {
+    return (flags & bit) !== 0;
+}
+
 export function wrapExpressions(exprs: Array<ts.Statement>) : ts.Expression {
     let last = exprs.pop()!;
     if (!last) return ts.factory.createNull();
