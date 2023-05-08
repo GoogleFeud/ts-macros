@@ -67,7 +67,7 @@ Variable declarations. Check out the [[VariableDeclarationLabel]] interface to s
 ```ts --Macro
 function $addOneToVars(info: VariableDeclarationLabel) {
     +[[info.identifiers, info.initializers], (name: any, decl: any) => {
-        $$define!(name, decl + 1, info.declarationType === "const");
+        $$define!(name, decl + 1, info.declarationType === "let");
     }]
 }
 ```
@@ -76,9 +76,9 @@ function $addOneToVars(info: VariableDeclarationLabel) {
 $addOneToVars: const a = 2, b = 4, c = 10;
 ```
 ```ts --Result
-let a = 3;
-let b = 5;
-let c = 11;
+const a = 3;
+const b = 5;
+const c = 11;
 ```
 
 ### ForIter
