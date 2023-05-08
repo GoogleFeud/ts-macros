@@ -16,18 +16,19 @@
     "diff": "^5.1.0",
     "eslint": "^7.32.0",
     "mocha": "^9.2.2",
-    "ttypescript": "^1.5.15",
+    "ts-patch": "^2.1.0",
     "typescript": "^4.9.5"
   },
   "peerDependencies": {
-    "typescript": "^5.0.2"
+    "typescript": "^4.9.5"
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "ts-patch install -s",
     "lint": "npx eslint",
-    "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
+    "test": "tsc && cd ./tests && tsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
-    "manual": "tsc && cd ./test && ttsc",
+    "manual": "tsc && cd ./test && tsc",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"
   },
