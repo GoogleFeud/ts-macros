@@ -70,10 +70,10 @@ $add!({
 If a **string literal** parameter is used as a class / function / enum declaration, then the parameter name will be repalced with the contents inside the literal.
 
 ```ts --Macro
-function $createClasses(values: AsRest<Array<string>>, ...names: Array<string>) {
-    +[[names], (name) => {
+function $createClasses(values: Array<string>, ...names: Array<string>) {
+    +[[values, names], (val, name) => {
         class name {
-            static value = values
+            static value = val
         }
     }]
 }
