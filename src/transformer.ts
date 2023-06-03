@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
+import * as fs from "fs";
 import nativeMacros from "./nativeMacros";
 import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
@@ -63,18 +64,20 @@ export class MacroTransformer {
     boundVisitor: ts.Visitor;
     props: MacroTransformerBuiltinProps;
     checker: ts.TypeChecker;
+    program: ts.Program;
     macros: MacroMap;
     escapedStatements: Array<Array<ts.Statement>>;
     comptimeSignatures: Map<ts.Node, ComptimeFunction>;
     config: TsMacrosConfig;
-    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap, config?: TsMacrosConfig) {
+    constructor(context: ts.TransformationContext, program: ts.Program, macroMap: MacroMap, config?: TsMacrosConfig) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.repeat = [];
         this.macroStack = [];
         this.escapedStatements = [];
         this.props = {};
-        this.checker = checker;
+        this.program = program;
+        this.checker = program.getTypeChecker();
         this.macros = macroMap;
         this.comptimeSignatures = new Map();
         this.config = config || {};
@@ -82,6 +85,7 @@ export class MacroTransformer {
 
     run(node: ts.SourceFile): ts.Node {
         if (node.isDeclarationFile) return node;
+        console.log("Transpiling file: ", node.fileName);
         const statements: Array<ts.Statement> = [];
         this.addEscapeScope();
         for (const stmt of node.statements) {
@@ -136,27 +140,44 @@ export class MacroTransformer {
 
             const namespace = ts.isModuleBlock(node.parent) ? node.parent.parent : undefined;
 
-            // There cannot be 2 macros that have the same name and come from the same source file,
-            // which means that if the if statement is true, it's very likely the files are being watched
-            // for changes and transpiled every time there's a change, so it's a good idea to clean up the
-            // macros map for 2 important reasons:
+            // If watch mode is enabled, when a new macro is registered
+            // the transformer will check if another macro with the same name
+            // and same file location exists, and if it does, it's gonna get
+            // removed from the map for the following reasons:
             // - To not excede the max capacity of the map
             // - To allow for macro chaining to work, because it uses macro names only.
-            for (const [oldSym, macro] of this.macros) {
-                // Watcher has fed us the same file for this to be true
-                if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName && macro.namespace === namespace) {
-                    this.macros.delete(oldSym);
-                    break;
+            //
+            // On top of that, the transformer will touch all files where the macro is
+            // referenced in (exluding the file it's defined in), so the watches retranspiles them.
+            if (this.config.watchMode) {
+                for (const [oldSym, macro] of this.macros) {
+                    if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName && macro.namespace === namespace) {
+                        this.macros.delete(oldSym);
+                        const cancelToken = {
+                            throwIfCancellationRequested: () => undefined,
+                            isCancellationRequested: () => false
+                        } as ts.CancellationToken;
+                        const foundRefs = ts.FindAllReferences.findReferencedSymbols(this.program, cancelToken, this.program.getSourceFiles(), node.getSourceFile(), node.name!.pos) || [];
+                        for (const ref of foundRefs) {
+                            if (ref.definition.kind === "function") continue;
+                            console.log(ref.definition.fileName);
+                            const contents = fs.readFileSync(ref.definition.fileName);
+                            fs.writeFileSync(ref.definition.fileName, "");
+                            fs.writeFileSync(ref.definition.fileName, contents);
+                        }
+                        break;
+                    }
                 }
             }
 
             this.macros.set(sym, {
-                name: macroName,
+                name: sym.name,
                 params,
                 body: node.body,
                 typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| [],
-                namespace
+                namespace: ts.isModuleBlock(node.parent) ? node.parent.parent : undefined
             });
+
             return;
         }
 
@@ -416,7 +437,7 @@ export class MacroTransformer {
                             if (i === repNodeIndex) finalArgs.push(...newBod);
                             else finalArgs.push(node.arguments[i]);
                         }
-                        return ts.visitNode(ts.factory.createCallExpression(node.expression, node.typeArguments, finalArgs as Array<ts.Expression>), this.boundVisitor);
+                        return ts.visitNode(ts.factory.createCallExpression(node.expression, [], finalArgs as Array<ts.Expression>), this.boundVisitor);
                     }
                 }
             }         
@@ -527,6 +548,7 @@ export class MacroTransformer {
             normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
         }
         if (!macro || !macro.body) {
+            console.log(1);
             const calledSym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name));
             if (calledSym?.declarations?.length) {
                 this.boundVisitor(calledSym.declarations[0]);

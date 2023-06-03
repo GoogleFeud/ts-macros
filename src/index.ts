@@ -11,8 +11,7 @@ export interface TsMacrosConfig {
 }
 
 export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
-    const typeChecker = program.getTypeChecker();
-    const transformer = new MacroTransformer(ctx, typeChecker, macros, config);
+    const transformer = new MacroTransformer(ctx, program, macros, config);
     return firstNode => {
         return transformer.run(firstNode as ts.SourceFile);
     };
