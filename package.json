@@ -9,26 +9,25 @@
     "@types/chai": "^4.3.4",
     "@types/mocha": "^9.1.1",
     "@types/node": "^16.18.10",
-    "@types/ts-expose-internals": "npm:ts-expose-internals@^4.9.4",
+    "@types/ts-expose-internals": "npm:ts-expose-internals@^4.9.5",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
     "chai": "^4.3.7",
     "diff": "^5.1.0",
     "eslint": "^7.32.0",
     "mocha": "^9.2.2",
-    "ts-patch": "^2.1.0",
-    "typescript": "^4.9.5"
+    "ts-patch": "^3.0.0",
+    "typescript": "5.0.4"
   },
   "peerDependencies": {
-    "typescript": "^4.9.5"
+    "typescript": "4.7.x || 4.8.x || 4.9.x || 5.0.x || 5.1.x"
   },
   "scripts": {
     "build": "tsc",
-    "prepare": "ts-patch install -s",
     "lint": "npx eslint",
-    "test": "tsc && cd ./tests && tsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
+    "test": "tsc && cd ./tests && tspc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
-    "manual": "tsc && cd ./test && tsc",
+    "manual": "tsc && cd ./test && tspc",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"
   },

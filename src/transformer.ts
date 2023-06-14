@@ -386,12 +386,12 @@ export class MacroTransformer {
             }
 
             // Detects a repetition
-            else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
+            else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.expression.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
                 return this.execRepetition(fn, literals, separator);
             }
             else if (ts.isPrefixUnaryExpression(node)) {
-                if (node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
+                if (node.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.operand)) {
                     const { separator, function: fn, literals} = getRepetitionParams(node.operand);
                     if (!separator) throw MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
                     return this.execRepetition(fn, literals, separator, true);
@@ -405,7 +405,7 @@ export class MacroTransformer {
                 }
             }
             else if (ts.isCallExpression(node)) {
-                const repNodeIndex = node.arguments.findIndex(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === 39 && ts.isArrayLiteralExpression(arg.operand));
+                const repNodeIndex = node.arguments.findIndex(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(arg.operand));
                 if (repNodeIndex !== -1) {
                     const repNode = (node.arguments[repNodeIndex] as ts.PrefixUnaryExpression).operand as ts.ArrayLiteralExpression;
                     const { separator, function: fn, literals} = getRepetitionParams(repNode);
