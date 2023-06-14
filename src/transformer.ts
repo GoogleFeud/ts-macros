@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -143,6 +143,7 @@ export class MacroTransformer {
             // - To not excede the max capacity of the map
             // - To allow for macro chaining to work, because it uses macro names only.
             for (const [oldSym, macro] of this.macros) {
+                // Watcher has fed us the same file for this to be true
                 if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName && macro.namespace === namespace) {
                     this.macros.delete(oldSym);
                     break;
@@ -162,7 +163,7 @@ export class MacroTransformer {
         if (ts.isModuleDeclaration(node) && node.body) {
             const bod = ts.visitNode(node.body, this.boundVisitor) as ts.ModuleBlock;
             if (!bod.statements.length) return;
-            else ts.factory.updateModuleDeclaration(node, node.modifiers, node.name, bod);
+            else return ts.factory.updateModuleDeclaration(node, node.modifiers, node.name, bod);
         }
 
         if (ts.isBlock(node)) {
@@ -385,12 +386,12 @@ export class MacroTransformer {
             }
 
             // Detects a repetition
-            else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === 39 && ts.isArrayLiteralExpression(node.expression.operand)) {
+            else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.expression.operand)) {
                 const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
                 return this.execRepetition(fn, literals, separator);
             }
             else if (ts.isPrefixUnaryExpression(node)) {
-                if (node.operator === 39 && ts.isArrayLiteralExpression(node.operand)) {
+                if (node.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.operand)) {
                     const { separator, function: fn, literals} = getRepetitionParams(node.operand);
                     if (!separator) throw MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
                     return this.execRepetition(fn, literals, separator, true);
@@ -404,7 +405,7 @@ export class MacroTransformer {
                 }
             }
             else if (ts.isCallExpression(node)) {
-                const repNodeIndex = node.arguments.findIndex(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === 39 && ts.isArrayLiteralExpression(arg.operand));
+                const repNodeIndex = node.arguments.findIndex(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(arg.operand));
                 if (repNodeIndex !== -1) {
                     const repNode = (node.arguments[repNodeIndex] as ts.PrefixUnaryExpression).operand as ts.ArrayLiteralExpression;
                     const { separator, function: fn, literals} = getRepetitionParams(repNode);
@@ -507,7 +508,7 @@ export class MacroTransformer {
         let macro, normalArgs;
         if (ts.isPropertyAccessExpression(name)) {
             const symofArg = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name.expression));
-            if (symofArg && (symofArg.flags & ts.SymbolFlags.Namespace) !== 0) return this.runMacro(call, name.name);
+            if (symofArg && hasBit(symofArg.flags, ts.SymbolFlags.Namespace)) return this.runMacro(call, name.name);
             const possibleMacros = this.findMacroByTypeParams(name, call);
             if (!possibleMacros.length) throw MacroError(call, `No possible candidates for "${name.name.getText()}" call`);
             else if (possibleMacros.length > 1) throw MacroError(call, `More than one possible candidate for "${name.name.getText()}" call`);

@@ -6,7 +6,8 @@ import { MacroExpand, MacroTransformer } from "./transformer";
 export const macros = new Map();
 
 export interface TsMacrosConfig {
-    noComptime?: boolean
+    noComptime?: boolean,
+    watchMode?: boolean
 }
 
 export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
@@ -668,7 +669,8 @@ export const enum LabelKinds {
     ForIter,
     For,
     While,
-    Block
+    Block,
+    VariableDeclaration
 }
 
 export interface IfLabel {
@@ -721,6 +723,13 @@ export interface WhileLabel {
 export interface BlockLabel {
     kind: LabelKinds.Block,
     statement: any
+}
+
+export interface VariableDeclarationLabel {
+    kind: LabelKinds.VariableDeclaration,
+    declarationType: "let"|"const"|"var",
+    identifiers: any[],
+    initializers: any[]
 }
 
 export type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;

@@ -46,15 +46,9 @@ To read more about ts-macros features, visit the [documentation](https://googlef
 npm i --save-dev ts-macros
 ```
 
-### Usage with ttypescript
+### Usage with ttypescript / ts-patch
 
-By default, typescript doesn't allow you to add custom transformers, so you must use a tool which adds them. `ttypescript` does just that! Make sure to install it:
-
-```
-npm i --save-dev ttypescript
-```
-
-and add the `ts-macros` transformer to your `tsconfig.json`:
+By default, typescript doesn't allow you to add custom transformers, so you must use a tool which adds them. `ttypescript` and `ts-patch` do just that! Make sure to install your preferred tool and add the `ts-macros` transformer to your `tsconfig.json`:
 
 ```json
 "compilerOptions": {
@@ -65,7 +59,7 @@ and add the `ts-macros` transformer to your `tsconfig.json`:
 }
 ```
 
-then transpile your code with `ttsc`.
+If you're using `ttypescript`, you must run `ttsc` to transpile your code with the transformer. If you're using `ts-patch`, run `ts-patch install` once and then run `tsc`.
 
 ### Usage with ts-loader
 
@@ -81,7 +75,7 @@ options: {
 
 ### Usage with vite
 
-If you want to use ts-macros with vite, you'll have to use the `@rollup/plugin-typescript` plguin. [Here](https://github.com/GoogleFeud/ts-macros-vite-example) is an example repository which sets up a basic vite project which includes ts-macros.
+If you want to use ts-macros with vite, you'll have to use the `@rollup/plugin-typescript` plugin. [Here](https://github.com/GoogleFeud/ts-macros-vite-example) is an example repository which sets up a basic vite project which includes ts-macros.
 
 **Note:** Macros and `dev` mode do not work well together. If your macro is in one file, and you're using it in a different file, and you want to change some code inside the macro, you'll also have to change some code in the file the macro's used in so you can see the change. It could be adding an empty line or a space somewhere, the change doesn't matter, the file just needs to be transpiled again for the changes in the macro to happen.
 
@@ -91,7 +85,7 @@ This library has 2 built-in macros (`$raw` and `$comptime`) which **can** execut
 
 If you're transpiling an untrusted codebase which uses this library, make sure to turn the `noComptime` option to `true`. Enabling it will replace all calls to these macros with `null` without executing the code inside them.
 
-**ttypescript:**
+**ttypescript/ts-patch:**
 ```json
 "plugins": [
         { "transform": "ts-macros", "noComptime": true }

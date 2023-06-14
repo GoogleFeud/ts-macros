@@ -10,6 +10,10 @@ export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     return [ts.factory.createExpressionStatement(body)];
 }
 
+export function hasBit(flags: number, bit: number) : boolean {
+    return (flags & bit) !== 0;
+}
+
 export function wrapExpressions(exprs: Array<ts.Statement>) : ts.Expression {
     let last = exprs.pop()!;
     if (!last) return ts.factory.createNull();
@@ -102,7 +106,7 @@ export function primitiveToNode(primitive: unknown) : ts.Expression {
     else {
         const assignments: Array<ts.PropertyAssignment> = [];
         for (const key in (primitive as Record<string, unknown>)) {
-            assignments.push(ts.factory.createPropertyAssignment(key, primitiveToNode((primitive as Record<string, unknown>)[key])));
+            assignments.push(ts.factory.createPropertyAssignment(ts.factory.createStringLiteral(key), primitiveToNode((primitive as Record<string, unknown>)[key])));
         }
         return ts.factory.createObjectLiteralExpression(assignments);
     }

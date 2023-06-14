@@ -51,7 +51,7 @@ export default {
             if (shouldParse) {
                 if (jsonFileCache[filePath]) return jsonFileCache[filePath];
             }
-            else if (regFileCache[filePath]) return regFileCache[filePath];
+            else if (regFileCache[filePath]) return ts.factory.createStringLiteral(regFileCache[filePath]);
             const fileContents = fs.readFileSync(filePath, "utf-8");
             if (shouldParse) {
                 const value = primitiveToNode(JSON.parse(fileContents));
@@ -125,10 +125,11 @@ export default {
     "$$define": {
         call: ([name, value, useLet], transformer, callSite) => {
             const strContent = transformer.getStringFromNode(name, true, true);
+            const useLetBool = transformer.getBoolFromNode(useLet);
             if (typeof strContent !== "string") throw MacroError(callSite, "`define` macro expects a string literal as the first argument.");
             const list = transformer.context.factory.createVariableDeclarationList([
                 transformer.context.factory.createVariableDeclaration(strContent, undefined, undefined, value)
-            ], useLet ? ts.NodeFlags.Let : ts.NodeFlags.Const);
+            ], useLetBool ? ts.NodeFlags.Let : ts.NodeFlags.Const);
             if (ts.isForStatement(callSite.parent)) return list;
             else return [ts.factory.createVariableStatement(undefined, list)];
         }
