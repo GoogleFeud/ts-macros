@@ -8,7 +8,7 @@ const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
 
 export interface NativeMacro {
-    call: (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.CallExpression) => ts.VisitResult<ts.Node>,
+    call: (args: ts.NodeArray<ts.Expression>, transformer: MacroTransformer, callSite: ts.CallExpression) => ts.VisitResult<ts.Node|undefined>,
     preserveParams?: boolean
 }
 
@@ -175,14 +175,14 @@ export default {
                 if (typeof valItem !== "string") throw MacroError(callSite, "`includes` macro expects a string literal as the second argument.");
                 return strContent.includes(valItem) ? ts.factory.createTrue() : ts.factory.createFalse();
             } else if (ts.isArrayLiteralExpression(array)) {
-                const normalArr = array.elements.map(el => transformer.getLiteralFromNode(ts.visitNode(el, transformer.boundVisitor)));
+                const normalArr = array.elements.map(el => transformer.getLiteralFromNode(transformer.expectExpression(el)));
                 return normalArr.includes(transformer.getLiteralFromNode(item)) ? ts.factory.createTrue() : ts.factory.createFalse();
             } else throw MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
         }
     },
     "$$ts": {
         call: ([code], transformer, callSite) => {
-            const str = transformer.getStringFromNode(ts.visitNode(code, transformer.boundVisitor), true, true);
+            const str = transformer.getStringFromNode(transformer.expectExpression(code), true, true);
             if (!str) throw MacroError(callSite, "`ts` macro expects a string as it's first argument.");
             const result = ts.createSourceFile("expr", str, ts.ScriptTarget.ESNext, false, ts.ScriptKind.JS);
             const visitor = (node: ts.Node): ts.Node => {
@@ -197,7 +197,7 @@ export default {
     "$$escape": {
         call: ([code], transformer, callSite) => {
             if (!code) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
-            const maybeFn = normalizeFunctionNode(transformer.checker, ts.visitNode(code, transformer.boundVisitor));
+            const maybeFn = normalizeFunctionNode(transformer.checker, transformer.expectExpression(code));
             if (!maybeFn || !maybeFn.body) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
             if (ts.isBlock(maybeFn.body)) {
                 const hygienicBody = [...transformer.makeHygienic(maybeFn.body.statements)];
@@ -280,6 +280,7 @@ export default {
             const kindParamName = fn.parameters[1] && ts.isIdentifier(fn.parameters[1].name) && fn.parameters[1].name.text;
             const visitorFn = (node: ts.Node) : ts.Node|Array<ts.Node> => {
                 const visitedNode = ts.visitNode(node, transformer.boundVisitor);
+                if (!visitedNode) return node;
                 if (!ts.isExpression(visitedNode)) return ts.visitEachChild(visitedNode, visitorFn, transformer.context);
                 lastMacro.store.set(paramName, visitedNode);
                 if (kindParamName) lastMacro.store.set(kindParamName, ts.factory.createNumericLiteral(visitedNode.kind));

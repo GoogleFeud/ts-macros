@@ -113,7 +113,33 @@ export class MacroTransformer {
         return ts.factory.updateSourceFile(node, statements);
     }
 
-    visitor(node: ts.Node): ts.VisitResult<ts.Node> {
+    expectExpression(node: ts.Node) : ts.Expression {
+        const visited = ts.visitNode(node, this.boundVisitor);
+        if (!visited || !ts.isExpression(node)) throw MacroError(node, "Expected an expression.");
+        return visited as ts.Expression;
+    }
+
+    expectStatement(node: ts.Node) : ts.Statement {
+        const visited = ts.visitNode(node, this.boundVisitor);
+        if (!visited || !isStatement(visited)) throw MacroError(node, "Expected a statement.");
+        return visited as ts.Statement;
+    }
+
+    maybeStatement(node?: ts.Node) : ts.Statement | undefined {
+        if (!node) return;
+        const visited = ts.visitNode(node, this.boundVisitor);
+        if (!visited) return undefined;
+        if (!isStatement(visited)) throw MacroError(node, "Expected a statement.");
+        return visited as ts.Statement;
+    }
+
+    expect<T extends ts.Node = ts.Node>(node: T, kind: ts.SyntaxKind) : T {
+        const visited = ts.visitNode(node, this.boundVisitor);
+        if (!visited || visited.kind !== kind) throw MacroError(node, `Expected SyntaxKind ${kind}.`);
+        return visited as T;
+    }
+
+    visitor(node: ts.Node): ts.VisitResult<ts.Node|undefined> {
         if (ts.isFunctionDeclaration(node) && node.name && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && node.name.getText().startsWith("$")) {
             if (!node.body) return node;
             const sym = this.checker.getSymbolAtLocation(node.name);
@@ -196,7 +222,7 @@ export class MacroTransformer {
                     results.push(...labelRes.filter((_item, ind) => ind !== foundStmt));
                     statementNode = labelRes[foundStmt] as ts.Statement;
                 }
-                else statementNode = ts.visitNode(node.statement, this.boundVisitor);
+                else statementNode = this.expectStatement(node.statement);
             }
             const labelAction = labelActions[statementNode.kind];
             if (!labelAction) return node;
@@ -275,17 +301,17 @@ export class MacroTransformer {
                     if (!value) return node;
                     return ts.factory.createStringLiteral(value);
                 } else {
-                    let exp: ts.Expression = ts.visitNode(node.expression, this.boundVisitor);
+                    let exp = this.expectExpression(node.expression);
                     while (ts.isParenthesizedExpression(exp)) exp = exp.expression;
                     if (ts.isObjectLiteralExpression(exp)) {
-                        const name = ts.isPropertyAccessExpression(node) ? getNameFromProperty(node.name) : this.getNumberFromNode(ts.visitNode(node.argumentExpression, this.boundVisitor));
+                        const name = ts.isPropertyAccessExpression(node) ? getNameFromProperty(node.name) : this.getNumberFromNode(this.expectExpression(node.argumentExpression));
                         if (!name) return node;
                         const prop = exp.properties.find(p => p.name && (getNameFromProperty(p.name) === name));
                         if (prop && ts.isPropertyAssignment(prop)) return prop.initializer;
                         return ts.factory.createPropertyAccessExpression(exp, name.toString()); 
                     } else if (ts.isArrayLiteralExpression(exp)) {
                         if (!ts.isElementAccessExpression(node)) return ts.factory.createPropertyAccessExpression(exp, node.name);
-                        const nameNode = ts.visitNode(node.argumentExpression, this.boundVisitor);
+                        const nameNode = this.expectExpression(node.argumentExpression);
                         const name = this.getNumberFromNode(nameNode);
                         if (name !== undefined && exp.elements[name]) return exp.elements[name];
                         return ts.factory.createElementAccessExpression(exp, nameNode);
@@ -313,12 +339,12 @@ export class MacroTransformer {
             }
 
             else if (ts.isVariableStatement(node)) {
-                const leftovers = [];
+                const leftovers: ts.VariableDeclaration[] = [];
                 for (const varNode of node.declarationList.declarations) {
                     if (ts.isIdentifier(varNode.name) && varNode.name.text.startsWith("$")) {
-                        store.set(varNode.name.text, ts.visitNode(varNode.initializer, this.boundVisitor) || ts.factory.createIdentifier("undefined"));
+                        store.set(varNode.name.text, varNode.initializer ? this.expectExpression(varNode.initializer) : ts.factory.createIdentifier("undefined"));
                     } else {
-                        leftovers.push(ts.visitNode(varNode, this.boundVisitor));
+                        leftovers.push(this.expect(varNode, ts.SyntaxKind.VariableDeclaration));
                     }
                 }
                 if (leftovers.length) return ts.factory.createVariableStatement(node.modifiers, ts.factory.createVariableDeclarationList(leftovers, node.declarationList.flags));
@@ -329,47 +355,47 @@ export class MacroTransformer {
                 const elements = [];
                 for (const element of node.elements) {
                     if (ts.isSpreadElement(element)) {
-                        const visited = ts.visitNode(element.expression, this.boundVisitor);
+                        const visited = this.expectExpression(element.expression);
                         if (ts.isArrayLiteralExpression(visited)) elements.push(...visited.elements);
-                        else elements.push(ts.visitNode(element, this.boundVisitor));
+                        else elements.push(this.expectExpression(element));
                     }
-                    else elements.push(ts.visitNode(element, this.boundVisitor));
+                    else elements.push(this.expectExpression(element));
                 }
                 return ts.factory.createArrayLiteralExpression(elements);
             }
 
             // Detects a ternary expression and tries to remove it if possible
             else if (ts.isConditionalExpression(node)) {
-                const param = ts.visitNode(node.condition, this.boundVisitor);
+                const param = this.expectExpression(node.condition);
                 const res = this.getBoolFromNode(param);
                 if (res === false) return ts.visitNode(node.whenFalse, this.boundVisitor);
                 else if (res === true) return ts.visitNode(node.whenTrue, this.boundVisitor);
-                else return ts.factory.createConditionalExpression(param, undefined, ts.visitNode(node.whenTrue, this.boundVisitor), undefined, ts.visitNode(node.whenFalse, this.boundVisitor));
+                else return ts.factory.createConditionalExpression(param, undefined, this.expectExpression(node.whenTrue), undefined, this.expectExpression(node.whenFalse));
             }
 
             // Detects an if statement and tries to remove it if possible
             else if (ts.isIfStatement(node) && !ts.isParenthesizedExpression(node.expression)) {
-                const condition = ts.visitNode(node.expression, this.boundVisitor);
+                const condition = this.expectExpression(node.expression);
                 const res = this.getBoolFromNode(condition);
                 if (res === true) {
-                    const res = ts.visitNode(node.thenStatement, this.boundVisitor);
+                    const res = this.expectStatement(node.thenStatement);
                     if (res && ts.isBlock(res)) return [...res.statements];
                     return res;
                 }
                 else if (res === false) {
                     if (!node.elseStatement) return undefined;
-                    const res = ts.visitNode(node.elseStatement, this.boundVisitor);
+                    const res = this.expectStatement(node.elseStatement);
                     if (res && ts.isBlock(res)) return [...res.statements];
                     return res;
                 }
-                return ts.factory.createIfStatement(condition, ts.visitNode(node.thenStatement, this.boundVisitor), ts.visitNode(node.elseStatement, this.boundVisitor));
+                return ts.factory.createIfStatement(condition, this.expectStatement(node.thenStatement), node.elseStatement ? this.expectStatement(node.elseStatement) : undefined);
             }
 
             // Detects a binary operation and tries to remove it if possible
             else if (ts.isBinaryExpression(node)) {
                 const op = node.operatorToken.kind;
-                const left: ts.Expression = ts.visitNode(node.left, this.boundVisitor);
-                const right: ts.Expression = ts.visitNode(node.right, this.boundVisitor);
+                const left = this.expectExpression(node.left);
+                const right = this.expectExpression(node.right);
                 const leftVal = this.getLiteralFromNode(left);
                 const rightVal = this.getLiteralFromNode(right);
                 if (leftVal === NO_LIT_FOUND || rightVal === NO_LIT_FOUND) return ts.factory.createBinaryExpression(left, op, right);
@@ -379,7 +405,7 @@ export class MacroTransformer {
 
             // Detects a typeof expression and tries to remove it if possible
             else if (ts.isTypeOfExpression(node)) {
-                const visitedNode = ts.visitNode(node.expression, this.boundVisitor);
+                const visitedNode = this.expectExpression(node.expression);
                 const val = this.getLiteralFromNode(visitedNode);
                 if (val === NO_LIT_FOUND) return ts.factory.updateTypeOfExpression(node, visitedNode);
                 return ts.factory.createStringLiteral(typeof val);
@@ -398,7 +424,7 @@ export class MacroTransformer {
                 } else {
                     // Detects a unary expression and tries to remove it if possible
                     const op = node.operator;
-                    const value: ts.Expression = ts.visitNode(node.operand, this.boundVisitor);
+                    const value = this.expectExpression(node.operand);
                     const val = this.getLiteralFromNode(value);
                     if (val === NO_LIT_FOUND) return ts.factory.createPrefixUnaryExpression(node.operator, value);
                     return unaryActions[op]?.(val) || value;
@@ -434,7 +460,7 @@ export class MacroTransformer {
 
         for (let i=0; i < elements.length; i++) {
             const lit = elements[i];
-            const resolved = ts.visitNode(lit, this.boundVisitor);
+            const resolved = this.expectExpression(lit);
             if (ts.isArrayLiteralExpression(resolved)) {
                 if (resolved.elements.length > totalLoopsNeeded) totalLoopsNeeded = resolved.elements.length;
                 elementSlices[i % repeatNames.length].push(...resolved.elements);
@@ -459,9 +485,9 @@ export class MacroTransformer {
 
     transformFunction(fn: ts.FunctionLikeDeclaration, wrapStatements?: boolean) : Array<ts.Node> {
         if (!fn.body) return [];
-        const newBod = [];
+        const newBod: ts.Node[] = [];
         if ("statements" in fn.body) {
-            if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => ts.visitNode(node, this.boundVisitor)).filter(el => el)));
+            if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => this.maybeStatement(node)).filter(el => el) as ts.Statement[]));
             else {
                 for (const stmt of fn.body.statements) {
                     const res = this.boundVisitor(stmt);
@@ -473,7 +499,7 @@ export class MacroTransformer {
             }
         }
         else {
-            const res = ts.visitNode(fn.body, this.boundVisitor);
+            const res = this.expectExpression(fn.body);
             newBod.push(res);
         }
         return newBod;
@@ -505,7 +531,7 @@ export class MacroTransformer {
 
     runMacro(call: ts.CallExpression, name: ts.Expression, target?: ts.Node) : Array<ts.Statement>|undefined {
         const args = call.arguments;
-        let macro, normalArgs;
+        let macro, normalArgs: ts.NodeArray<ts.Expression>;
         if (ts.isPropertyAccessExpression(name)) {
             const symofArg = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name.expression));
             if (symofArg && hasBit(symofArg.flags, ts.SymbolFlags.Namespace)) return this.runMacro(call, name.name);
@@ -513,18 +539,18 @@ export class MacroTransformer {
             if (!possibleMacros.length) throw MacroError(call, `No possible candidates for "${name.name.getText()}" call`);
             else if (possibleMacros.length > 1) throw MacroError(call, `More than one possible candidate for "${name.name.getText()}" call`);
             else macro = possibleMacros[0];
-            const newArgs = ts.factory.createNodeArray([ts.visitNode(name.expression, this.boundVisitor), ...call.arguments]);
-            normalArgs = this.macroStack.length ? ts.visitNodes(newArgs, this.boundVisitor) : newArgs;
+            const newArgs = ts.factory.createNodeArray([this.expectExpression(name.expression), ...call.arguments]);
+            normalArgs = this.macroStack.length ? ts.factory.createNodeArray(newArgs.map(arg => this.expectExpression(arg))) : newArgs;
         } else {
             const nativeMacro = nativeMacros[name.getText()];
             if (nativeMacro) {
-                const macroResult = nativeMacro.call(nativeMacro.preserveParams ? args : ts.visitNodes(args, this.boundVisitor), this, call);
+                const macroResult = nativeMacro.call(nativeMacro.preserveParams ? args : ts.factory.createNodeArray(args.map(arg => this.expectExpression(arg))), this, call);
                 if (!macroResult) return undefined;
                 if (Array.isArray(macroResult)) return macroResult as Array<ts.Statement>;
                 return [ts.factory.createExpressionStatement(macroResult as ts.Expression)];
             }
             macro = this.macros.get(resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name))!);
-            normalArgs = this.macroStack.length ? ts.visitNodes(args, this.boundVisitor) : args;
+            normalArgs = this.macroStack.length ? ts.factory.createNodeArray(args.map(arg => this.expectExpression(arg))) : args;
         }
         if (!macro || !macro.body) {
             const calledSym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name));
@@ -548,7 +574,7 @@ export class MacroTransformer {
         for (let i=0; i < macro.params.length; i++) {
             const param = macro.params[i];
             if (param.marker === MacroParamMarkers.Save) {
-                const value = param.spread ? ts.factory.createArrayLiteralExpression(normalArgs.slice(param.start)) : (normalArgs[param.start] || param.defaultVal);
+                const value = param.spread ? ts.factory.createArrayLiteralExpression(normalArgs.slice(param.start) as ts.Expression[]) : (normalArgs[param.start] || param.defaultVal) as ts.Expression;
                 if (!ts.isIdentifier(value)) {
                     param.realName = ts.factory.createUniqueName(param.name);
                     pre.push(ts.factory.createVariableDeclaration(param.realName, undefined, undefined, value));
@@ -574,14 +600,14 @@ export class MacroTransformer {
                 defined.set(name.text, newName);
                 return newName;
             }
-            else if (ts.isArrayBindingPattern(name)) return ts.factory.createArrayBindingPattern(name.elements.map(el => ts.isBindingElement(el) ? ts.factory.createBindingElement(el.dotDotDotToken, el.propertyName, makeBindingElementHygienic(el.name), ts.visitNode(el.initializer, visitor)) : el));
-            else if (ts.isObjectBindingPattern(name)) return ts.factory.createObjectBindingPattern(name.elements.map(el => ts.factory.createBindingElement(el.dotDotDotToken, el.propertyName, makeBindingElementHygienic(el.name), ts.visitNode(el.initializer, visitor))));
+            else if (ts.isArrayBindingPattern(name)) return ts.factory.createArrayBindingPattern(name.elements.map(el => ts.isBindingElement(el) ? ts.factory.createBindingElement(el.dotDotDotToken, el.propertyName, makeBindingElementHygienic(el.name), el.initializer ? this.expectExpression(el.initializer) : undefined) : el));
+            else if (ts.isObjectBindingPattern(name)) return ts.factory.createObjectBindingPattern(name.elements.map(el => ts.factory.createBindingElement(el.dotDotDotToken, el.propertyName, makeBindingElementHygienic(el.name), el.initializer ? this.expectExpression(el.initializer) : undefined)));
             else return name;
         };
 
         const visitor = (node: ts.Node) : ts.Node => {
             if (ts.isVariableDeclaration(node) && node.pos !== -1) {
-                return ts.factory.updateVariableDeclaration(node, makeBindingElementHygienic(node.name), undefined, undefined, ts.visitNode(node.initializer, visitor));
+                return ts.factory.updateVariableDeclaration(node, makeBindingElementHygienic(node.name), undefined, undefined, node.initializer ? this.expectExpression(node.initializer) : undefined);
             }
             else if (ts.isIdentifier(node)) {
                 if (node.parent && ts.isPropertyAccessExpression(node.parent) && node.parent.expression !== node) return node;
@@ -589,7 +615,7 @@ export class MacroTransformer {
             }
             else return ts.visitEachChild(node, visitor, this.context);
         };
-        return ts.visitNodes(ts.factory.createNodeArray(statements), visitor);
+        return ts.visitNodes(ts.factory.createNodeArray(statements), visitor) as ts.NodeArray<ts.Statement>;
     }
 
     getMarker(param: ts.ParameterDeclaration) : MacroParamMarkers {
@@ -653,7 +679,7 @@ export class MacroTransformer {
         else if (handleTemplates && ts.isTemplateExpression(node)) {
             let res = node.head.text;
             for (const span of node.templateSpans) {
-                const lit = this.getLiteralFromNode(ts.visitNode(span.expression, this.boundVisitor));
+                const lit = this.getLiteralFromNode(this.expectExpression(span.expression));
                 res += (lit as string || "").toString() + span.literal.text;
             }
             return res;
