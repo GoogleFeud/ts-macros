@@ -89,6 +89,7 @@ export class MacroTransformer {
             if (ts.isImportDeclaration(stmt) && stmt.importClause) {
                 if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
                     const filtered = stmt.importClause.namedBindings.elements.filter(el => {
+                        if (el.isTypeOnly) return false;
                         const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(el.name));
                         return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name]);
                     });
