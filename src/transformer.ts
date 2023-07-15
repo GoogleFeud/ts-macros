@@ -604,7 +604,7 @@ export class MacroTransformer {
         if (!statements) return;
         if (parent) {
             const prepared = this.makeHygienic(ts.factory.createNodeArray(statements)) as unknown as Array<ts.Statement>;
-            if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1])) {
+            if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(parent)) {
                 const exp = prepared.pop() as ts.ReturnStatement;
                 if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
             }

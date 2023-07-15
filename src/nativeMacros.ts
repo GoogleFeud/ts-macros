@@ -333,6 +333,7 @@ export default {
                 transformer,
                 checker: transformer.checker,
                 thisMacro: lastMacro,
+                require,
                 error: (node: ts.Node, message: string) => {
                     throw MacroError(node, message);
                 }

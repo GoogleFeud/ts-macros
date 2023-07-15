@@ -458,6 +458,7 @@ export interface RawContext {
     transformer: MacroTransformer,
     checker: ts.TypeChecker,
     thisMacro: MacroExpand,
+    require: typeof require,
     error: (node: ts.Node, message: string) => void
 }
 
@@ -470,7 +471,7 @@ export interface RawContext {
  * match the macro's, except in AST form. The only exception to this are rest operators, those get
  * turned into an array of expressions.
  * 
- * The first parameter of the function is a [[RawContext]], which gives you access to the everything
+ * The first parameter of the function is a [[RawContext]], which gives you access to everything
  * exported by typescript so you don't have to import it.
  * 
  * Use the high-level tools provided by ts-macros if possible - they're easier to read and understand,
