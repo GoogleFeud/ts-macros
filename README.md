@@ -46,9 +46,9 @@ To read more about ts-macros features, visit the [documentation](https://googlef
 npm i --save-dev ts-macros
 ```
 
-### Usage with ttypescript / ts-patch
+### Usage with ts-patch
 
-By default, typescript doesn't allow you to add custom transformers, so you must use a tool which adds them. `ttypescript` and `ts-patch` do just that! Make sure to install your preferred tool and add the `ts-macros` transformer to your `tsconfig.json`:
+By default, typescript doesn't allow you to add custom transformers, so you must use a tool which adds them. `ts-patch` does just that! After you've installed the tool, add the `ts-macros` transformer to your `tsconfig.json`:
 
 ```json
 "compilerOptions": {
@@ -59,7 +59,7 @@ By default, typescript doesn't allow you to add custom transformers, so you must
 }
 ```
 
-If you're using `ttypescript`, you must run `ttsc` to transpile your code with the transformer. If you're using `ts-patch`, run `ts-patch install` once and then run `tsc`.
+Then run `ts-patch install` once and then you can use `tsc`.
 
 ### Usage with ts-loader
 
