@@ -224,6 +224,7 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         callSignature.parameters = callSignature.parameters.map(p => {
             if (!p.valueDeclaration || !(p.valueDeclaration as ts.ParameterDeclaration).type) return p;
             const newParam = checker.createSymbol(p.flags, p.escapedName);
+            //@ts-expect-error Private API
             newParam.type = resolveTypeWithTypeParams(checker.getTypeAtLocation((p.valueDeclaration as ts.ParameterDeclaration).type as ts.Node), typeParams, replacementTypes);
             return newParam;
         });

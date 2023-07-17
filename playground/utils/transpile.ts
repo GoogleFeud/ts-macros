@@ -105,7 +105,7 @@ export function genTranspile(lib: string) : (str: string) => { code?: string, er
         const CompilerHost: ts.CompilerHost = {
             getSourceFile: (fileName) => {
                 if (fileName.endsWith(".d.ts")) return LibFile;
-                return SourceFile;
+                else if (fileName === "module.ts") return SourceFile;
             },
             getDefaultLibFileName: () => "lib.d.ts",
             useCaseSensitiveFileNames: () => false,
