@@ -1,0 +1,164 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="keywords" content="typescript, documentation, docs, ts, ts-macros"><title>Macro labels | ts-macros</title><meta name="description" content="Typescript API documentation for ts-macros v2.2.1"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous"><link id="highlightTheme" rel="stylesheet" crossorigin="anonymous"><link rel="icon" type="image/x-icon" href="/assets/media/favicon.ico"><link href="../../assets/css/index.css" type="text/css" rel="stylesheet"><script>window.depth="../../";window.ab=false;</script><script src="../../assets/js/index.js"></script></head><body><header class="container-fluid navi"><div class="row"><div class="col-4"><input class="form-control search" id="search" type="search" placeholder="Search..." aria-label="Search"></div><div class="col-8"><div class="row float-end row-cols-auto" style="margin-top:5px"><div class="col clickable-icon" id="theme-icon"></div><div class="col"><a href="https://github.com/GoogleFeud/ts-macros/tree/HEAD" class="clickable-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-github" viewbox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg></a></div><div class="col"><span style="font-size: 1.2em">v2.2.1</span></div></div></div></div></header><div class="container-fluid"><div class="row"><nav class="col-lg-auto sidebar" id="sidebar"><h1 class="lib-name text-center"><a href="../../index.html">ts-macros</a></h1><p class="current-thing text-center"></p><div class="sidebar-members"><div class="sidebar-member"><div class="collapsible-trigger"><span class="collapsible-arrow open"></span><span class="sidebar-category">In-Depth</span></div><div class="collapsible-body open"><span class="sidebar-category-member"><a href="../In-Depth/Overview.html">Overview</a></span><span class="sidebar-category-member"><a href="../In-Depth/Expanding macros.html">Expanding macros</a></span><span class="sidebar-category-member"><a href="../In-Depth/Chaining macros.html">Chaining macros</a></span><span class="sidebar-category-member"><a href="../In-Depth/Parameters.html">Parameters</a></span><span class="sidebar-category-member"><a href="../In-Depth/Repetitions.html">Repetitions</a></span><span class="sidebar-category-member"><a href="../In-Depth/Literals.html">Literals</a></span><span class="sidebar-category-member"><a href="../In-Depth/Markers.html">Markers</a></span><span class="sidebar-category-member"><a href="../In-Depth/Built-in macros.html">Built-in macros</a></span><span class="sidebar-category-member"><a href="../In-Depth/Macro decorators.html">Macro decorators</a></span><span class="sidebar-category-member"><span><a href="../In-Depth/Macro labels.html" style="font-weight: bold">Macro labels</a><div style="padding-left:15px"><div><a class="fw-bold" href="#usable-statements">Usable statements</a><div style="padding-left:15px"><a href="#if" class="sidebar-category-member">If</a><a href="#foriter" class="sidebar-category-member">ForIter</a><a href="#for" class="sidebar-category-member">For</a><a href="#while" class="sidebar-category-member">While</a><a href="#block" class="sidebar-category-member">Block</a><a href="#generic-label-type" class="sidebar-category-member">Generic Label type</a></div></div><a href="#calling-label-macros" class="sidebar-category-member">Calling label macros</a><a href="#nesting-macro-labels" class="sidebar-category-member">Nesting macro labels</a></div></span></span></div></div><div class="sidebar-member"><div class="collapsible-trigger"><span class="collapsible-arrow open"></span><span class="sidebar-category">Links</span></div><div class="collapsible-body open"><span class="sidebar-category-member"><a href="https://googlefeud.github.io/ts-macros/playground/" target="_blank"><span style="position: relative; top: -2.25px; right: 3px;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-box-arrow-up-left" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M7.364 3.5a.5.5 0 0 1 .5-.5H14.5A1.5 1.5 0 0 1 16 4.5v10a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 3 14.5V7.864a.5.5 0 1 1 1 0V14.5a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-10a.5.5 0 0 0-.5-.5H7.864a.5.5 0 0 1-.5-.5z"></path><path fill-rule="evenodd" d="M0 .5A.5.5 0 0 1 .5 0h5a.5.5 0 0 1 0 1H1.707l8.147 8.146a.5.5 0 0 1-.708.708L1 1.707V5.5a.5.5 0 0 1-1 0v-5z"></path></svg></span>Playground</a></span></div></div></div></nav><main id="content" class="col content"><div class="d-none" id="search-menu"><h1>Search results</h1><div class="row" style="margin-top: 20px;margin-bottom: 20px"><div class="col-md-4"><p class="mini-header">Types</p><div><input type="checkbox" class="c-checkbox" id="search-option-classes" checked><span>Classes</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-interfaces" checked><span>Interfaces</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-enums" checked><span>Enums</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-functions" checked><span>Functions</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-types" checked><span>Type aliases</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-constants"><span>Constants</span></div></div><div class="col-md-4"><p class="mini-header">Members</p><div><div><input type="checkbox" class="c-checkbox" id="search-option-properties" checked><span>Properties</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-methods" checked><span>Methods</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-getters" checked><span>Getters</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-setters" checked><span>Setters</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-enum-members"><span>Enum members</span></div><div><input type="checkbox" class="c-checkbox" id="search-option-privates"><span>Show privates</span></div></div></div><div class="col-md-4"><p class="mini-header">Other</p><div><div><input type="checkbox" class="c-checkbox" id="search-option-this-module-only"><span>In this module only</span></div></div></div></div><div id="search-result-list"></div></div><div id="content-main" class="d-none"><div class="path"><span><a href="../../index.html" class="path-member">index</a> / <span class="path-member">In-Depth</span> / <a href="" class="path-member">Macro labels</a></span></div><h1 id="macro-labels" class="section-header">Macro labels</h1><p>Macros can also be used on statements with labels:</p>
+<div class="tab-code"><span class="tab-code-tab hljs">Macro</span><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-comment">// Macro for turning a for...of loop to a regular for loop</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$NormalizeFor</span>(<span class="hljs-params">info: ForIterLabel</span>) : <span class="hljs-built_in">void</span> {
+    <span class="hljs-keyword">if</span> ($$kindof!(info.<span class="hljs-property">initializer</span>) === ts.<span class="hljs-property">SyntaxKind</span>.<span class="hljs-property">Identifier</span>) {
+        <span class="hljs-keyword">const</span> iter = (info.<span class="hljs-property">iterator</span>).<span class="hljs-property">length</span>;
+        <span class="hljs-keyword">for</span> ($$define!(info.<span class="hljs-property">initializer</span>, <span class="hljs-number">0</span>, <span class="hljs-literal">true</span>); info.<span class="hljs-property">initializer</span> &lt; iter; info.<span class="hljs-property">initializer</span>++) {
+            $$inline!(info.<span class="hljs-property">statement</span>);
+        }
+    }
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>];
+
+<span class="hljs-attr">$NormalizeFor</span>:
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> item <span class="hljs-keyword">of</span> arr) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(item + <span class="hljs-number">1</span>);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> iter = (arr).<span class="hljs-property">length</span>;
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> item = <span class="hljs-number">0</span>; item &lt; iter; item++) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(item + <span class="hljs-number">1</span>);
+}</code></pre></div></div><p>Only catch is that these macros cannot accept any other parameters - their first parameter will <strong>always</strong> be an object with information about the statement. Even though you cannot provide parameters yourself, you can still use the <code>Var</code> and <code>Accumulator</code> markers. All statements are wrapped in an arrow function, you can either call it or inline it with <code>$$inline</code>.</p>
+<h2 id="usable-statements" class="section-header">Usable statements</h2><h3 id="if" class="section-header">If</h3><p>If statements. Check out the <span><span class="c-tooltip"><a class="reference-link object" href="../../interface/IfLabel.html">IfLabel</a><span class="c-tooltip-content"><span class="keyword">interface </span><span class="item-name object">IfLabel</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">IfLabel</span></span></span></span></span> interface to see all information exposed to the macro.</p>
+<div class="tab-code"><span class="tab-code-tab hljs">Macro</span><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-comment">// Macro for turning an if statement to a ternary expression</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$ToTernary</span>(<span class="hljs-params">label: IfLabel</span>) : <span class="hljs-built_in">void</span> {
+    label.<span class="hljs-property">condition</span> ? $$inline!(label.<span class="hljs-property">then</span>) : $$inline!(label.<span class="hljs-property">else</span>);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">let</span> <span class="hljs-attr">num</span>: <span class="hljs-built_in">number</span> = <span class="hljs-number">123</span>;
+<span class="hljs-attr">$ToTernary</span>:
+<span class="hljs-keyword">if</span> (num === <span class="hljs-number">124</span>) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;Number is valid.&quot;</span>);
+} <span class="hljs-keyword">else</span> {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;Number is not valid.&quot;</span>);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs">num === <span class="hljs-number">124</span> ? <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;Number is valid.&quot;</span>) : <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;Number is not valid.&quot;</span>);</code></pre></div></div><h3 id="foriter" class="section-header">ForIter</h3><p>A <code>for...of</code> or a <code>for...in</code> loop. Check out the <span><span class="c-tooltip"><a class="reference-link object" href="../../interface/ForIterLabel.html">ForIterLabel</a><span class="c-tooltip-content"><span class="keyword">interface </span><span class="item-name object">ForIterLabel</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">ForIterLabel</span></span></span></span></span> interface for all the properties. </p>
+<div class="tab-code"><span class="tab-code-tab hljs">Macro</span><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-comment">// A macro which turns a for...of loop to a forEach</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$ToForEach</span>(<span class="hljs-params">info: ForIterLabel</span>) : <span class="hljs-built_in">void</span> {
+    <span class="hljs-keyword">const</span> $initializerName = info.<span class="hljs-property">initializer</span>;
+    <span class="hljs-keyword">if</span> ($$kindof!($initializerName) === ts.<span class="hljs-property">SyntaxKind</span>.<span class="hljs-property">Identifier</span>) {
+        info.<span class="hljs-property">iterator</span>.<span class="hljs-title function_">forEach</span>(<span class="hljs-function">(<span class="hljs-params">$initializerName: <span class="hljs-built_in">any</span></span>) =&gt;</span> {
+            $$escape!(info.<span class="hljs-property">statement</span>);
+        })
+    }
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>];
+
+<span class="hljs-attr">$ToForEach</span>:
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> item <span class="hljs-keyword">of</span> arr) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(item);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(item + <span class="hljs-number">1</span>);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs">(arr).<span class="hljs-title function_">forEach</span>(<span class="hljs-function">(<span class="hljs-params">item</span>) =&gt;</span> {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(item);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(item + <span class="hljs-number">1</span>);
+});</code></pre></div></div><h3 id="for" class="section-header">For</h3><p>A general C-like for loop. Check out the <span><span class="c-tooltip"><a class="reference-link object" href="../../interface/ForLabel.html">ForLabel</a><span class="c-tooltip-content"><span class="keyword">interface </span><span class="item-name object">ForLabel</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">ForLabel</span></span></span></span></span> interface for all the properties.</p>
+<div class="tab-code"><span class="tab-code-tab hljs">Macro</span><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-comment">// Macro for turning a regular for loop into a while loop</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$ForToWhile</span>(<span class="hljs-params">info: ForLabel</span>) {
+    <span class="hljs-keyword">if</span> (info.<span class="hljs-property">initializer</span>.<span class="hljs-property">variables</span>) {
+        +[[info.<span class="hljs-property">initializer</span>.<span class="hljs-property">variables</span>], <span class="hljs-function">(<span class="hljs-params">variable: [<span class="hljs-built_in">string</span>, <span class="hljs-built_in">any</span>]</span>) =&gt;</span> {
+            $$define!(variable[<span class="hljs-number">0</span>], variable[<span class="hljs-number">1</span>], <span class="hljs-literal">true</span>)
+        }];
+    }
+    <span class="hljs-keyword">else</span> info.<span class="hljs-property">initializer</span>.<span class="hljs-property">expression</span>;
+    <span class="hljs-keyword">while</span>(info.<span class="hljs-property">condition</span>) {
+        $$inline!(info.<span class="hljs-property">statement</span>);
+        info.<span class="hljs-property">increment</span>;
+    }
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>];
+
+<span class="hljs-attr">$ForToWhile</span>:
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i=<span class="hljs-number">2</span>, j; i &lt; arr.<span class="hljs-property">length</span>; i++) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(i);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(i + <span class="hljs-number">1</span>);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">let</span> i = <span class="hljs-number">2</span>;
+<span class="hljs-keyword">let</span> j = <span class="hljs-literal">undefined</span>;
+<span class="hljs-keyword">while</span> (i &lt; arr.<span class="hljs-property">length</span>) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(i);
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(i + <span class="hljs-number">1</span>);
+    i++;
+}</code></pre></div></div><h3 id="while" class="section-header">While</h3><p>A <code>do...while</code> or a <code>while</code> loop. Check out the <span><span class="c-tooltip"><a class="reference-link object" href="../../interface/WhileLabel.html">WhileLabel</a><span class="c-tooltip-content"><span class="keyword">interface </span><span class="item-name object">WhileLabel</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">WhileLabel</span></span></span></span></span> interface for all the properties.</p>
+<div class="tab-code"><span class="tab-code-tab hljs">Macro</span><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-comment">// Slows down a while loop by using an interval</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$ToInterval</span>(<span class="hljs-params">info: WhileLabel, intervalTimer = <span class="hljs-number">1000</span></span>) {
+    <span class="hljs-keyword">const</span> interval = <span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+        <span class="hljs-keyword">if</span> (info.<span class="hljs-property">condition</span>) {
+            $$inline!(info.<span class="hljs-property">statement</span>);
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-built_in">clearInterval</span>(interval);
+        }
+    }, intervalTimer);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>];
+
+<span class="hljs-attr">$ToInterval</span>:
+<span class="hljs-keyword">while</span> (arr.<span class="hljs-property">length</span> !== <span class="hljs-number">0</span>) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(arr.<span class="hljs-title function_">pop</span>());
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> interval = <span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (arr.<span class="hljs-property">length</span> !== <span class="hljs-number">0</span>) {
+        <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(arr.<span class="hljs-title function_">pop</span>());
+    }
+    <span class="hljs-keyword">else</span> {
+        <span class="hljs-built_in">clearInterval</span>(interval);
+    }
+}, <span class="hljs-number">1000</span>);</code></pre></div></div><h3 id="block" class="section-header">Block</h3><p>A block, or a collection of statements, wrapped in an arrow function. See <span><span class="c-tooltip"><a class="reference-link object" href="../../interface/BlockLabel.html">BlockLabel</a><span class="c-tooltip-content"><span class="keyword">interface </span><span class="item-name object">BlockLabel</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">BlockLabel</span></span></span></span></span> for all the properties.</p>
+<div class="tab-code"><span class="tab-code-tab hljs">Macro</span><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-comment">// Wraps a block in a try/catch, ignoring the error</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$TrySilence</span>(<span class="hljs-params">info: BlockLabel</span>) {
+    <span class="hljs-keyword">try</span> {
+        $$inline!(info.<span class="hljs-property">statement</span>);
+    } <span class="hljs-keyword">catch</span>(err) {};
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>, <span class="hljs-number">6</span>];
+
+<span class="hljs-keyword">if</span> (arr.<span class="hljs-title function_">includes</span>(<span class="hljs-number">5</span>)) <span class="hljs-attr">$TrySilence</span>: {
+    <span class="hljs-keyword">throw</span> <span class="hljs-string">&quot;Errorr...&quot;</span>
+    <span class="hljs-comment">// Some async actions...</span>
+} <span class="hljs-keyword">else</span> <span class="hljs-attr">$TrySilence</span>: {
+    <span class="hljs-comment">// Some async actions...</span>
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(arr);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">if</span> (arr.<span class="hljs-title function_">includes</span>(<span class="hljs-number">5</span>)) {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-keyword">throw</span> <span class="hljs-string">&quot;Errorr...&quot;</span>;
+    }
+    <span class="hljs-keyword">catch</span> (err) { }
+    ;
+}
+<span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(arr);
+    }
+    <span class="hljs-keyword">catch</span> (err) { }
+    ;
+}</code></pre></div></div><h3 id="generic-label-type" class="section-header">Generic Label type</h3><p>A <span><span class="c-tooltip"><a class="reference-link object" href="../../type/Label.html">Label</a><span class="c-tooltip-content"><span class="keyword">type </span><span class="item-name object">Label</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">Label</span></span></span></span></span> type is also provided, which allows you to be able to run a single macro for multiple statements. Just compare the <code>kind</code> property with any value of the <span><span class="c-tooltip"><a class="reference-link object" href="../../enum/LabelKinds.html">LabelKinds</a><span class="c-tooltip-content"><span class="keyword">enum </span><span class="item-name object">LabelKinds</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">LabelKinds</span></span></span></span></span> enum.</p>
+<h2 id="calling-label-macros" class="section-header">Calling label macros</h2><p>You can also call label macros just like regular macros!</p>
+<div class="tab-code"><span class="tab-code-tab hljs">Macro</span><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-comment">// Let&#x27;s use the ToInterval macro, and let&#x27;s make it so we can provide</span>
+<span class="hljs-comment">// a custom interval when we&#x27;re calling the macro explicitly:</span>
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">$ToInterval</span>(<span class="hljs-params">info: WhileLabel, intervalTimer = <span class="hljs-number">1000</span></span>) {
+    <span class="hljs-keyword">const</span> interval = <span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+        <span class="hljs-keyword">if</span> (info.<span class="hljs-property">condition</span>) {
+            $$inline!(info.<span class="hljs-property">statement</span>);
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-built_in">clearInterval</span>(interval);
+        }
+    }, intervalTimer);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> arr = [<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>];
+$ToInterval!({
+    <span class="hljs-attr">condition</span>: arr.<span class="hljs-property">length</span> !== <span class="hljs-number">0</span>,
+    <span class="hljs-attr">do</span>: <span class="hljs-literal">false</span>,
+    <span class="hljs-attr">kind</span>: <span><span class="c-tooltip"><a class="reference-link object" href="../../enum/LabelKinds.html">LabelKinds</a><span class="c-tooltip-content"><span class="keyword">enum </span><span class="item-name object">LabelKinds</span><span style="display:block" class="monospace fw-bold"><span class="item-name object">LabelKinds</span></span></span></span></span>.<span class="hljs-property">While</span>,
+    <span class="hljs-attr">statement</span>: <span class="hljs-function">() =&gt;</span> {
+        <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(arr.<span class="hljs-title function_">pop</span>());
+    }
+}, <span class="hljs-number">5000</span>);</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">const</span> interval_1 = <span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (arr.<span class="hljs-property">length</span> !== <span class="hljs-number">0</span>) {
+        <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(arr.<span class="hljs-title function_">pop</span>());
+    }
+    <span class="hljs-keyword">else</span> {
+        <span class="hljs-built_in">clearInterval</span>(interval_1);
+    }
+}, <span class="hljs-number">5000</span>);</code></pre></div></div><h2 id="nesting-macro-labels" class="section-header">Nesting macro labels</h2><p>Macro labels can be nested. Let&#39;s use both the <code>ForToWhile</code> and the <code>ToInterval</code> macros we created earlier on the same statement:</p>
+<div class="tab-code"><span class="tab-code-tab hljs">Call</span><span class="tab-code-tab hljs">Result</span><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-attr">$ToInterval</span>:
+<span class="hljs-attr">$ForToWhile</span>:
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">let</span> i=<span class="hljs-number">0</span>; i &lt; <span class="hljs-number">100</span>; i++) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(i);
+}</code></pre></div><div class="tab-code-code" style="display: none"><pre><code class="hljs"><span class="hljs-keyword">let</span> i = <span class="hljs-number">0</span>;
+<span class="hljs-keyword">const</span> interval = <span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (i &lt; <span class="hljs-number">100</span>) {
+        <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(i);
+        i++;
+    }
+    <span class="hljs-keyword">else</span> {
+        <span class="hljs-built_in">clearInterval</span>(interval);
+    }
+}, <span class="hljs-number">1000</span>);</code></pre></div></div><p>If a nested label macro expands to two or more statements that can be used with macro labels, then only the first statement will be used in the upper macro label, while all other statements will be placed <strong>above</strong> that statement.</p>
+</div></main></div></div><div id="to-top" class="btn-to-top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-up" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"></path></svg></div><div id="sidebar-arrow" class="sidebar-arrow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-right" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"></path></svg></div></body></html>

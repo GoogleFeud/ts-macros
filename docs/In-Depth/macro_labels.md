@@ -60,27 +60,6 @@ if (num === 124) {
 num === 124 ? console.log("Number is valid.") : console.log("Number is not valid.");
 ```
 
-### Variable declaration
-
-Variable declarations. Check out the [[VariableDeclarationLabel]] interface to see all information exposed to the macro. **Currently, typescript throws an error if you use a label on a variable declaration, but the error can be ignored via `ts-expect-error` or a vscode plugin**. Does not support deconstructing.
-
-```ts --Macro
-function $addOneToVars(info: VariableDeclarationLabel) {
-    +[[info.identifiers, info.initializers], (name: any, decl: any) => {
-        $$define!(name, decl + 1, info.declarationType === "let");
-    }]
-}
-```
-```ts --Call
-//@ts-expect-error
-$addOneToVars: const a = 2, b = 4, c = 10;
-```
-```ts --Result
-const a = 3;
-const b = 5;
-const c = 11;
-```
-
 ### ForIter
 
 A `for...of` or a `for...in` loop. Check out the [[ForIterLabel]] interface for all the properties. 

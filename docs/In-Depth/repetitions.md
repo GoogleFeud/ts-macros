@@ -5,7 +5,7 @@ order: 4
 
 # Repetitions
 
-ts-macro has **repetitions** which are heavily inspired by Rust. They allow you to repeat code for every element of an array. Since ts-macros is limited by the typescript compiler, this is the syntax for repetitions:
+ts-macro has **repetitions** which are heavily inspired by Rust. They allow you to repeat code for every element of an array, without loops. Since ts-macros is limited by the typescript compiler, this is the syntax for repetitions:
 
 ```
 +[separator?, [arrays], (...params) => codeToRepeat]

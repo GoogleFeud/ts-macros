@@ -1,6 +1,6 @@
 import * as ts from "typescript";
 import { LabelKinds } from ".";
-import { createObject, hasBit } from "./utils";
+import { createObject } from "./utils";
 
 export const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
     [ts.SyntaxKind.MinusToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left - right),
@@ -137,21 +137,6 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
         return createObject({
             kind: ts.factory.createNumericLiteral(LabelKinds.Block),
             statement: node
-        });
-    },
-    [ts.SyntaxKind.VariableStatement]: (node: ts.VariableStatement) => {
-        const idents: Array<ts.Identifier> = [], inits: Array<ts.Expression> = [];
-        for (const decl of node.declarationList.declarations) {
-            if (!ts.isIdentifier(decl.name)) continue;
-            idents.push(decl.name);
-            inits.push(decl.initializer || ts.factory.createIdentifier("undefined"));
-        }
-        return createObject({
-            kind: ts.factory.createNumericLiteral(LabelKinds.VariableDeclaration),
-            identifiers: ts.factory.createArrayLiteralExpression(idents),
-            initializers: ts.factory.createArrayLiteralExpression(inits),
-            declarationType: hasBit(node.declarationList.flags, ts.NodeFlags.Const) ? ts.factory.createStringLiteral("const") :
-                hasBit(node.declarationList.flags, ts.NodeFlags.Let) ? ts.factory.createStringLiteral("let") : ts.factory.createStringLiteral("var")
         });
     }
 };

@@ -6,8 +6,7 @@ import { MacroExpand, MacroTransformer } from "./transformer";
 export const macros = new Map();
 
 export interface TsMacrosConfig {
-    noComptime?: boolean,
-    watchMode?: boolean
+    noComptime?: boolean
 }
 
 export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
@@ -458,7 +457,6 @@ export interface RawContext {
     transformer: MacroTransformer,
     checker: ts.TypeChecker,
     thisMacro: MacroExpand,
-    require: typeof require,
     error: (node: ts.Node, message: string) => void
 }
 
@@ -471,7 +469,7 @@ export interface RawContext {
  * match the macro's, except in AST form. The only exception to this are rest operators, those get
  * turned into an array of expressions.
  * 
- * The first parameter of the function is a [[RawContext]], which gives you access to everything
+ * The first parameter of the function is a [[RawContext]], which gives you access to the everything
  * exported by typescript so you don't have to import it.
  * 
  * Use the high-level tools provided by ts-macros if possible - they're easier to read and understand,
@@ -670,8 +668,7 @@ export const enum LabelKinds {
     ForIter,
     For,
     While,
-    Block,
-    VariableDeclaration
+    Block
 }
 
 export interface IfLabel {
@@ -724,13 +721,6 @@ export interface WhileLabel {
 export interface BlockLabel {
     kind: LabelKinds.Block,
     statement: any
-}
-
-export interface VariableDeclarationLabel {
-    kind: LabelKinds.VariableDeclaration,
-    declarationType: "let"|"const"|"var",
-    identifiers: any[],
-    initializers: any[]
 }
 
 export type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;

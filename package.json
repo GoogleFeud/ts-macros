@@ -1,6 +1,6 @@
 {
   "name": "ts-macros",
-  "version": "2.3.0",
+  "version": "2.2.1",
   "description": "",
   "main": "dist/index.js",
   "devDependencies": {
@@ -9,25 +9,25 @@
     "@types/chai": "^4.3.4",
     "@types/mocha": "^9.1.1",
     "@types/node": "^16.18.10",
-    "@types/ts-expose-internals": "npm:ts-expose-internals@^5.1.6",
+    "@types/ts-expose-internals": "npm:ts-expose-internals@^4.9.4",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
     "chai": "^4.3.7",
     "diff": "^5.1.0",
     "eslint": "^7.32.0",
     "mocha": "^9.2.2",
-    "ts-patch": "^3.0.0",
-    "typescript": "^5.1.6"
+    "ttypescript": "^1.5.15",
+    "typescript": "^4.9.5"
   },
   "peerDependencies": {
-    "typescript": "4.7.x || 4.8.x || 4.9.x || 5.0.x || 5.1.x"
+    "typescript": "^5.0.2"
   },
   "scripts": {
     "build": "tsc",
     "lint": "npx eslint",
-    "test": "tsc && cd ./tests && tspc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
+    "test": "tsc && cd ./tests && ttsc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
-    "manual": "tsc && cd ./test && tspc",
+    "manual": "tsc && cd ./test && ttsc",
     "prepublishOnly": "tsc",
     "docs": "npx ts-docs"
   },
