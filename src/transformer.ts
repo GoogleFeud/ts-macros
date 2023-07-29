@@ -86,12 +86,12 @@ export class MacroTransformer {
         this.addEscapeScope();
         for (const stmt of node.statements) {
 
-            if (ts.isImportDeclaration(stmt) && stmt.importClause) {
+            if (ts.isImportDeclaration(stmt) && stmt.importClause && !stmt.importClause.isTypeOnly) {
                 if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
                     const filtered = stmt.importClause.namedBindings.elements.filter(el => {
                         if (el.isTypeOnly) return false;
                         const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(el.name));
-                        return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name]);
+                        return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name] && !hasBit(sym.flags, ts.SymbolFlags.Interface) && !hasBit(sym.flags, ts.SymbolFlags.ConstEnum) && !hasBit(sym.flags, ts.SymbolFlags.TypeAlias));
                     });
                     if (filtered.length) statements.push(ts.factory.updateImportDeclaration(stmt, stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
                     continue;
