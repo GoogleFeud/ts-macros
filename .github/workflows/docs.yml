@@ -1,9 +1,9 @@
 name: Deploy docs to Github Pages
 on:
   workflow_dispatch:
-  release:
-    branches:
-      - dev
+#  release:
+#    branches:
+#      - dev
 jobs:
   deploy-docs:
     runs-on: ubuntu-latest
@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v2
       - run: npm i --force
       - run: tsc
-#      - run: npm run docs
+      - run: npm run docs
       - run: touch ./docs/.nojekyll
       - run: |
           cd ./playground
