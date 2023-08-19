@@ -554,7 +554,8 @@ export class MacroTransformer {
             if (nativeMacro) {
                 const macroResult = nativeMacro.call(nativeMacro.preserveParams ? args : ts.factory.createNodeArray(args.map(arg => this.expectExpression(arg))), this, call);
                 if (!macroResult) return undefined;
-                if (Array.isArray(macroResult)) return macroResult as Array<ts.Statement>;
+                else if (Array.isArray(macroResult)) return macroResult as Array<ts.Statement>;
+                else if (ts.isStatement(macroResult as ts.Node)) return [macroResult as ts.Statement];
                 return [ts.factory.createExpressionStatement(macroResult as ts.Expression)];
             }
             macro = this.macros.get(resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name))!);
@@ -603,7 +604,7 @@ export class MacroTransformer {
     expandMacroResults(statements?: ts.Statement[], parent?: ts.Node) : ts.Node | ts.Node[] | undefined {
         if (!statements) return;
         if (parent) {
-            const prepared = this.makeHygienic(ts.factory.createNodeArray(statements)) as unknown as Array<ts.Statement>;
+            const prepared = this.makeHygienic(statements);
             if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(parent)) {
                 const exp = prepared.pop() as ts.ReturnStatement;
                 if (exp.expression) prepared.push(ts.factory.createExpressionStatement(exp.expression));
@@ -625,7 +626,7 @@ export class MacroTransformer {
         }
     }
 
-    makeHygienic(statements: ts.NodeArray<ts.Statement>) : ts.NodeArray<ts.Statement> {
+    makeHygienic(statements: ts.Statement[]) : ts.Statement[] {
         const defined = this.getLastMacro()?.defined || new Map();
 
         const makeBindingElementHygienic = (name: ts.BindingName) : ts.BindingName => {
@@ -649,7 +650,7 @@ export class MacroTransformer {
             }
             else return ts.visitEachChild(node, visitor, this.context);
         };
-        return ts.visitNodes(ts.factory.createNodeArray(statements), visitor) as ts.NodeArray<ts.Statement>;
+        return statements.map(stmt => visitor(stmt) as ts.Statement);
     }
 
     getMarker(param: ts.ParameterDeclaration) : MacroParamMarkers {

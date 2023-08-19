@@ -123,15 +123,14 @@ export default {
         }
     },
     "$$define": {
-        call: ([name, value, useLet], transformer, callSite) => {
+        call: ([name, value, useLet, exportDecl], transformer, callSite) => {
             const strContent = transformer.getStringFromNode(name, true, true);
-            const useLetBool = transformer.getBoolFromNode(useLet);
-            if (typeof strContent !== "string") throw MacroError(callSite, "`define` macro expects a string literal as the first argument.");
+            if (!strContent) throw MacroError(callSite, "`define` macro expects a string literal as the first argument.");
             const list = transformer.context.factory.createVariableDeclarationList([
                 transformer.context.factory.createVariableDeclaration(strContent, undefined, undefined, value)
-            ], useLetBool ? ts.NodeFlags.Let : ts.NodeFlags.Const);
+            ], transformer.getBoolFromNode(useLet) ? ts.NodeFlags.Let : ts.NodeFlags.Const);
             if (ts.isForStatement(callSite.parent)) return list;
-            else return [ts.factory.createVariableStatement(undefined, list)];
+            else return ts.factory.createVariableStatement(transformer.getBoolFromNode(exportDecl) ? [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)] : undefined, list);
         }
     },
     "$$i": {
@@ -200,7 +199,7 @@ export default {
             const maybeFn = normalizeFunctionNode(transformer.checker, transformer.expectExpression(code));
             if (!maybeFn || !maybeFn.body) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
             if (ts.isBlock(maybeFn.body)) {
-                const hygienicBody = [...transformer.makeHygienic(maybeFn.body.statements)];
+                const hygienicBody = [...transformer.makeHygienic(maybeFn.body.statements as unknown as ts.Statement[])];
                 const lastStatement = hygienicBody.pop();
                 transformer.escapeStatement(...hygienicBody);
                 if (lastStatement) {

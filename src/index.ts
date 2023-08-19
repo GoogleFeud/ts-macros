@@ -178,7 +178,7 @@ export declare function $$kindof(ast: unknown) : number;
  * ```
  * @category Built-in Macros
  */
-export declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
+export declare function $$define(varname: string, initializer: unknown, let?: boolean, exportDecl?: boolean) : number;
 
 /**
  * If this macro is called in a repetition, it's going to return the number of the current iteration. If it's called outside, it's going to return `-1`.
