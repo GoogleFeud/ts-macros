@@ -789,7 +789,7 @@ export class MacroTransformer {
             if (resolvedTypeParameterIndex === -1) return;
             if (lastMacroCall.call && ts.isCallExpression(lastMacroCall.call)) {
                 const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
-                if (!resolvedTypeParam) return this.checker.getResolvedSignature(lastMacroCall.call)?.getTypeParameterAtPosition(resolvedTypeParameterIndex);
+                if (!resolvedTypeParam) return resolveTypeArguments(this.checker, lastMacroCall.call)[resolvedTypeParameterIndex];
                 return this.checker.getTypeAtLocation(resolvedTypeParam);
             } else return;
         } else {
