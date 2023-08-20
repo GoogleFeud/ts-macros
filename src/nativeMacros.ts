@@ -1,4 +1,4 @@
-import ts = require("typescript");
+import type ts = require("typescript");
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
@@ -15,14 +15,14 @@ export interface NativeMacro {
 export default {
     "$$loadEnv": {
         call: (args, transformer, callSite) => {
-            const extraPath = args.length && ts.isStringLiteral(args[0]) ? args[0].text:"";
+            const extraPath = args.length && transformer.ts.isStringLiteral(args[0]) ? args[0].text:"";
             let dotenv;
             try {
                 dotenv = require("dotenv");
             } catch {
                 throw MacroError(callSite, "`loadEnv` macro called but `dotenv` module is not installed.");
             }
-            if (extraPath) dotenv.config({path: path.join(ts.sys.getCurrentDirectory(), extraPath)});
+            if (extraPath) dotenv.config({path: path.join(transformer.ts.sys.getCurrentDirectory(), extraPath)});
             else dotenv.config();
             transformer.props.optimizeEnv = true;
             return transformer.context.factory.createCallExpression(
@@ -51,7 +51,7 @@ export default {
             if (shouldParse) {
                 if (jsonFileCache[filePath]) return jsonFileCache[filePath];
             }
-            else if (regFileCache[filePath]) return ts.factory.createStringLiteral(regFileCache[filePath]);
+            else if (regFileCache[filePath]) return transformer.ts.factory.createStringLiteral(regFileCache[filePath]);
             const fileContents = fs.readFileSync(filePath, "utf-8");
             if (shouldParse) {
                 const value = primitiveToNode(JSON.parse(fileContents));
@@ -59,14 +59,14 @@ export default {
                 return value;
             } else {
                 regFileCache[filePath] = fileContents;
-                return ts.factory.createStringLiteral(fileContents);
+                return transformer.ts.factory.createStringLiteral(fileContents);
             }
         }
     },
     "$$inline": {
         call: ([func, params, doNotCall], transformer, callSite) => {
             if (!func) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
-            if (!params || !ts.isArrayLiteralExpression(params)) throw MacroError(callSite, "`inline` macro expects an array of expressions as the second argument.");
+            if (!params || !transformer.ts.isArrayLiteralExpression(params)) throw MacroError(callSite, "`inline` macro expects an array of expressions as the second argument.");
             const fn = normalizeFunctionNode(transformer.checker, func);
             if (!fn || !fn.body) throw MacroError(callSite, "`inline` macro expects a function as the first argument.");
             let newBody: ts.ConciseBody;
@@ -75,18 +75,18 @@ export default {
                 const replacements = new Map();
                 for (let i=0; i < fn.parameters.length; i++) {
                     const param = fn.parameters[i];
-                    if (ts.isIdentifier(param.name)) replacements.set(param.name.text, params.elements[i]);
+                    if (transformer.ts.isIdentifier(param.name)) replacements.set(param.name.text, params.elements[i]);
                 }
                 const visitor = (node: ts.Node): ts.Node|undefined => {
-                    if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
-                    return ts.visitEachChild(node, visitor, transformer.context);
+                    if (transformer.ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
+                    return transformer.ts.visitEachChild(node, visitor, transformer.context);
                 };
                 transformer.context.suspendLexicalEnvironment();
-                newBody = ts.visitFunctionBody(fn.body, visitor, transformer.context);
+                newBody = transformer.ts.visitFunctionBody(fn.body, visitor, transformer.context);
             }
-            if (doNotCall) return ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, newBody);
+            if (doNotCall) return transformer.ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, newBody);
             else {
-                if (ts.isBlock(newBody)) return newBody.statements;
+                if (transformer.ts.isBlock(newBody)) return newBody.statements;
                 else return newBody;
             }
         }
@@ -96,23 +96,23 @@ export default {
             const argsArr = [...args].reverse();
             const fnParam = argsArr.pop();
             if (!fnParam) throw MacroError(callSite, "`inlineFunc` macro expects an arrow function as the first argument.");
-            const fn = ts.visitNode(fnParam, transformer.boundVisitor);
-            if (!fn || !ts.isArrowFunction(fn)) throw MacroError(callSite, "`inlineFunc` macro expects an arrow function as the first argument.");
+            const fn = transformer.ts.visitNode(fnParam, transformer.boundVisitor);
+            if (!fn || !transformer.ts.isArrowFunction(fn)) throw MacroError(callSite, "`inlineFunc` macro expects an arrow function as the first argument.");
             if (!fn.parameters.length) {
-                if (ts.isBlock(fn.body)) return fn.body.statements;
+                if (transformer.ts.isBlock(fn.body)) return fn.body.statements;
                 else return fn.body;
             }
             const replacements = new Map();
             for (const param of fn.parameters) {
-                if (ts.isIdentifier(param.name)) replacements.set(param.name.text, argsArr.pop());
+                if (transformer.ts.isIdentifier(param.name)) replacements.set(param.name.text, argsArr.pop());
             }
             const visitor = (node: ts.Node): ts.Node|undefined => {
-                if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
-                return ts.visitEachChild(node, visitor, transformer.context);
+                if (transformer.ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
+                return transformer.ts.visitEachChild(node, visitor, transformer.context);
             };
             transformer.context.suspendLexicalEnvironment();
-            const newFn = ts.visitFunctionBody(fn.body, visitor, transformer.context);
-            if (ts.isBlock(newFn)) newFn.statements;
+            const newFn = transformer.ts.visitFunctionBody(fn.body, visitor, transformer.context);
+            if (transformer.ts.isBlock(newFn)) newFn.statements;
             return newFn;
         }
     },
@@ -128,9 +128,9 @@ export default {
             if (!strContent) throw MacroError(callSite, "`define` macro expects a string literal as the first argument.");
             const list = transformer.context.factory.createVariableDeclarationList([
                 transformer.context.factory.createVariableDeclaration(strContent, undefined, undefined, value)
-            ], transformer.getBoolFromNode(useLet) ? ts.NodeFlags.Let : ts.NodeFlags.Const);
-            if (ts.isForStatement(callSite.parent)) return list;
-            else return ts.factory.createVariableStatement(transformer.getBoolFromNode(exportDecl) ? [ts.factory.createToken(ts.SyntaxKind.ExportKeyword)] : undefined, list);
+            ], transformer.getBoolFromNode(useLet) ? transformer.ts.NodeFlags.Let : transformer.ts.NodeFlags.Const);
+            if (transformer.ts.isForStatement(callSite.parent)) return list;
+            else return transformer.ts.factory.createVariableStatement(transformer.getBoolFromNode(exportDecl) ? [transformer.ts.factory.createToken(transformer.ts.SyntaxKind.ExportKeyword)] : undefined, list);
         }
     },
     "$$i": {
@@ -142,7 +142,7 @@ export default {
     "$$length": {
         call: ([arrLit], transformer, callSite) => {
             if (!arrLit) throw MacroError(callSite, "`length` macro expects an array / string literal as the first argument."); 
-            if (ts.isArrayLiteralExpression(arrLit)) return transformer.context.factory.createNumericLiteral(arrLit.elements.length);
+            if (transformer.ts.isArrayLiteralExpression(arrLit)) return transformer.context.factory.createNumericLiteral(arrLit.elements.length);
             const str = transformer.getStringFromNode(arrLit, true, true);
             if (str) return transformer.context.factory.createNumericLiteral(str.length);
             throw MacroError(callSite, "`length` macro expects an array / string literal as the first argument."); 
@@ -152,7 +152,7 @@ export default {
         call: ([thing], transformer, callSite) => {
             if (!thing) throw MacroError(callSite, "`ident` macro expects a string literal as the first parameter.");
             const strVal = transformer.getStringFromNode(thing, true, true);
-            if (strVal) return transformer.getLastMacro()?.defined?.get(strVal) || ts.factory.createIdentifier(strVal);
+            if (strVal) return transformer.getLastMacro()?.defined?.get(strVal) || transformer.ts.factory.createIdentifier(strVal);
             else return thing;
         }
     },
@@ -172,10 +172,10 @@ export default {
             if (strContent) {
                 const valItem = transformer.getLiteralFromNode(item);
                 if (typeof valItem !== "string") throw MacroError(callSite, "`includes` macro expects a string literal as the second argument.");
-                return strContent.includes(valItem) ? ts.factory.createTrue() : ts.factory.createFalse();
-            } else if (ts.isArrayLiteralExpression(array)) {
+                return strContent.includes(valItem) ? transformer.ts.factory.createTrue() : transformer.ts.factory.createFalse();
+            } else if (transformer.ts.isArrayLiteralExpression(array)) {
                 const normalArr = array.elements.map(el => transformer.getLiteralFromNode(transformer.expectExpression(el)));
-                return normalArr.includes(transformer.getLiteralFromNode(item)) ? ts.factory.createTrue() : ts.factory.createFalse();
+                return normalArr.includes(transformer.getLiteralFromNode(item)) ? transformer.ts.factory.createTrue() : transformer.ts.factory.createFalse();
             } else throw MacroError(callSite, "`includes` macro expects an array/string literal as the first argument.");
         }
     },
@@ -183,14 +183,14 @@ export default {
         call: ([code], transformer, callSite) => {
             const str = transformer.getStringFromNode(transformer.expectExpression(code), true, true);
             if (!str) throw MacroError(callSite, "`ts` macro expects a string as it's first argument.");
-            const result = ts.createSourceFile("expr", str, ts.ScriptTarget.ESNext, false, ts.ScriptKind.JS);
+            const result = transformer.ts.createSourceFile("expr", str, transformer.ts.ScriptTarget.ESNext, false, transformer.ts.ScriptKind.JS);
             const visitor = (node: ts.Node): ts.Node => {
-                if (ts.isIdentifier(node)) {
-                    return ts.factory.createIdentifier(node.text);
+                if (transformer.ts.isIdentifier(node)) {
+                    return transformer.ts.factory.createIdentifier(node.text);
                 }
-                return ts.visitEachChild(node, visitor, transformer.context);
+                return transformer.ts.visitEachChild(node, visitor, transformer.context);
             };
-            return ts.visitNodes(result.statements, visitor) as unknown as Array<ts.Statement>;
+            return transformer.ts.visitNodes(result.statements, visitor) as unknown as Array<ts.Statement>;
         }
     },
     "$$escape": {
@@ -198,15 +198,15 @@ export default {
             if (!code) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
             const maybeFn = normalizeFunctionNode(transformer.checker, transformer.expectExpression(code));
             if (!maybeFn || !maybeFn.body) throw MacroError(callSite, "`escape` macro expects a function as it's first argument.");
-            if (ts.isBlock(maybeFn.body)) {
+            if (transformer.ts.isBlock(maybeFn.body)) {
                 const hygienicBody = [...transformer.makeHygienic(maybeFn.body.statements as unknown as ts.Statement[])];
                 const lastStatement = hygienicBody.pop();
                 transformer.escapeStatement(...hygienicBody);
                 if (lastStatement) {
-                    if (ts.isReturnStatement(lastStatement)) {
+                    if (transformer.ts.isReturnStatement(lastStatement)) {
                         return lastStatement.expression;
                     } else {
-                        if (!hygienicBody.length && ts.isExpression(lastStatement)) return lastStatement;
+                        if (!hygienicBody.length && transformer.ts.isExpression(lastStatement)) return lastStatement;
                         transformer.escapeStatement(lastStatement);
                     }
                 }
@@ -219,8 +219,8 @@ export default {
             const startNum = (start && transformer.getNumberFromNode(start)) || -Infinity;
             const endNum = (end && transformer.getNumberFromNode(end)) || Infinity;
             const strVal = transformer.getStringFromNode(thing, false, true);
-            if (strVal) return ts.factory.createStringLiteral(strVal.slice(startNum, endNum));
-            else if (ts.isArrayLiteralExpression(thing)) return ts.factory.createArrayLiteralExpression(thing.elements.slice(startNum, endNum));
+            if (strVal) return transformer.ts.factory.createStringLiteral(strVal.slice(startNum, endNum));
+            else if (transformer.ts.isArrayLiteralExpression(thing)) return transformer.ts.factory.createArrayLiteralExpression(thing.elements.slice(startNum, endNum));
             else throw MacroError(callSite, "`slice` macro expects an array/string literal as the first argument.");
         }
     },
@@ -228,7 +228,7 @@ export default {
         call: (_args, transformer, callSite) => {
             const type = transformer.resolveTypeArgumentOfCall(callSite, 0);
             if (!type) throw MacroError(callSite, "`propsOfType` macro expects one type parameter.");
-            return ts.factory.createArrayLiteralExpression(type.getProperties().map(sym => ts.factory.createStringLiteral(sym.name)));
+            return transformer.ts.factory.createArrayLiteralExpression(type.getProperties().map(sym => transformer.ts.factory.createStringLiteral(sym.name)));
         }
     },
     "$$typeToString": {
@@ -237,7 +237,7 @@ export default {
             if (!type) throw MacroError(callSite, "`typeToString` macro expects one type parameter.");
             if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
             if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
-            return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
+            return transformer.ts.factory.createStringLiteral(transformer.checker.typeToString(type));
         }
     },
     "$$typeAssignableTo": {
@@ -245,7 +245,7 @@ export default {
             const type = transformer.resolveTypeArgumentOfCall(callSite, 0);
             const compareTo = transformer.resolveTypeArgumentOfCall(callSite, 1);
             if (!type || !compareTo) throw MacroError(callSite, "`typeAssignableTo` macro expects two type parameters.");
-            return transformer.checker.isTypeAssignableTo(type, compareTo) ? ts.factory.createTrue() : ts.factory.createFalse();
+            return transformer.checker.isTypeAssignableTo(type, compareTo) ? transformer.ts.factory.createTrue() : transformer.ts.factory.createFalse();
         }
     },
     "$$text": {
@@ -256,14 +256,14 @@ export default {
     },
     "$$decompose": {
         call: ([exp], transformer) => {
-            if (!exp) return ts.factory.createArrayLiteralExpression([]);
+            if (!exp) return transformer.ts.factory.createArrayLiteralExpression([]);
             const elements: Array<ts.Expression> = [];
             const visitor = (node: ts.Node) => {
-                if (ts.isExpression(node)) elements.push(node);
+                if (transformer.ts.isExpression(node)) elements.push(node);
                 return node;
             };
-            ts.visitEachChild(exp, visitor, transformer.context);
-            return ts.factory.createArrayLiteralExpression(elements);
+            transformer.ts.visitEachChild(exp, visitor, transformer.context);
+            return transformer.ts.factory.createArrayLiteralExpression(elements);
         }
     },
     "$$map": {
@@ -274,20 +274,20 @@ export default {
             if (!visitor) throw MacroError(callSite, "`$$map` macro expects a function expression as it's second argument.");
             const fn = normalizeFunctionNode(transformer.checker, visitor);
             if (!fn || !fn.body) throw MacroError(callSite, "`$$map` macro expects a function as it's second argument.");
-            if (!fn.parameters.length || !ts.isIdentifier(fn.parameters[0].name)) throw MacroError(callSite, "`$$map` macro expects the function to have a parameter.");
+            if (!fn.parameters.length || !transformer.ts.isIdentifier(fn.parameters[0].name)) throw MacroError(callSite, "`$$map` macro expects the function to have a parameter.");
             const paramName = fn.parameters[0].name.text;
-            const kindParamName = fn.parameters[1] && ts.isIdentifier(fn.parameters[1].name) && fn.parameters[1].name.text;
+            const kindParamName = fn.parameters[1] && transformer.ts.isIdentifier(fn.parameters[1].name) && fn.parameters[1].name.text;
             const visitorFn = (node: ts.Node) : ts.Node|Array<ts.Node> => {
-                const visitedNode = ts.visitNode(node, transformer.boundVisitor);
+                const visitedNode = transformer.ts.visitNode(node, transformer.boundVisitor);
                 if (!visitedNode) return node;
-                if (!ts.isExpression(visitedNode)) return ts.visitEachChild(visitedNode, visitorFn, transformer.context);
+                if (!transformer.ts.isExpression(visitedNode)) return transformer.ts.visitEachChild(visitedNode, visitorFn, transformer.context);
                 lastMacro.store.set(paramName, visitedNode);
-                if (kindParamName) lastMacro.store.set(kindParamName, ts.factory.createNumericLiteral(visitedNode.kind));
+                if (kindParamName) lastMacro.store.set(kindParamName, transformer.ts.factory.createNumericLiteral(visitedNode.kind));
                 const newNodes = transformer.transformFunction(fn, true);
-                if (newNodes.length === 1 && newNodes[0].kind === ts.SyntaxKind.NullKeyword) return ts.visitEachChild(visitedNode, visitorFn, transformer.context);
+                if (newNodes.length === 1 && newNodes[0].kind === transformer.ts.SyntaxKind.NullKeyword) return transformer.ts.visitEachChild(visitedNode, visitorFn, transformer.context);
                 return newNodes;
             };
-            return ts.visitNode(exp, visitorFn);
+            return transformer.ts.visitNode(exp, visitorFn);
         },
         preserveParams: true
     },
@@ -299,9 +299,9 @@ export default {
             const callableFn = normalizeFunctionNode(transformer.checker, fn);
             if (!callableFn || !callableFn.body) throw MacroError(callSite, "`comptime` macro expects a function as the first parameter.");
             let parent = callSite.parent;
-            if (ts.isExpressionStatement(parent)) {
+            if (transformer.ts.isExpressionStatement(parent)) {
                 parent = parent.parent;
-                if (ts.isBlock(parent)) parent = parent.parent;
+                if (transformer.ts.isBlock(parent)) parent = parent.parent;
                 if ("body" in parent) {
                     const signature = transformer.checker.getSignatureFromDeclaration(parent as ts.SignatureDeclaration);
                     if (!signature || !signature.declaration) return;
@@ -322,13 +322,13 @@ export default {
             if (!callableFn || !callableFn.body) throw MacroError(callSite, "`raw` macro expects a function as the first parameter.");
             const renamedParameters = [];
             for (const param of callableFn.parameters.slice(1)) {
-                if (!ts.isIdentifier(param.name)) throw MacroError(callSite, "`raw` macro parameters cannot be deconstructors.");
+                if (!transformer.ts.isIdentifier(param.name)) throw MacroError(callSite, "`raw` macro parameters cannot be deconstructors.");
                 renamedParameters.push(param.name.text);
             }
             const stringified = transformer.addComptimeSignature(callableFn, fnBodyToString(transformer.checker, callableFn), ["ctx", ...renamedParameters]);
             return tryRun(stringified, [{
-                ts,
-                factory: ts.factory,
+                ts: transformer.ts,
+                factory: transformer.ts.factory,
                 transformer,
                 checker: transformer.checker,
                 thisMacro: lastMacro,
@@ -342,7 +342,7 @@ export default {
     },
     "$$setStore": {
         call: ([key, value], transformer, callSite) => {
-            if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`setStore` macro expects a string literal as the key.");
+            if (!transformer.ts.isStringLiteral(key)) throw MacroError(callSite, "`setStore` macro expects a string literal as the key.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`setStore` macro must be called inside another macro.");
             lastMacro.store.set(key.text, value);
@@ -350,7 +350,7 @@ export default {
     },
     "$$getStore": {
         call: ([key], transformer, callSite) => {
-            if (!ts.isStringLiteral(key)) throw MacroError(callSite, "`getStore` macro expects a string literal as the key.");
+            if (!transformer.ts.isStringLiteral(key)) throw MacroError(callSite, "`getStore` macro expects a string literal as the key.");
             const lastMacro = transformer.getLastMacro();
             if (!lastMacro) throw MacroError(callSite, "`getStore` macro must be called inside another macro.");
             return lastMacro.store.get(key.text);

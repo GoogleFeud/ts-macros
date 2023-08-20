@@ -6,6 +6,7 @@
     "declaration": true,
     "outDir": "./dist",
     "rootDir": "./src",
+    "skipLibCheck": true,
     "strict": true
   },
   "tsdocsOptions": {
@@ -14,7 +15,7 @@
     "customPages": "./docs",
     "style": {
       "dontCollapseCategories": true
-    }
+    },
   },
   "exclude": ["./tests", "./test", "./dist", "./node_modules", "./playground"]
 }

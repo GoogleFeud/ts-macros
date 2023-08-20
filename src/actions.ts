@@ -2,29 +2,29 @@ import * as ts from "typescript";
 import { LabelKinds } from ".";
 import { createObject, hasBit } from "./utils";
 
-export const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
-    [ts.SyntaxKind.MinusToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left - right),
-    [ts.SyntaxKind.AsteriskToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left * right),
-    [ts.SyntaxKind.SlashToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left / right),
-    [ts.SyntaxKind.LessThanToken]: (left: number, right: number) => left < right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.LessThanEqualsToken]: (left: number, right: number) => left <= right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.GreaterThanToken]: (left: number, right: number) => left > right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.GreaterThanEqualsToken]: (left: number, right: number) => left >= right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.AmpersandToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left & right),
-    [ts.SyntaxKind.BarToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left | right),
-    [ts.SyntaxKind.CaretToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left ^ right),
-    [ts.SyntaxKind.PercentToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left % right)
+export const binaryNumberActions: Record<number, (left: number, right: number, tsc: typeof ts) => ts.Expression> = {
+    [ts.SyntaxKind.MinusToken]: (left: number, right: number, tsc) => tsc.factory.createNumericLiteral(left - right),
+    [ts.SyntaxKind.AsteriskToken]: (left: number, right: number, tsc) => tsc.factory.createNumericLiteral(left * right),
+    [ts.SyntaxKind.SlashToken]: (left: number, right: number, tsc) => tsc.factory.createNumericLiteral(left / right),
+    [ts.SyntaxKind.LessThanToken]: (left: number, right: number, tsc) => left < right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.LessThanEqualsToken]: (left: number, right: number, tsc) => left <= right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.GreaterThanToken]: (left: number, right: number, tsc) => left > right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.GreaterThanEqualsToken]: (left: number, right: number, tsc) => left >= right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.AmpersandToken]: (left: number, right: number, tsc) => tsc.factory.createNumericLiteral(left & right),
+    [ts.SyntaxKind.BarToken]: (left: number, right: number, tsc) => tsc.factory.createNumericLiteral(left | right),
+    [ts.SyntaxKind.CaretToken]: (left: number, right: number, tsc) => tsc.factory.createNumericLiteral(left ^ right),
+    [ts.SyntaxKind.PercentToken]: (left: number, right: number, tsc) => tsc.factory.createNumericLiteral(left % right)
 };
 
-export const binaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => ts.Expression|undefined> = {
-    [ts.SyntaxKind.PlusToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => {
-        if (typeof left === "string" || typeof right === "string") return ts.factory.createStringLiteral(left as string + right);
-        else if (typeof left === "number" || typeof right === "number") return ts.factory.createNumericLiteral(left as number + (right as number));
+export const binaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown, tsc: typeof ts) => ts.Expression|undefined> = {
+    [ts.SyntaxKind.PlusToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown, tsc) => {
+        if (typeof left === "string" || typeof right === "string") return tsc.factory.createStringLiteral(left as string + right);
+        else if (typeof left === "number" || typeof right === "number") return tsc.factory.createNumericLiteral(left as number + (right as number));
     },
-    [ts.SyntaxKind.EqualsEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left === right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.EqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left == right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.ExclamationEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left !== right ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.ExclamationEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown) => left != right ? ts.factory.createTrue() : ts.factory.createFalse(),
+    [ts.SyntaxKind.EqualsEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown, tsc) => left === right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.EqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown, tsc) => left == right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.ExclamationEqualsEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown, tsc) => left !== right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.ExclamationEqualsToken]: (_origLeft: ts.Expression, _origRight: ts.Expression, left: unknown, right: unknown, tsc) => left != right ? tsc.factory.createTrue() : tsc.factory.createFalse(),
     [ts.SyntaxKind.AmpersandAmpersandToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => {
         if (left && right) return origRight;
         if (!left) return origLeft;
@@ -37,19 +37,19 @@ export const binaryActions: Record<number, (origLeft: ts.Expression, origRight: 
     }
 };
 
-export const unaryActions: Record<number, (val: unknown) => ts.Expression|undefined> = {
-    [ts.SyntaxKind.ExclamationToken]: (val: unknown) => !val ? ts.factory.createTrue() : ts.factory.createFalse(),
-    [ts.SyntaxKind.MinusToken]: (val: unknown) => {
+export const unaryActions: Record<number, (val: unknown, tsc: typeof ts) => ts.Expression|undefined> = {
+    [ts.SyntaxKind.ExclamationToken]: (val: unknown, tsc) => !val ? tsc.factory.createTrue() : tsc.factory.createFalse(),
+    [ts.SyntaxKind.MinusToken]: (val: unknown, tsc) => {
         if (typeof val !== "number") return;
-        return ts.factory.createNumericLiteral(-val);
+        return tsc.factory.createNumericLiteral(-val);
     },
-    [ts.SyntaxKind.TildeToken]: (val: unknown) => {
+    [ts.SyntaxKind.TildeToken]: (val: unknown, tsc) => {
         if (typeof val !== "number") return;
-        return ts.factory.createNumericLiteral(~val);
+        return tsc.factory.createNumericLiteral(~val);
     },
-    [ts.SyntaxKind.PlusToken]: (val: unknown) => {
+    [ts.SyntaxKind.PlusToken]: (val: unknown, tsc) => {
         if (typeof val !== "number" && typeof val !== "string") return;
-        return ts.factory.createNumericLiteral(+val);
+        return tsc.factory.createNumericLiteral(+val);
     }
 };
 
