@@ -3,7 +3,7 @@ import type { ProgramTransformerExtras, PluginConfig } from "ts-patch";
 import { MacroTransformer } from "./transformer";
 import { TsMacrosConfig, macros } from "./index";
 
-function printAsTS(printer: ts.Printer, source: ts.SourceFile) : string {
+export function printAsTS(printer: ts.Printer, source: ts.SourceFile) : string {
     let fileText = "";
     for (const fileItem of source.statements) {
         fileText += printer.printNode(ts.EmitHint.Unspecified, fileItem, source);
@@ -11,7 +11,7 @@ function printAsTS(printer: ts.Printer, source: ts.SourceFile) : string {
     return fileText;
 } 
 
-function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.CompilerOptions | undefined, newSourceFiles: Map<string, ts.SourceFile>, instance: typeof ts) : ts.CompilerHost {
+export function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.CompilerOptions | undefined, newSourceFiles: Map<string, ts.SourceFile>, instance: typeof ts) : ts.CompilerHost {
     const compilerHost = host || instance.createCompilerHost(config || instance.getDefaultCompilerOptions(), true);
     const ogGetSourceFile = compilerHost.getSourceFile;
     return {
