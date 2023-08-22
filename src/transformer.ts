@@ -246,10 +246,12 @@ export class MacroTransformer {
         if (ts.isExpressionStatement(node)) {
             if (ts.isCallExpression(node.expression) && ts.isNonNullExpression(node.expression.expression)) {
                 const statements = this.runMacroFromCallExpression(node.expression, node.expression.expression.expression);
+                if (!statements) return node;
                 return this.expandMacroResults(statements, node.parent);
             }
             else if (ts.isTaggedTemplateExpression(node.expression) && ts.isNonNullExpression(node.expression.tag)) {
                 const statements = this.runMacroFromTemplateExpression(node.expression, node.expression.tag.expression);
+                if (!statements) return node;
                 return this.expandMacroResults(statements, node.parent);
             }
         }
@@ -275,8 +277,9 @@ export class MacroTransformer {
         if (ts.isCallExpression(node)) {
             if (ts.isNonNullExpression(node.expression)) {
                 const statements = this.runMacroFromCallExpression(node, node.expression.expression);
-                if (!statements || !statements.length) return ts.factory.createNull(); 
-                return this.expandMacroResults(statements);
+                if (!statements) return node;
+                else if (!statements.length) return ts.factory.createNull();
+                else return this.expandMacroResults(statements);
             }
             else this.callComptimeFunction(node);
         }
@@ -555,7 +558,7 @@ export class MacroTransformer {
             const nativeMacro = nativeMacros[name.getText()];
             if (nativeMacro) {
                 const macroResult = nativeMacro.call(nativeMacro.preserveParams ? args : ts.factory.createNodeArray(args.map(arg => this.expectExpression(arg))), this, call);
-                if (!macroResult) return undefined;
+                if (!macroResult) return [];
                 else if (Array.isArray(macroResult)) return macroResult as Array<ts.Statement>;
                 else if (ts.isStatement(macroResult as ts.Node)) return [macroResult as ts.Statement];
                 return [ts.factory.createExpressionStatement(macroResult as ts.Expression)];
@@ -571,7 +574,7 @@ export class MacroTransformer {
         return this.execMacro(macro, normalArgs, call, target);
     }
 
-    execMacro(macro: Macro, args: ts.NodeArray<ts.Expression>, call: ts.Expression, target?: ts.Node) : ts.Statement[] | undefined {
+    execMacro(macro: Macro, args: ts.NodeArray<ts.Expression>, call: ts.Expression, target?: ts.Node) : ts.Statement[] {
         this.macroStack.push({
             macro,
             args,
@@ -599,8 +602,7 @@ export class MacroTransformer {
         return [...result];
     }
 
-    expandMacroResults(statements?: ts.Statement[], parent?: ts.Node) : ts.Node | ts.Node[] | undefined {
-        if (!statements) return;
+    expandMacroResults(statements: ts.Statement[], parent?: ts.Node) : ts.Node | ts.Node[] | undefined {
         if (parent) {
             const prepared = this.makeHygienic(statements);
             if (prepared.length && ts.isReturnStatement(prepared[prepared.length - 1]) && ts.isSourceFile(parent)) {
