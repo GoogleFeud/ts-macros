@@ -16,6 +16,7 @@ export interface MacroParam {
     marker: MacroParamMarkers,
     start: number,
     name: string,
+    node: ts.ParameterDeclaration,
     defaultVal?: ts.Expression,
     realName?: ts.Identifier
 }
@@ -23,6 +24,7 @@ export interface MacroParam {
 export interface Macro {
     name: string,
     params: Array<MacroParam>,
+    node: ts.FunctionDeclaration,
     typeParams: Array<ts.TypeParameterDeclaration>,
     body?: ts.FunctionBody,
     namespace?: ts.ModuleDeclaration
@@ -159,6 +161,7 @@ export class MacroTransformer {
                     marker,
                     start: i,
                     name: param.name.text,
+                    node: param,
                     defaultVal: param.initializer || (param.questionToken ? ts.factory.createIdentifier("undefined") : undefined)
                 });
             }
@@ -184,6 +187,7 @@ export class MacroTransformer {
                 params,
                 body: node.body,
                 typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| [],
+                node,
                 namespace
             });
             return;

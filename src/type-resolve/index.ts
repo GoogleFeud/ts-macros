@@ -4,8 +4,9 @@ import { MacroTransformer } from "../transformer";
 import { TsMacrosConfig, macros } from "../index";
 import { transformDeclaration } from "./declarations";
 import { MacroError } from "../utils";
+import { generateChainingTypings } from "./chainingTypes";
 
-export function printAsTS(printer: ts.Printer, statements: ts.NodeArray<ts.Statement>, source: ts.SourceFile) : string {
+export function printAsTS(printer: ts.Printer, statements: ts.Statement[], source: ts.SourceFile) : string {
     let fileText = "";
     for (const fileItem of statements) {
         fileText += printer.printNode(ts.EmitHint.Unspecified, fileItem, source);
@@ -35,13 +36,16 @@ export default function (
 
     const instance = extras.ts as typeof ts;
     const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true});
-    const newSourceFiles = new Map();
+    const newSourceFiles: Map<string, ts.SourceFile> = new Map();
     const diagnostics: ts.Diagnostic[] = [];
     const compilerOptions = program.getCompilerOptions();
     const typeChecker = program.getTypeChecker();
     const printer = instance.createPrinter();
 
-    for (const sourceFile of program.getSourceFiles()) {
+    const sourceFiles = program.getSourceFiles();
+
+    for (let i=0; i < sourceFiles.length; i++) {
+        const sourceFile = sourceFiles[i];
         if (sourceFile.isDeclarationFile) continue;
         let localDiagnostic: ts.Diagnostic|undefined;
 
@@ -62,7 +66,7 @@ export default function (
                 diagnostics.push(localDiagnostic);
             }
         }
-        if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printAsTS(printer, parsed.statements, parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
+        if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printAsTS(printer, parsed.statements as unknown as ts.Statement[], parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
         else {
             const newNodes = [];
             const positions = [];
@@ -73,13 +77,17 @@ export default function (
                     if (transformed) newNodes.push(transformed);
                 }
             }
-            const newNodesOnly = printAsTS(printer, instance.factory.createNodeArray(newNodes), parsed);
+
+            if (i === sourceFiles.length - 1) {
+                newNodes.push(...generateChainingTypings(typeChecker, macros));
+            }
+
+            const newNodesOnly = printAsTS(printer, newNodes, parsed);
             const newNodesSource = instance.createSourceFile(sourceFile.fileName, sourceFile.text + "\n" + newNodesOnly, sourceFile.languageVersion, true, ts.ScriptKind.TS);
             if (localDiagnostic) newNodesSource.parseDiagnostics.push(localDiagnostic as ts.DiagnosticWithLocation);
-            ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, positions.join(", ") + "\n\n" + newNodesSource.text);
+            ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, positions.join(", ") + "\n\n" + macros.size + "\n\n" + newNodesSource.text);
             newSourceFiles.set(sourceFile.fileName, newNodesSource); 
         }
-
     }
 
     return instance.createProgram(
