@@ -2,6 +2,8 @@ import * as ts from "typescript";
 import type { ProgramTransformerExtras, PluginConfig } from "ts-patch";
 import { MacroTransformer } from "../transformer";
 import { TsMacrosConfig, macros } from "../index";
+import { transformDeclaration } from "./declarations";
+import { MacroError } from "../utils";
 
 export function printAsTS(printer: ts.Printer, statements: ts.NodeArray<ts.Statement>, source: ts.SourceFile) : string {
     let fileText = "";
@@ -32,34 +34,57 @@ export default function (
     const isTSC = process.argv[1]?.endsWith("tsc");
 
     const instance = extras.ts as typeof ts;
-    const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, options as TsMacrosConfig);
+    const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true});
     const newSourceFiles = new Map();
+    const diagnostics: ts.Diagnostic[] = [];
     const compilerOptions = program.getCompilerOptions();
+    const typeChecker = program.getTypeChecker();
     const printer = instance.createPrinter();
 
     for (const sourceFile of program.getSourceFiles()) {
         if (sourceFile.isDeclarationFile) continue;
-    
-        const parsed = transformer.run(sourceFile);
+        let localDiagnostic: ts.Diagnostic|undefined;
+
+        let parsed;
+        try {
+            parsed = transformer.run(sourceFile);
+        } catch(err) {
+            parsed = sourceFile;
+            if (err instanceof MacroError) {
+                localDiagnostic = {
+                    code: 8000,
+                    start: err.start,
+                    length: err.length,
+                    messageText: err.rawMsg,
+                    file: sourceFile,
+                    category: ts.DiagnosticCategory.Error
+                };
+                diagnostics.push(localDiagnostic);
+            }
+        }
         if (!instance.isSourceFile(parsed)) continue;
         if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printAsTS(printer, parsed.statements, parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
         else {
             const newNodes = [];
             for (const statement of parsed.statements) {
                 if (statement.pos === -1 && (ts.isTypeDeclaration(statement) || ts.isVariableStatement(statement))) {
-                    newNodes.push(statement);
+                    newNodes.push(transformDeclaration(typeChecker, statement));
                 }
             }
             const newNodesOnly = printAsTS(printer, instance.factory.createNodeArray(newNodes), parsed);
             const newNodesSource = instance.createSourceFile(sourceFile.fileName, sourceFile.text + "\n" + newNodesOnly, sourceFile.languageVersion, true, ts.ScriptKind.TS);
-            ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, newNodesSource.text);
+            if (localDiagnostic) newNodesSource.parseDiagnostics.push(localDiagnostic as ts.DiagnosticWithLocation);
+            ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, "" + diagnostics.length + "\n\n" + newNodesSource.text);
             newSourceFiles.set(sourceFile.fileName, newNodesSource); 
         }
+
     }
 
     return instance.createProgram(
         program.getRootFileNames(),
         compilerOptions,
-        patchCompilerHost(host, compilerOptions, newSourceFiles, instance)
+        patchCompilerHost(host, compilerOptions, newSourceFiles, instance),
+        undefined,
+        diagnostics
     );
 }

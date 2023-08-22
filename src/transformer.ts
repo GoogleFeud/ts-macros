@@ -86,7 +86,7 @@ export class MacroTransformer {
         this.addEscapeScope();
         for (const stmt of node.statements) {
 
-            if (ts.isImportDeclaration(stmt) && stmt.importClause && !stmt.importClause.isTypeOnly) {
+            if (!this.config.keepImports && ts.isImportDeclaration(stmt) && stmt.importClause && !stmt.importClause.isTypeOnly) {
                 if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
                     const filtered = stmt.importClause.namedBindings.elements.filter(el => {
                         if (el.isTypeOnly) return false;
@@ -116,13 +116,13 @@ export class MacroTransformer {
 
     expectExpression(node: ts.Node) : ts.Expression {
         const visited = ts.visitNode(node, this.boundVisitor);
-        if (!visited || !ts.isExpression(node)) throw MacroError(node, "Expected an expression.");
+        if (!visited || !ts.isExpression(node)) throw new MacroError(node, "Expected an expression.");
         return visited as ts.Expression;
     }
 
     expectStatement(node: ts.Node) : ts.Statement {
         const visited = ts.visitNode(node, this.boundVisitor);
-        if (!visited || !isStatement(visited)) throw MacroError(node, "Expected a statement.");
+        if (!visited || !isStatement(visited)) throw new MacroError(node, "Expected a statement.");
         return visited as ts.Statement;
     }
 
@@ -130,13 +130,13 @@ export class MacroTransformer {
         if (!node) return;
         const visited = ts.visitNode(node, this.boundVisitor);
         if (!visited) return undefined;
-        if (!isStatement(visited)) throw MacroError(node, "Expected a statement.");
+        if (!isStatement(visited)) throw new MacroError(node, "Expected a statement.");
         return visited as ts.Statement;
     }
 
     expect<T extends ts.Node = ts.Node>(node: T, kind: ts.SyntaxKind) : T {
         const visited = ts.visitNode(node, this.boundVisitor);
-        if (!visited || visited.kind !== kind) throw MacroError(node, `Expected SyntaxKind ${kind}.`);
+        if (!visited || visited.kind !== kind) throw new MacroError(node, `Expected SyntaxKind ${kind}.`);
         return visited as T;
     }
 
@@ -150,7 +150,7 @@ export class MacroTransformer {
             const params: Array<MacroParam> = [];
             for (let i = 0; i < node.parameters.length; i++) {
                 const param = node.parameters[i];
-                if (!ts.isIdentifier(param.name)) throw MacroError(param, "You cannot use deconstruction patterns in macros.");
+                if (!ts.isIdentifier(param.name)) throw new MacroError(param, "You cannot use deconstruction patterns in macros.");
                 const marker = this.getMarker(param);
                 params.push({
                     spread: Boolean(param.dotDotDotToken),
@@ -416,7 +416,7 @@ export class MacroTransformer {
             else if (ts.isPrefixUnaryExpression(node)) {
                 if (node.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.operand)) {
                     const { separator, function: fn, literals} = getRepetitionParams(node.operand);
-                    if (!separator) throw MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
+                    if (!separator) throw new MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
                     return this.execRepetition(fn, literals, separator, true);
                 } else {
                     // Detects a unary expression and tries to remove it if possible
@@ -544,8 +544,8 @@ export class MacroTransformer {
             const symofArg = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name.expression));
             if (symofArg && hasBit(symofArg.flags, ts.SymbolFlags.Namespace)) return this.runMacroFromCallExpression(call, name.name);
             const possibleMacros = this.findMacroByTypeParams(name, call);
-            if (!possibleMacros.length) throw MacroError(call, `No possible candidates for "${name.name.getText()}" call`);
-            else if (possibleMacros.length > 1) throw MacroError(call, `More than one possible candidate for "${name.name.getText()}" call`);
+            if (!possibleMacros.length) throw new MacroError(call, `No possible candidates for "${name.name.getText()}" call`);
+            else if (possibleMacros.length > 1) throw new MacroError(call, `More than one possible candidate for "${name.name.getText()}" call`);
             else macro = possibleMacros[0];
             const newArgs = ts.factory.createNodeArray([this.expectExpression(name.expression), ...call.arguments]);
             normalArgs = this.macroStack.length ? ts.factory.createNodeArray(newArgs.map(arg => this.expectExpression(arg))) : newArgs;
@@ -852,7 +852,7 @@ export class MacroTransformer {
         for (const [, macro] of this.macros) {
             if (macro.name === name) foundMacros.push(macro);
         }
-        if (foundMacros.length > 1) throw MacroError(node, `More than one macro with the name ${name} exists.`);
+        if (foundMacros.length > 1) throw new MacroError(node, `More than one macro with the name ${name} exists.`);
         return foundMacros[0];
     }
 
@@ -886,13 +886,7 @@ export class MacroTransformer {
 
     strToAST(str: string) : ts.NodeArray<ts.Statement> {
         const file = ts.createSourceFile("", str, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TSX);
-        const uniquelize: (node: ts.Node) => ts.Node = (node: ts.Node) => {
-            if (ts.isNumericLiteral(node)) return ts.factory.createNumericLiteral(node.text);
-            else if (ts.isStringLiteral(node)) return ts.factory.createStringLiteral(node.text);
-            else if (ts.isRegularExpressionLiteral(node)) return ts.factory.createRegularExpressionLiteral(node.text);
-            else if (ts.isIdentifier(node)) return ts.factory.createIdentifier(node.text);
-            else return ts.visitEachChild(node, uniquelize, this.context);
-        };
+        const uniquelize: (node: ts.Node) => ts.Node = (node: ts.Node) => ts.factory.cloneNode(ts.visitEachChild(node, uniquelize, this.context));
         return ts.visitEachChild(file, uniquelize, this.context).statements;
     }
 

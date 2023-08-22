@@ -7,7 +7,8 @@ export const macros = new Map();
 
 export interface TsMacrosConfig {
     noComptime?: boolean,
-    watchMode?: boolean
+    watchMode?: boolean,
+    keepImports?: boolean
 }
 
 export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
