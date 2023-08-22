@@ -85,7 +85,6 @@ export class MacroTransformer {
         const statements: Array<ts.Statement> = [];
         this.addEscapeScope();
         for (const stmt of node.statements) {
-
             if (ts.isImportDeclaration(stmt) && stmt.importClause && !stmt.importClause.isTypeOnly) {
                 if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
                     const filtered = stmt.importClause.namedBindings.elements.filter(el => {
@@ -566,12 +565,8 @@ export class MacroTransformer {
         }
         if (!macro || !macro.body) {
             const calledSym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name));
-            if (calledSym?.declarations?.length) {
-                this.boundVisitor(calledSym.declarations[0]);
-                return this.runMacroFromCallExpression(call, name, target);
-            } else {
-                return;
-            }
+            if (calledSym?.declarations?.length && !this.boundVisitor(calledSym.declarations[0])) return this.runMacroFromCallExpression(call, name, target);
+            else return;
         }
         return this.execMacro(macro, normalArgs, call, target);
     }
