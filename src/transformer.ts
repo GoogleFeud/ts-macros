@@ -672,7 +672,7 @@ export class MacroTransformer {
             if (signature && signature.declaration) {
                 const func = this.comptimeSignatures.get(signature.declaration);
                 if (func) {
-                    tryRun(func, node.arguments?.map(arg => {
+                    tryRun(node, func, node.arguments?.map(arg => {
                         const lit = this.getLiteralFromNode(arg, false, true, true);
                         if (lit === NO_LIT_FOUND) return undefined;
                         else return lit;

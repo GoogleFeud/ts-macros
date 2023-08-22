@@ -321,7 +321,7 @@ export default {
                 renamedParameters.push(param.name.text);
             }
             const stringified = transformer.addComptimeSignature(callableFn, fnBodyToString(transformer.checker, callableFn), ["ctx", ...renamedParameters]);
-            return tryRun(stringified, [{
+            return tryRun(fn, stringified, [{
                 ts,
                 factory: ts.factory,
                 transformer,

@@ -61,7 +61,7 @@ export class MacroError extends Error {
     length: number;
     rawMsg: string;
     constructor(callSite: ts.Node, msg: string) {
-        const start = callSite.pos + 2;
+        const start = callSite.pos;
         const length = callSite.end - callSite.pos;
         super(ts.formatDiagnosticsWithColorAndContext([{
             category: ts.DiagnosticCategory.Error,
@@ -154,18 +154,12 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
     return code + ts.transpile((fn.body.original || fn.body).getText());
 }
 
-export function tryRun(comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {
+export function tryRun(contentStartNode: ts.Node, comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {
     try {
         return comptime(...args);
     } catch(err: unknown) {
         if (err instanceof Error) {
-            const { line, col } = (err.stack || "").match(/<anonymous>:(?<line>\d+):(?<col>\d+)/)?.groups || {};
-            const lineNum = line ? (+line - 1) : 0;
-            const colNum = col ? (+col - 1) : 0;
-            const file = ts.createSourceFile("comptime", comptime.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
-            const startLoc = ts.getPositionOfLineAndCharacter(file, lineNum, colNum);
-            const node = ts.getTokenAtPosition(file, startLoc);
-            throw new MacroError(node, (additionalMessage || "") + err.message);
+            throw new MacroError(contentStartNode, (additionalMessage || "") + err.message);
         } else throw err;
     }
 }

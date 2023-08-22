@@ -66,15 +66,18 @@ export default function (
         if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printAsTS(printer, parsed.statements, parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
         else {
             const newNodes = [];
+            const positions = [];
             for (const statement of parsed.statements) {
-                if (statement.pos === -1 && (ts.isTypeDeclaration(statement) || ts.isVariableStatement(statement))) {
-                    newNodes.push(transformDeclaration(typeChecker, statement));
+                positions.push(`${statement.pos}-${ts.isExpressionStatement(statement) ? statement.expression.kind : statement.kind}`);
+                if (statement.pos === -1) {
+                    const transformed = transformDeclaration(typeChecker, statement);
+                    if (transformed) newNodes.push(transformed);
                 }
             }
             const newNodesOnly = printAsTS(printer, instance.factory.createNodeArray(newNodes), parsed);
             const newNodesSource = instance.createSourceFile(sourceFile.fileName, sourceFile.text + "\n" + newNodesOnly, sourceFile.languageVersion, true, ts.ScriptKind.TS);
             if (localDiagnostic) newNodesSource.parseDiagnostics.push(localDiagnostic as ts.DiagnosticWithLocation);
-            ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, "" + diagnostics.length + "\n\n" + newNodesSource.text);
+            ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, positions.join(", ") + "\n\n" + newNodesSource.text);
             newSourceFiles.set(sourceFile.fileName, newNodesSource); 
         }
 
