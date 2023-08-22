@@ -80,18 +80,21 @@ export class MacroTransformer {
         this.config = config || {};
     }
 
-    run(node: ts.SourceFile): ts.Node {
+    run(node: ts.SourceFile): ts.SourceFile {
         if (node.isDeclarationFile) return node;
         const statements: Array<ts.Statement> = [];
         this.addEscapeScope();
         for (const stmt of node.statements) {
 
-            if (!this.config.keepImports && ts.isImportDeclaration(stmt) && stmt.importClause && !stmt.importClause.isTypeOnly) {
+            if (ts.isImportDeclaration(stmt) && stmt.importClause && !stmt.importClause.isTypeOnly) {
                 if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
                     const filtered = stmt.importClause.namedBindings.elements.filter(el => {
-                        if (el.isTypeOnly) return false;
+                        if (el.isTypeOnly) return this.config.keepImports;
                         const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(el.name));
-                        return !sym || (!this.macros.has(sym) && !nativeMacros[sym.name] && !hasBit(sym.flags, ts.SymbolFlags.Interface) && !hasBit(sym.flags, ts.SymbolFlags.ConstEnum) && !hasBit(sym.flags, ts.SymbolFlags.TypeAlias));
+                        if (!sym) return true;
+                        if (this.macros.has(sym) || nativeMacros[sym.name]) return false;
+                        else if (hasBit(sym.flags, ts.SymbolFlags.Interface) || hasBit(sym.flags, ts.SymbolFlags.ConstEnum) || hasBit(sym.flags, ts.SymbolFlags.TypeAlias)) return this.config.keepImports;
+                        else return true;
                     });
                     if (filtered.length) statements.push(ts.factory.updateImportDeclaration(stmt, stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
                     continue;

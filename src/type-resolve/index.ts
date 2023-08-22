@@ -62,7 +62,6 @@ export default function (
                 diagnostics.push(localDiagnostic);
             }
         }
-        if (!instance.isSourceFile(parsed)) continue;
         if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printAsTS(printer, parsed.statements, parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
         else {
             const newNodes = [];
