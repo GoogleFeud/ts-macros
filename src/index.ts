@@ -6,7 +6,11 @@ import { MacroExpand, MacroTransformer } from "./transformer";
 export const macros = new Map();
 
 export interface TsMacrosConfig {
-    noComptime?: boolean
+    noComptime?: boolean,
+    watchMode?: boolean,
+    keepImports?: boolean,
+    isTSC?: boolean,
+    logFileData?: boolean
 }
 
 export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
@@ -165,19 +169,21 @@ export declare function $$kindof(ast: unknown) : number;
  * Creates a const variable with the provided name and initializer. This is not hygienic, use it when you want to create a variable and know it's name.
  * @param varname The name of the variable
  * @param initializer Any expression
+ * @param let Use let instead of const when defining the variable
+ * @param exportDecl Exports the variable
  * 
  * @example
  * ```ts --Usage
  * import { $$const } from "ts-macros";
  * 
- * $$const!("abc", 123);
+ * $$define!("abc", 123);
  * ```
  * ```js --Result
  * const abc = 123;
  * ```
  * @category Built-in Macros
  */
-export declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
+export declare function $$define(varname: string, initializer: unknown, let?: boolean, exportDecl?: boolean) : number;
 
 /**
  * If this macro is called in a repetition, it's going to return the number of the current iteration. If it's called outside, it's going to return `-1`.
@@ -457,6 +463,7 @@ export interface RawContext {
     transformer: MacroTransformer,
     checker: ts.TypeChecker,
     thisMacro: MacroExpand,
+    require: typeof require,
     error: (node: ts.Node, message: string) => void
 }
 
@@ -469,7 +476,7 @@ export interface RawContext {
  * match the macro's, except in AST form. The only exception to this are rest operators, those get
  * turned into an array of expressions.
  * 
- * The first parameter of the function is a [[RawContext]], which gives you access to the everything
+ * The first parameter of the function is a [[RawContext]], which gives you access to everything
  * exported by typescript so you don't have to import it.
  * 
  * Use the high-level tools provided by ts-macros if possible - they're easier to read and understand,
@@ -533,7 +540,7 @@ export declare function $$getStore<T>(key: string) : T;
 /**
  * Separates the passed expression to individual nodes, and expands to an array literal with the nodes inside of it.
  * 
- * **Doesn't work on expressions which can contain statements, such as function expressions.**
+ * **Doesn't work on expressions that can contain statements, such as function expressions.**
  * 
  * @example
  * ```ts --Macro
@@ -668,7 +675,8 @@ export const enum LabelKinds {
     ForIter,
     For,
     While,
-    Block
+    Block,
+    VariableDeclaration
 }
 
 export interface IfLabel {
@@ -721,6 +729,13 @@ export interface WhileLabel {
 export interface BlockLabel {
     kind: LabelKinds.Block,
     statement: any
+}
+
+export interface VariableDeclarationLabel {
+    kind: LabelKinds.VariableDeclaration,
+    declarationType: "let"|"const"|"var",
+    identifiers: any[],
+    initializers: any[]
 }
 
 export type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;

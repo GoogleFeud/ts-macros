@@ -6,15 +6,8 @@
     "declaration": true,
     "outDir": "./dist",
     "rootDir": "./src",
+    "skipLibCheck": true,
     "strict": true
-  },
-  "tsdocsOptions": {
-    "entryPoints": ["./src/index.ts"],
-    "name": "ts-macros",
-    "customPages": "./docs",
-    "style": {
-      "dontCollapseCategories": true
-    }
   },
   "exclude": ["./tests", "./test", "./dist", "./node_modules", "./playground"]
 }
