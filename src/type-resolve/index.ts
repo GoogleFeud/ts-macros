@@ -29,10 +29,10 @@ export function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.
 export default function (
     program: ts.Program, 
     host: ts.CompilerHost | undefined, 
-    options: PluginConfig, 
+    options: PluginConfig & TsMacrosConfig, 
     extras: ProgramTransformerExtras
 ) : ts.Program {
-    const isTSC = process.argv[1]?.endsWith("tsc");
+    const isTSC = typeof options.isTSC === "undefined" ? process.argv[1]?.endsWith("tsc") : options.isTSC;
 
     const instance = extras.ts as typeof ts;
     const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true});
@@ -69,9 +69,7 @@ export default function (
         if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printAsTS(printer, parsed.statements as unknown as ts.Statement[], parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
         else {
             const newNodes = [];
-            const positions = [];
             for (const statement of parsed.statements) {
-                positions.push(`${statement.pos}-${ts.isExpressionStatement(statement) ? statement.expression.kind : statement.kind}`);
                 if (statement.pos === -1) {
                     const transformed = transformDeclaration(typeChecker, statement);
                     if (transformed) newNodes.push(transformed);
@@ -85,7 +83,7 @@ export default function (
             const newNodesOnly = printAsTS(printer, newNodes, parsed);
             const newNodesSource = instance.createSourceFile(sourceFile.fileName, sourceFile.text + "\n" + newNodesOnly, sourceFile.languageVersion, true, ts.ScriptKind.TS);
             if (localDiagnostic) newNodesSource.parseDiagnostics.push(localDiagnostic as ts.DiagnosticWithLocation);
-            ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, positions.join(", ") + "\n\n" + macros.size + "\n\n" + newNodesSource.text);
+            if (options.logFileData) ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, macros.size + "\n\n" + newNodesSource.text);
             newSourceFiles.set(sourceFile.fileName, newNodesSource); 
         }
     }

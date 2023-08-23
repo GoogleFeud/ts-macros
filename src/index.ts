@@ -8,7 +8,9 @@ export const macros = new Map();
 export interface TsMacrosConfig {
     noComptime?: boolean,
     watchMode?: boolean,
-    keepImports?: boolean
+    keepImports?: boolean,
+    isTSC?: boolean,
+    logFileData?: boolean
 }
 
 export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFactory<ts.Node> => ctx => {
@@ -167,12 +169,14 @@ export declare function $$kindof(ast: unknown) : number;
  * Creates a const variable with the provided name and initializer. This is not hygienic, use it when you want to create a variable and know it's name.
  * @param varname The name of the variable
  * @param initializer Any expression
+ * @param let Use let instead of const when defining the variable
+ * @param exportDecl Exports the variable
  * 
  * @example
  * ```ts --Usage
  * import { $$const } from "ts-macros";
  * 
- * $$const!("abc", 123);
+ * $$define!("abc", 123);
  * ```
  * ```js --Result
  * const abc = 123;
@@ -536,7 +540,7 @@ export declare function $$getStore<T>(key: string) : T;
 /**
  * Separates the passed expression to individual nodes, and expands to an array literal with the nodes inside of it.
  * 
- * **Doesn't work on expressions which can contain statements, such as function expressions.**
+ * **Doesn't work on expressions that can contain statements, such as function expressions.**
  * 
  * @example
  * ```ts --Macro

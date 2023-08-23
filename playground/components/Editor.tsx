@@ -1,15 +1,19 @@
 
 import Editor, { useMonaco } from "@monaco-editor/react";
-import { languages } from "monaco-editor";
-import { useEffect } from "react";
+import { languages, editor } from "monaco-editor";
+import { useEffect, useState } from "react";
 import { CompilerOptions, Markers } from "../utils/transpile";
 
 
 export function TextEditor(props: {
     onChange: (code: string|undefined) => void
-    code: string|undefined
+    code: string|undefined,
+    libCode?: string
 }) {
     const monaco = useMonaco();
+    const [libModel, setLibModel] = useState<editor.ITextModel>();
+
+    const filename = "ts:ts-macros/index.d.ts";
 
     useEffect(() => {
         if (!monaco) return;
@@ -20,10 +24,14 @@ export function TextEditor(props: {
             diagnosticCodesToIgnore: [1219]
           });
 
-        const filename = "ts:ts-macros/index.d.ts";
         monaco.languages.typescript.javascriptDefaults.addExtraLib(Markers, filename);
-        monaco.editor.createModel(Markers, "typescript", monaco.Uri.parse(filename));
+        setLibModel(monaco.editor.createModel(Markers + (props.libCode || ""), "typescript", monaco.Uri.parse(filename)));
     }, [monaco]);
+
+    useEffect(() => {
+        if (!monaco) return;
+        libModel?.setValue(Markers + (props.libCode || ""));
+    }, [props.libCode]);
 
     return <Editor height="calc(90vh - 50px)" language="typescript" theme="vs-dark" value={props.code} onChange={props.onChange}>
 
