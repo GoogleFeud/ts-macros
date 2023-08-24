@@ -1,6 +1,7 @@
 import ts = require("typescript");
 import { Macro } from "../transformer";
 import { hasBit } from "../utils";
+import { UNKNOWN_TOKEN } from "./declarations";
 
 function resolveTypeName(checker: ts.TypeChecker, type: ts.Type) : string | undefined {
     if (hasBit(type.flags, ts.TypeFlags.String)) return "String";
@@ -24,7 +25,7 @@ export function generateChainingTypings(checker: ts.TypeChecker, macros: Map<ts.
         if (!macroParamNode) continue;
         const macroParamType = checker.getTypeAtLocation(macroParamNode);
         if (!macroParamType) continue;
-        const decl = ts.factory.createMethodSignature([], macro.name, macro.node.questionToken, macro.node.typeParameters, macro.node.parameters.slice(1), macro.node.type);
+        const decl = ts.factory.createMethodSignature([], macro.name, macro.node.questionToken, macro.node.typeParameters, macro.node.parameters.slice(1), macro.node.type || UNKNOWN_TOKEN);
         if (macroParamType.isUnion()) {
             for (const type of macroParamType.types) addNodeToMap(ambientDecls, type, decl);
         }

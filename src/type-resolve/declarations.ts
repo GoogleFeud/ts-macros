@@ -1,6 +1,6 @@
 import * as ts from "typescript";
 
-const UNKNOWN_TOKEN = ts.factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
+export const UNKNOWN_TOKEN = ts.factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
 
 export function transformDeclaration(checker: ts.TypeChecker, decl: ts.Statement) : ts.Statement | undefined {
     if (ts.isInterfaceDeclaration(decl) || ts.isTypeAliasDeclaration(decl) || ts.isEnumDeclaration(decl)) return decl;
