@@ -739,3 +739,5 @@ export interface VariableDeclarationLabel {
 }
 
 export type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
+
+export { MacroError } from "./utils";
