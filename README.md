@@ -6,19 +6,15 @@ ts-macros is a typescript transformer which allows you to create function macros
 
 All macro names must start with a dollar sign (`$`) and must be declared using the function keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `$macro!(params)`.
 
-![alt text](https://github.com/GoogleFeud/ts-macros/blob/dev/.github/assets/intro_gif.gif)
+![showcase](https://github.com/GoogleFeud/ts-macros/blob/dev/.github/assets/intro_gif.gif)
 
 To read more about ts-macros features, visit the [documentation](https://github.com/GoogleFeud/ts-macros/wiki), or you can check out the [interactive playground](https://googlefeud.github.io/ts-macros/) if you want to play with macros without having to set up an enviourment!
 
 **What you can do with ts-macros**:
 - Generate repetitive code
 - Generate code conditionally, based on enviourment variables or other configuration files
-- Generate types which you can use in your code
+- Generate types which you can use in your code (read more [here](https://github.com/GoogleFeud/ts-macros/wiki/Type-Resolver-Transformer))
 - Create abstractions without the runtime cost
-
-```
-npm i --save-dev ts-macros
-```
 
 ## Usage
 
