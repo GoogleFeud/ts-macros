@@ -1,9 +1,9 @@
 import { expect } from "chai";
-const { $$inlineFunc } = require("../../../../dist/index");
+const { $$inline } = require("../../../../dist/index");
 
 function $TrySilence(info: any) {
     try {
-        $$inlineFunc!(info.statement);
+        $$inline!(info.statement, []);
     } catch(err) {};
 }
 

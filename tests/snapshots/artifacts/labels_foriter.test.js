@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const chai_1 = require("chai");
 const typescript_1 = __importDefault(require("typescript"));
-const { $$inlineFunc, $$kindof, $$define } = require("../../../../dist/index");
+const { $$inline, $$kindof, $$define } = require("../../../../dist/index");
 describe("ForIter label marker", () => {
     it("To transpile to the correct statement", () => {
         const arr = [1, 3, 4, 5, 6];

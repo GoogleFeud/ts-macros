@@ -1,10 +1,10 @@
 
 import { expect } from "chai";
-const { $$inlineFunc } = require("../../../../dist/index");
+const { $$inline } = require("../../../../dist/index");
 
 
 function $ToTernary(label: any) : void {
-    label.condition ? $$inlineFunc!(label.then) : $$inlineFunc!(label.else);
+    label.condition ? $$inline!(label.then, []) : $$inline!(label.else, []);
 }
 
 describe("If label marker", () => {

@@ -91,31 +91,6 @@ export default {
             }
         }
     },
-    "$$inlineFunc": {
-        call: (args, transformer, callSite) => {
-            const argsArr = [...args].reverse();
-            const fnParam = argsArr.pop();
-            if (!fnParam) throw new MacroError(callSite, "`inlineFunc` macro expects an arrow function as the first argument.");
-            const fn = ts.visitNode(fnParam, transformer.boundVisitor);
-            if (!fn || !ts.isArrowFunction(fn)) throw new MacroError(callSite, "`inlineFunc` macro expects an arrow function as the first argument.");
-            if (!fn.parameters.length) {
-                if (ts.isBlock(fn.body)) return fn.body.statements;
-                else return fn.body;
-            }
-            const replacements = new Map();
-            for (const param of fn.parameters) {
-                if (ts.isIdentifier(param.name)) replacements.set(param.name.text, argsArr.pop());
-            }
-            const visitor = (node: ts.Node): ts.Node|undefined => {
-                if (ts.isIdentifier(node) && replacements.has(node.text)) return replacements.get(node.text);
-                return ts.visitEachChild(node, visitor, transformer.context);
-            };
-            transformer.context.suspendLexicalEnvironment();
-            const newFn = ts.visitFunctionBody(fn.body, visitor, transformer.context);
-            if (ts.isBlock(newFn)) newFn.statements;
-            return newFn;
-        }
-    },
     "$$kindof": {
         call: (args, transformer, callSite) => { 
             if (!args.length) throw new MacroError(callSite, "`kindof` macro expects a single argument.");
@@ -334,21 +309,5 @@ export default {
             }, ...macroParamsToArray(lastMacro.macro.params, [...lastMacro.args])], `$$raw in ${lastMacro.macro.name}: `);
         },
         preserveParams: true
-    },
-    "$$setStore": {
-        call: ([key, value], transformer, callSite) => {
-            if (!ts.isStringLiteral(key)) throw new MacroError(callSite, "`setStore` macro expects a string literal as the key.");
-            const lastMacro = transformer.getLastMacro();
-            if (!lastMacro) throw new MacroError(callSite, "`setStore` macro must be called inside another macro.");
-            lastMacro.store.set(key.text, value);
-        }
-    },
-    "$$getStore": {
-        call: ([key], transformer, callSite) => {
-            if (!ts.isStringLiteral(key)) throw new MacroError(callSite, "`getStore` macro expects a string literal as the key.");
-            const lastMacro = transformer.getLastMacro();
-            if (!lastMacro) throw new MacroError(callSite, "`getStore` macro must be called inside another macro.");
-            return lastMacro.store.get(key.text);
-        }
     }
 } as Record<string, NativeMacro>;
