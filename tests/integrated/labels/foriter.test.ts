@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import ts from "typescript";
-const { $$inlineFunc, $$kindof, $$define } = require("../../../../dist/index");
+const { $$inline, $$kindof, $$define } = require("../../../../dist/index");
 
 function $NormalizeFor(info: any) : void {
     if ($$kindof!(info.initializer) === ts.SyntaxKind.Identifier) {
         for (let i=0; i < info.iterator.length; i++) {
             $$define!(info.initializer, info.iterator[i]);
-            $$inlineFunc!(info.statement);
+            $$inline!(info.statement, []);
         }
     }
 }

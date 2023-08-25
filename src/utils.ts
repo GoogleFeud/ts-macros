@@ -52,29 +52,33 @@ export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
     const thirdElement = rep.elements[2];
     if (thirdElement && ts.isArrowFunction(thirdElement)) res.function = thirdElement;
 
-    if (!res.function) throw MacroError(rep, "Repetition must include arrow function.");
+    if (!res.function) throw new MacroError(rep, "Repetition must include arrow function.");
     return res as ReturnType<typeof getRepetitionParams>;
 }
 
-export function MacroError(callSite: ts.Node, msg: string) : void {
-    MacroErrorWrapper(callSite.pos, callSite.end - callSite.pos, msg, callSite.getSourceFile());
-    process.exit();
-}
-
-export function MacroErrorWrapper(start: number, length: number, msg: string, file: ts.SourceFile) : void {
-    if (!ts.sys || typeof process !== "object") throw new Error(msg);
-    console.error(ts.formatDiagnosticsWithColorAndContext([{
-        category: ts.DiagnosticCategory.Error,
-        code: 8000,
-        file,
-        start,
-        length,
-        messageText: msg
-    }], {
-        getNewLine: () => "\r\n",
-        getCurrentDirectory: ts.sys.getCurrentDirectory,
-        getCanonicalFileName: (fileName) => fileName
-    }));
+export class MacroError extends Error {
+    start: number;
+    length: number;
+    rawMsg: string;
+    constructor(callSite: ts.Node, msg: string) {
+        const start = callSite.pos;
+        const length = callSite.end - callSite.pos;
+        super(ts.formatDiagnosticsWithColorAndContext([{
+            category: ts.DiagnosticCategory.Error,
+            code: 8000,
+            file: callSite.getSourceFile(),
+            start,
+            length,
+            messageText: msg
+        }], {
+            getNewLine: () => "\r\n",
+            getCurrentDirectory: () => "unknown directory",
+            getCanonicalFileName: (fileName) => fileName
+        }));
+        this.start = start;
+        this.length = length;
+        this.rawMsg = msg;
+    }
 }
 
 export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
@@ -150,18 +154,12 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
     return code + ts.transpile((fn.body.original || fn.body).getText());
 }
 
-export function tryRun(comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {
+export function tryRun(contentStartNode: ts.Node, comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {
     try {
         return comptime(...args);
     } catch(err: unknown) {
         if (err instanceof Error) {
-            const { line, col } = (err.stack || "").match(/<anonymous>:(?<line>\d+):(?<col>\d+)/)?.groups || {};
-            const lineNum = line ? (+line - 1) : 0;
-            const colNum = col ? (+col - 1) : 0;
-            const file = ts.createSourceFile("comptime", comptime.toString(), ts.ScriptTarget.ES2020, true, ts.ScriptKind.JS);
-            const startLoc = ts.getPositionOfLineAndCharacter(file, lineNum, colNum);
-            const node = ts.getTokenAtPosition(file, startLoc);
-            MacroError(node, (additionalMessage || "") + err.message);
+            throw new MacroError(contentStartNode, (additionalMessage || "") + err.message);
         } else throw err;
     }
 }

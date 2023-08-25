@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const chai_1 = require("chai");
-const { $$inlineFunc, $$define } = require("../../../../dist/index");
+const { $$inline, $$define } = require("../../../../dist/index");
 describe("For label marker", () => {
     it("To transpile to the correct statement", () => {
         const arr = [1, 3, 4, 5, 6];

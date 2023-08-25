@@ -1,5 +1,5 @@
 
-import { genTranspile } from "../utils/transpile";
+import { transpile, transpileTStoTS } from "../utils/transpile";
 import { useEffect, useState } from "react";
 import { TextEditor } from "../components/Editor";
 import { Runnable } from "../components/Runnable";
@@ -9,6 +9,7 @@ import styles from "../css/App.module.css";
 import fs from "fs";
 import path from "path";
 import ts from "typescript";
+import { MacroError } from "../../dist";
 
 const SetupCodes = [
     `function $contains<T>(value: T, possible: Array<T>) {
@@ -77,8 +78,7 @@ while (arr.length !== 0) {
 function $renameClass(newName: string) : EmptyDecorator {
     return $$raw!((ctx, newNameNode) => {
        const target = ctx.thisMacro.target;
-       return ctx.factory.updateClassDeclaration(
-            target,
+       return ctx.factory.createClassDeclaration(
             target.modifiers?.filter(m => m.kind !== ctx.ts.SyntaxKind.Decorator),
             ctx.factory.createIdentifier(newNameNode.text),
             target.typeParameters,
@@ -108,21 +108,32 @@ const SetupCode = `
 ${SetupCodes[Math.floor(Math.random() * SetupCodes.length)]}
 `;
 
-function Main({transpile}: { transpile: ReturnType<typeof genTranspile>}) {
-    const [code, setCode] = useState<string|undefined>(SetupCode);
-    const [compiledCode, setCompiled] = useState<string>("");
+function Main({lib}: { lib: ts.SourceFile }) {
+    const [code, setCode] = useState<string|undefined>();
+    const [errors, setErrors] = useState<MacroError[]>([]);
+    const [libCode, setLibCode] = useState<string|undefined>();
+    const [compiledCode, setCompiled] = useState<string>();
+
+    const transpileCode = (source: string) => {
+        setCode(source);
+        const {code, error} = transpile(lib, source);
+        setCompiled(code);
+        const {code: libCode, error: libError} = transpileTStoTS(lib, source);
+        setLibCode(libCode);
+        const errs = [];
+        if (error) errs.push(error);
+        if (libError) errs.push(libError);
+        setErrors(errs);
+    } 
 
     useEffect(() => {
         const params = Object.fromEntries(new URLSearchParams(window.location.search).entries());
         if (params.code) {
             const normalized = decompressFromEncodedURIComponent(params.code);
             if (!normalized) return;
-            setCode(normalized);
-            const {code, error} = transpile(normalized);
-            setCompiled(code ? code : "" + error);
+            transpileCode(normalized);
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            setCompiled(transpile(SetupCode).code!);
+            transpileCode(SetupCode);
         }
     }, []);
 
@@ -147,12 +158,10 @@ function Main({transpile}: { transpile: ReturnType<typeof genTranspile>}) {
                 </a>
             </header>
             <SplitPane split="vertical" defaultSize={"50%"} primary="first">
-                <TextEditor code={code} onChange={(code) => {
-                    setCode(code);
-                    const {code: transpiled, error} = transpile(code || "");
-                    setCompiled(transpiled ? transpiled : "" + error);
+                <TextEditor code={code} libCode={libCode} errors={errors} onChange={(code) => {
+                    transpileCode(code || "");
                 }} />
-                <Runnable code={compiledCode} />
+                <Runnable code={compiledCode || ""} />
             </SplitPane>
             <footer className={styles.footer}>
                 <p>Made with ❤️ by <a href="https://github.com/GoogleFeud">GoogleFeud</a>.</p>
@@ -162,8 +171,8 @@ function Main({transpile}: { transpile: ReturnType<typeof genTranspile>}) {
 }
 
 export default (props: { lib: string }) => {
-    const transpile = genTranspile(props.lib);
-    return <Main transpile={transpile} />;
+    const LibFile = ts.createSourceFile("lib.d.ts", props.lib, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+    return <Main lib={LibFile} />;
 };
 
 export async function getStaticProps() {

@@ -1,6 +1,6 @@
 
 import { expect } from "chai";
-const { $$inlineFunc, $$define } = require("../../../../dist/index");
+const { $$inline, $$define } = require("../../../../dist/index");
 
 
 function $ForToWhile(info: any) {
@@ -11,7 +11,7 @@ function $ForToWhile(info: any) {
     }
     else info.initializer.expression;
     while(info.condition) {
-        $$inlineFunc!(info.statement);
+        $$inline!(info.statement, []);
         info.increment;
     }
 }

@@ -1,11 +1,9 @@
 {
   "name": "ts-macros",
-  "version": "2.3.1",
-  "description": "",
+  "version": "2.4.0",
+  "description": "A typescript transformer / plugin which allows you to write macros for typescript!",
   "main": "dist/index.js",
   "devDependencies": {
-    "@ts-docs/default-docs-structure": "^0.4.4",
-    "@ts-docs/ts-docs": "^0.4.4",
     "@types/chai": "^4.3.4",
     "@types/mocha": "^9.1.1",
     "@types/node": "^16.18.10",
@@ -28,8 +26,7 @@
     "test": "tsc && cd ./tests && tspc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
     "manual": "tsc && cd ./test && tspc",
-    "prepublishOnly": "tsc",
-    "docs": "npx ts-docs"
+    "prepublishOnly": "tsc"
   },
   "repository": {
     "type": "git",

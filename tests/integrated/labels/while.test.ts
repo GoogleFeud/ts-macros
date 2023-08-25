@@ -1,10 +1,10 @@
 import { expect } from "chai";
-const { $$inlineFunc } = require("../../../../dist/index");
+const { $$inline } = require("../../../../dist/index");
 
 
 function $DeWhile(info: any) {
     if (info.condition) {
-        $$inlineFunc!(info.statement);
+        $$inline!(info.statement, []);
     }
 }
 
@@ -12,6 +12,7 @@ describe("While label marker", () => {
 
     it("To transpile to the correct statement", () => {
         let val: string = "123";
+        $DeWhile:
         while (val === "123") {
             val = "124";
         }
