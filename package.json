@@ -1,7 +1,7 @@
 {
   "name": "ts-macros",
   "version": "2.4.0",
-  "description": "",
+  "description": "A typescript transformer / plugin which allows you to write macros for typescript!",
   "main": "dist/index.js",
   "devDependencies": {
     "@types/chai": "^4.3.4",
