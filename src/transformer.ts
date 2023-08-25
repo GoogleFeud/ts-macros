@@ -339,7 +339,6 @@ export class MacroTransformer {
                 if (store.has(node.text)) return store.get(node.text);
                 const paramMacro = this.getMacroParam(node.text, macro, args);
                 if (!paramMacro) return node;
-                if (ts.isStringLiteral(paramMacro) && (ts.isClassDeclaration(node.parent) || ts.isEnumDeclaration(node.parent) || ts.isFunctionDeclaration(node.parent))) return ts.factory.createIdentifier(paramMacro.text);
                 if (ts.isIdentifier(paramMacro)) return paramMacro;
                 return ts.visitNode(paramMacro, this.boundVisitor);
             }

@@ -22,6 +22,24 @@ export function transformDeclaration(checker: ts.TypeChecker, decl: ts.Statement
         })
         );
     }
+    else if (ts.isExpressionStatement(decl) && ts.isClassExpression(decl.expression)) {
+        return ts.factory.createClassDeclaration([
+            ...(decl.expression.modifiers || []),
+            ts.factory.createToken(ts.SyntaxKind.DeclareKeyword)
+        ],
+        decl.expression.name,
+        decl.expression.typeParameters,
+        decl.expression.heritageClauses,
+        decl.expression.members.map(m => {
+            if (ts.isMethodDeclaration(m)) return ts.factory.createMethodDeclaration(m.modifiers, m.asteriskToken, m.name, m.questionToken, m.typeParameters, m.parameters, m.type || UNKNOWN_TOKEN, undefined);
+            else if (ts.isPropertyDeclaration(m)) return ts.factory.createPropertyDeclaration(m.modifiers, m.name, m.questionToken || m.exclamationToken, m.type || UNKNOWN_TOKEN, undefined);
+            else if (ts.isGetAccessorDeclaration(m)) return ts.factory.createGetAccessorDeclaration(m.modifiers, m.name, m.parameters, m.type || UNKNOWN_TOKEN, undefined);
+            else if (ts.isSetAccessorDeclaration(m)) return ts.factory.createSetAccessorDeclaration(m.modifiers, m.name, m.parameters, undefined);
+            else if (ts.isConstructorDeclaration(m)) return ts.factory.createConstructorDeclaration(m.modifiers, m.parameters, undefined);
+            else return m;
+        })
+        );
+    }
     else if (ts.isVariableStatement(decl)) {
         const decls = [];
         for (const declaration of decl.declarationList.declarations) {
