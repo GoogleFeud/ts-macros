@@ -1,6 +1,6 @@
 
 import ts from "typescript";
-import TsMacros, { macros } from "../../dist";
+import TsMacros, { macros, MacroError } from "../../dist";
 import TypeResolverProgram from "../../dist/type-resolve";
 
 export let Markers = `
@@ -98,7 +98,7 @@ export const CompilerOptions: ts.CompilerOptions = {
     experimentalDecorators: true
 };
 
-export function transpile(LibFile: ts.SourceFile, str: string): { code?: string, error?: unknown } {
+export function transpile(LibFile: ts.SourceFile, str: string): { code?: string, error?: MacroError } {
     const SourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
     let output = "";
     const CompilerHost: ts.CompilerHost = {
@@ -118,18 +118,18 @@ export function transpile(LibFile: ts.SourceFile, str: string): { code?: string,
         getDirectories: () => []
     };
 
+    let error;
     const program = ts.createProgram(["module.ts"], CompilerOptions, CompilerHost);
     try {
         macros.clear();
         program.emit(undefined, undefined, undefined, undefined, { before: [TsMacros(program) as unknown as ts.TransformerFactory<ts.SourceFile>] });
     } catch (err: unknown) {
-        console.log(err);
-        return { error: err };
+        if (err instanceof MacroError) error = err
     }
-    return { code: output };
+    return { code: output, error };
 };
 
-export function transpileTStoTS(LibFile: ts.SourceFile, str: string) : { code?: string, error?: unknown } {
+export function transpileTStoTS(LibFile: ts.SourceFile, str: string) : { code?: string, error?: MacroError } {
     const SourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
     const CompilerHost: ts.CompilerHost = {
         getSourceFile: (fileName) => {
@@ -148,8 +148,13 @@ export function transpileTStoTS(LibFile: ts.SourceFile, str: string) : { code?: 
         getDirectories: () => []
     };
     const program = ts.createProgram(["module.ts"], CompilerOptions, CompilerHost);
-    const newProgram = TypeResolverProgram(program, CompilerHost, {isTSC: false}, { ts });
-    return {
-        code: newProgram.getSourceFile("module.ts")?.text.slice(str.length)
+    let code, error;
+    try {
+        const newProgram = TypeResolverProgram(program, CompilerHost, {isTSC: false}, { ts });
+        code = newProgram.getSourceFile("module.ts")?.text.slice(str.length);
+    } catch(err) {
+        if (err instanceof MacroError) error = err;
+        code = program.getSourceFile("module.ts")?.text;
     }
+    return { code, error };
 }

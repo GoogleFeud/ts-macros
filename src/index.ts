@@ -73,43 +73,6 @@ export declare function $$readFile(path: string, parseJSON?: false) : string;
 export declare function $$readFile<T = Record<string, unknown>>(path: string, parseJSON?: boolean) : T;
 
 /**
- * Inlines the provided arrow function, replacing any argument occurrences with the corresponding values inside the `argReplacements` array.
- * @param func The arrow function literal to inline
- * @param params Any expression to replace the function's arguments
- * 
- * @example
- * ```ts --Macro
- * import { $$inlineFunc } from "ts-macros";
- * import * as ts from "typescript"
- * 
- * function $map(arr: Save<Array<number>>, cb: Function) : Array<number> {
- *     const res = [];
- *     for (let i=0; i < arr.length; i++) {
- *        res.push($$inlineFunc!(cb, arr[i]));
- *     }
- *     return res;
- * }
- * ```
- * ```ts --Call
- * console.log($map!([1, 2, 3, 4, 5], (num: number) => num * 2));
- * ```
- * ```js --Result
- * console.log((() => {
- *     var arr = [1, 2, 3, 4, 5];
- *     const res = [];
- *     for (let i = 0; i < arr.length; i++) {
- *         res.push(arr[i] * 2);
- *     }
- *     return res;
- * })());
- * ```
- * @category Built-in Macros
- * @deprecated
- */
-// eslint-disable-next-line @typescript-eslint/ban-types
-export declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
-
-/**
  * Inlines the provided function, replacing any argument occurances with the corresponding values inside the `params` array, and executes the code. 
  * 
  * If the function consists of a single expression, the call to `$$inline` expands to that expression, otherwise it expands to an IIFE. Passing any value
@@ -519,25 +482,6 @@ export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Nod
 export declare function $$text(exp: any) : string;
 
 /**
- * Stores the expression `value` in `key`. Storage is **not** persistent,
- * it won't stay across macro calls.
- * 
- * @category Built-in Macros
- * @deprecated
- */
-export declare function $$setStore(key: string, value: any) : void;
-
-/**
- * Expands to the stored expression at `key`. If a key hasn't been found,
- * it will expand to `null`.
- * 
- * @category Built-in Macros
- * @deprecated
- */
-export declare function $$getStore<T>(key: string) : T;
-
-
-/**
  * Separates the passed expression to individual nodes, and expands to an array literal with the nodes inside of it.
  * 
  * **Doesn't work on expressions that can contain statements, such as function expressions.**
@@ -739,3 +683,5 @@ export interface VariableDeclarationLabel {
 }
 
 export type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
+
+export { MacroError } from "./utils";

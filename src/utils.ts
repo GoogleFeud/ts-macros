@@ -72,7 +72,7 @@ export class MacroError extends Error {
             messageText: msg
         }], {
             getNewLine: () => "\r\n",
-            getCurrentDirectory: ts.sys.getCurrentDirectory,
+            getCurrentDirectory: () => "unknown directory",
             getCanonicalFileName: (fileName) => fileName
         }));
         this.start = start;
