@@ -6,11 +6,10 @@ import TypeResolverProgram from "../../dist/type-resolve";
 export let Markers = `
 declare function $$loadEnv(path?: string) : void;
 declare function $$readFile(path: string, parseJSON?: false) : string;
-declare function $$inlineFunc<R = any>(func: Function, ...params: Array<unknown>) : R;
 declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>, doNotCall: any) : () => ReturnType<F>;
 declare function $$inline<F extends (...args: any) => any>(func: F, params: Parameters<F>) : ReturnType<F>;
 declare function $$kindof(ast: unknown) : number;
-declare function $$define(varname: string, initializer: unknown, let?: boolean) : number;
+declare function $$define(varname: string, initializer: unknown, let?: boolean, exportDecl?: boolean) : void;
 declare function $$i() : number;
 declare function $$length(arr: Array<any>|string) : number;
 declare function $$ident(str: string) : any;
@@ -36,8 +35,6 @@ declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.
 declare function $$text(exp: any) : string;
 declare function $$decompose(exp: any) : any[];
 declare function $$map<T>(exp: T, mapper: (value: any, parent: number) => any) : T;
-declare function $$setStore(key: string, value: any) : void;
-declare function $$getStore<T>(key: string) : T;
 type Accumulator = number & { __marker?: "Accumulator" };
 type Save<T> = T & { __marker?: "Save" };
 type EmptyDecorator = (...props: any) => void;
@@ -84,7 +81,7 @@ interface BlockLabel {
 type Label = IfLabel | ForIterLabel | ForLabel | WhileLabel | BlockLabel;
 `;
 
-Markers += "enum SyntaxKind {\n";
+Markers += "const enum SyntaxKind {\n";
 for (const kind in Object.keys(ts.SyntaxKind)) {
     if (ts.SyntaxKind[kind]) Markers += `${ts.SyntaxKind[kind]} = ${kind},\n`;
 }
@@ -103,8 +100,9 @@ export function transpile(LibFile: ts.SourceFile, str: string): { code?: string,
     let output = "";
     const CompilerHost: ts.CompilerHost = {
         getSourceFile: (fileName) => {
-            if (fileName.endsWith(".d.ts")) return LibFile;
+            if (fileName.endsWith("lib.d.ts")) return LibFile;
             else if (fileName === "module.ts") return SourceFile;
+            else return;
         },
         getDefaultLibFileName: () => "lib.d.ts",
         useCaseSensitiveFileNames: () => false,

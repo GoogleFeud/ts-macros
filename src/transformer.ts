@@ -336,7 +336,11 @@ export class MacroTransformer {
 
             // Detects use of a macro parameter and replaces it with a literal
             else if (ts.isIdentifier(node)) {
-                if (store.has(node.text)) return store.get(node.text);
+                if (store.has(node.text)) {
+                    const value = store.get(node.text) as ts.Expression;
+                    if (ts.isStringLiteral(value) && (ts.isDeclaration(node.parent) || ts.isPropertyAccessExpression(node.parent))) return ts.factory.createIdentifier(node.text);
+                    return value;
+                }
                 const paramMacro = this.getMacroParam(node.text, macro, args);
                 if (!paramMacro) return node;
                 if (ts.isIdentifier(paramMacro)) return paramMacro;
