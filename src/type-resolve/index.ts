@@ -66,7 +66,7 @@ export default function (
                 diagnostics.push(localDiagnostic);
             }
         }
-        if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printAsTS(printer, parsed.statements as unknown as ts.Statement[], parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
+        if (isTSC) newSourceFiles.set(sourceFile.fileName, instance.createSourceFile(sourceFile.fileName, printer.printFile(parsed), sourceFile.languageVersion, true, ts.ScriptKind.TS));
         else {
             const newNodes = [];
             for (const statement of parsed.statements) {

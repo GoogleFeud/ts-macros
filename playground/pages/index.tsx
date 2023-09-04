@@ -1,5 +1,5 @@
 
-import { transpile, transpileTStoTS } from "../utils/transpile";
+import { Markers, transpile, transpileTStoTS } from "../utils/transpile";
 import { useEffect, useState } from "react";
 import { TextEditor } from "../components/Editor";
 import { Runnable } from "../components/Runnable";
@@ -171,7 +171,7 @@ function Main({lib}: { lib: ts.SourceFile }) {
 }
 
 export default (props: { lib: string }) => {
-    const LibFile = ts.createSourceFile("lib.d.ts", props.lib, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+    const LibFile = ts.createSourceFile("lib.d.ts", Markers + props.lib, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
     return <Main lib={LibFile} />;
 };
 
