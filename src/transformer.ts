@@ -341,7 +341,6 @@ export class MacroTransformer {
                     if (ts.isStringLiteral(value) && (ts.isDeclaration(node.parent) || ts.isPropertyAccessExpression(node.parent))) return ts.factory.createIdentifier(node.text);
                     return value;
                 }
-                if (ts.isDeclaration(node.parent) || ts.isPropertyAccessExpression(node.parent)) return node;
                 const paramMacro = this.getMacroParam(node.text, macro, args);
                 if (!paramMacro) return node;
                 if (ts.isIdentifier(paramMacro)) return paramMacro;
