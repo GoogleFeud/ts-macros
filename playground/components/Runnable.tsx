@@ -7,7 +7,7 @@ export function Runnable(props: { code: string }) {
     const [evalRes, setEvalRes] = useState<string>();
     return <SplitPane split="horizontal" defaultSize={"75%"} primary="first">
         <div style={{width: "100%"}}>
-            <Editor height={"80vh"} language="javascript" theme="vs-dark" value={props.code} options={{readOnly: true, formatOnPaste: true, formatOnType: true}}/>;
+            <Editor height={"80vh"} language="javascript" theme="vs-dark" value={props.code} options={{readOnly: true}}/>;
         </div>
         <div className={styles.runSection}>
             <button className={styles.button} onClick={() => {

@@ -9,7 +9,6 @@ export interface TsMacrosConfig {
     noComptime?: boolean,
     watchMode?: boolean,
     keepImports?: boolean,
-    isTSC?: boolean,
     logFileData?: boolean
 }
 

@@ -6,7 +6,7 @@ import { transformDeclaration } from "./declarations";
 import { MacroError } from "../utils";
 import { generateChainingTypings } from "./chainingTypes";
 
-export function printAsTS(printer: ts.Printer, statements: ts.Statement[], source: ts.SourceFile) : string {
+function printAsTS(printer: ts.Printer, statements: ts.Statement[], source: ts.SourceFile) : string {
     let fileText = "";
     for (const fileItem of statements) {
         fileText += printer.printNode(ts.EmitHint.Unspecified, fileItem, source);
@@ -14,7 +14,7 @@ export function printAsTS(printer: ts.Printer, statements: ts.Statement[], sourc
     return fileText;
 }
 
-export function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.CompilerOptions | undefined, newSourceFiles: Map<string, ts.SourceFile>, instance: typeof ts) : ts.CompilerHost {
+function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.CompilerOptions | undefined, newSourceFiles: Map<string, ts.SourceFile>, instance: typeof ts) : ts.CompilerHost {
     const compilerHost = host || instance.createCompilerHost(config || instance.getDefaultCompilerOptions(), true);
     const ogGetSourceFile = compilerHost.getSourceFile;
     return {
@@ -26,13 +26,45 @@ export function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.
     };
 }
 
+export function extractGeneratedTypes(typeChecker: ts.TypeChecker, sourceFile: ts.SourceFile, config?: TsMacrosConfig) : {
+    typeNodes: ts.Statement[],
+    chainTypes: ts.Statement[],
+    error?: MacroError,
+    print: (statements: ts.Statement[]) => string
+} {
+    const transformer = new MacroTransformer(ts.nullTransformationContext, typeChecker, macros, config);
+    let parsed: ts.SourceFile, error;
+    try {
+        parsed = transformer.run(sourceFile);
+    } catch(err) {
+        parsed = sourceFile;
+        if (err instanceof MacroError) error = err;
+    }
+    const newNodes = [];
+    for (const statement of parsed.statements) {
+        if (statement.pos === -1) {
+            const transformed = transformDeclaration(typeChecker, statement);
+            if (transformed) newNodes.push(transformed);
+        }
+    }
+
+    const printer = ts.createPrinter();
+
+    return {
+        error,
+        typeNodes: newNodes,
+        chainTypes: generateChainingTypings(typeChecker, macros),
+        print: (statements: ts.Statement[]) => printAsTS(printer, statements, parsed)
+    };
+}
+
 export default function (
     program: ts.Program, 
     host: ts.CompilerHost | undefined, 
     options: PluginConfig & TsMacrosConfig, 
     extras: ProgramTransformerExtras
 ) : ts.Program {
-    const isTSC = typeof options.isTSC === "undefined" ? process.argv[1]?.endsWith("tsc") : options.isTSC;
+    const isTSC = process.argv[1]?.endsWith("tsc");
 
     const instance = extras.ts as typeof ts;
     const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true});
@@ -83,7 +115,7 @@ export default function (
             const newNodesOnly = printAsTS(printer, newNodes, parsed);
             const newNodesSource = instance.createSourceFile(sourceFile.fileName, sourceFile.text + "\n" + newNodesOnly, sourceFile.languageVersion, true, ts.ScriptKind.TS);
             if (localDiagnostic) newNodesSource.parseDiagnostics.push(localDiagnostic as ts.DiagnosticWithLocation);
-            if (options.logFileData) ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, macros.size + "\n\n" + newNodesSource.text);
+            if (options.logFileData) ts.sys.writeFile(`${sourceFile.fileName}_log.txt`, `Generated at: ${new Date()}\nMacros: ${macros.size}\nNew node kinds: ${newNodes.map(n => ts.SyntaxKind[n.kind]).join(", ")}\nFull source:\n\n${newNodesSource.text}`);
             newSourceFiles.set(sourceFile.fileName, newNodesSource); 
         }
     }

@@ -1,13 +1,11 @@
 
-import { Markers, transpile, transpileTStoTS } from "../utils/transpile";
+import { GeneratedTypes, transpile } from "../utils/transpile";
 import { useEffect, useState } from "react";
 import { TextEditor } from "../components/Editor";
 import { Runnable } from "../components/Runnable";
 import SplitPane from "react-split-pane";
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 import styles from "../css/App.module.css";
-import fs from "fs";
-import path from "path";
 import ts from "typescript";
 import { MacroError } from "../../dist";
 
@@ -108,22 +106,18 @@ const SetupCode = `
 ${SetupCodes[Math.floor(Math.random() * SetupCodes.length)]}
 `;
 
-function Main({lib}: { lib: ts.SourceFile }) {
+function Main() {
     const [code, setCode] = useState<string|undefined>();
     const [errors, setErrors] = useState<MacroError[]>([]);
-    const [libCode, setLibCode] = useState<string|undefined>();
+    const [libCode, setLibCode] = useState<GeneratedTypes>();
     const [compiledCode, setCompiled] = useState<string>();
 
     const transpileCode = (source: string) => {
         setCode(source);
-        const {code, error} = transpile(lib, source);
-        setCompiled(code);
-        const {code: libCode, error: libError} = transpileTStoTS(lib, source);
-        setLibCode(libCode);
-        const errs = [];
-        if (error) errs.push(error);
-        if (libError) errs.push(libError);
-        setErrors(errs);
+        const {generatedTypes, errors, transpiledSourceCode} = transpile(source);
+        setCompiled(transpiledSourceCode);
+        setLibCode(generatedTypes);
+        setErrors(errors);
     } 
 
     useEffect(() => {
@@ -170,15 +164,6 @@ function Main({lib}: { lib: ts.SourceFile }) {
     );
 }
 
-export default (props: { lib: string }) => {
-    const LibFile = ts.createSourceFile("lib.d.ts", Markers + props.lib, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
-    return <Main lib={LibFile} />;
+export default () => {
+    return <Main />;
 };
-
-export async function getStaticProps() {
-    return {
-        props: {
-            lib: fs.readFileSync(path.join(process.cwd(), "./node_modules/typescript/lib/lib.es5.d.ts"), "utf-8")
-        }
-    };
-}
