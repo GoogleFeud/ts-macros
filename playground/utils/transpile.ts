@@ -1,6 +1,6 @@
 
 import ts from "typescript";
-import TsMacros, { macros, MacroError } from "../../dist";
+import { macros, MacroError } from "../../dist";
 import { extractGeneratedTypes } from "../../dist/type-resolve";
 import { MacroTransformer } from "../../dist/transformer";
 
@@ -104,8 +104,6 @@ export interface GeneratedTypes {
     chainTypes: string
 }
 
-const printer = ts.createPrinter({preserveSourceNewlines: true});
-
 export function transpile(str: string) : {
     generatedTypes: GeneratedTypes,
     errors: MacroError[],
@@ -118,9 +116,8 @@ export function transpile(str: string) : {
 
     const CompilerHost: ts.CompilerHost = {
         getSourceFile: (fileName) => {
-            if (fileName.endsWith("lib.d.ts")) return FinalMarkersFile;
-            else if (fileName === "module.ts") return sourceFile;
-            else return;
+            if (fileName === "module.ts") return sourceFile;
+            else return FinalMarkersFile;
         },
         getDefaultLibFileName: () => "lib.d.ts",
         useCaseSensitiveFileNames: () => false,
