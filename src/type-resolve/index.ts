@@ -26,22 +26,13 @@ function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.Compile
     };
 }
 
-export function extractGeneratedTypes(typeChecker: ts.TypeChecker, sourceFile: ts.SourceFile, config?: TsMacrosConfig) : {
+export function extractGeneratedTypes(typeChecker: ts.TypeChecker, parsedSourceFile: ts.SourceFile) : {
     typeNodes: ts.Statement[],
     chainTypes: ts.Statement[],
-    error?: MacroError,
     print: (statements: ts.Statement[]) => string
 } {
-    const transformer = new MacroTransformer(ts.nullTransformationContext, typeChecker, macros, config);
-    let parsed: ts.SourceFile, error;
-    try {
-        parsed = transformer.run(sourceFile);
-    } catch(err) {
-        parsed = sourceFile;
-        if (err instanceof MacroError) error = err;
-    }
     const newNodes = [];
-    for (const statement of parsed.statements) {
+    for (const statement of parsedSourceFile.statements) {
         if (statement.pos === -1) {
             const transformed = transformDeclaration(typeChecker, statement);
             if (transformed) newNodes.push(transformed);
@@ -51,10 +42,9 @@ export function extractGeneratedTypes(typeChecker: ts.TypeChecker, sourceFile: t
     const printer = ts.createPrinter();
 
     return {
-        error,
         typeNodes: newNodes,
         chainTypes: generateChainingTypings(typeChecker, macros),
-        print: (statements: ts.Statement[]) => printAsTS(printer, statements, parsed)
+        print: (statements: ts.Statement[]) => printAsTS(printer, statements, parsedSourceFile)
     };
 }
 

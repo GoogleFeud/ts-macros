@@ -2,6 +2,7 @@
 import ts from "typescript";
 import TsMacros, { macros, MacroError } from "../../dist";
 import { extractGeneratedTypes } from "../../dist/type-resolve";
+import { MacroTransformer } from "../../dist/transformer";
 
 export let Markers = `
 declare function $$loadEnv(path?: string) : void;
@@ -103,6 +104,8 @@ export interface GeneratedTypes {
     chainTypes: string
 }
 
+const printer = ts.createPrinter({preserveSourceNewlines: true});
+
 export function transpile(str: string) : {
     generatedTypes: GeneratedTypes,
     errors: MacroError[],
@@ -111,7 +114,6 @@ export function transpile(str: string) : {
     macros.clear();
 
     const sourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
-    let output;
     const errors = [];
 
     const CompilerHost: ts.CompilerHost = {
@@ -122,8 +124,8 @@ export function transpile(str: string) : {
         },
         getDefaultLibFileName: () => "lib.d.ts",
         useCaseSensitiveFileNames: () => false,
-        writeFile: (_name, text) => output = text,
         getCanonicalFileName: fileName => fileName,
+        writeFile: () => {},
         getCurrentDirectory: () => "",
         getNewLine: () => "\n",
         fileExists: () => true,
@@ -133,20 +135,28 @@ export function transpile(str: string) : {
     };
 
     const program = ts.createProgram(["module.ts"], CompilerOptions, CompilerHost);
-    const transformerFactory = TsMacros(program);
+
+    let genResult, transpiledSourceCode;
     try {
-        program.emit(undefined, undefined, undefined, undefined, { before: [transformerFactory as unknown as ts.TransformerFactory<ts.SourceFile>] });
+        program.emit(undefined, (_, text) => transpiledSourceCode = text, undefined, undefined, {
+            before: [(ctx: ts.TransformationContext) => {
+                const transformer = new MacroTransformer(ctx, program.getTypeChecker(), macros);
+                return (node: ts.SourceFile) => {
+                    const modified = transformer.run(node);
+                    genResult = extractGeneratedTypes(program.getTypeChecker(), modified);
+                    return modified;
+                }
+            }]
+        });
     } catch (err: unknown) {
         if (err instanceof MacroError) errors.push(err);
     }
 
-    const genResult = extractGeneratedTypes(program.getTypeChecker(), sourceFile);
-    if (genResult.error) errors.push(genResult.error);
     return {
-        transpiledSourceCode: output,
+        transpiledSourceCode,
         generatedTypes: {
-            fromMacros: genResult.print(genResult.typeNodes),
-            chainTypes: genResult.print(genResult.chainTypes)
+            fromMacros: genResult!.print(genResult!.typeNodes),
+            chainTypes: genResult!.print(genResult!.chainTypes)
         },
         errors
     }
