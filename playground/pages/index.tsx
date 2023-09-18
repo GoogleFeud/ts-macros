@@ -6,7 +6,6 @@ import { Runnable } from "../components/Runnable";
 import SplitPane from "react-split-pane";
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 import styles from "../css/App.module.css";
-import ts from "typescript";
 import { MacroError } from "../../dist";
 
 const SetupCodes = [
@@ -25,9 +24,8 @@ $contains!(searchItem, ["erwin", "tj"]);`,
     return resultObj.value;
 }
 
-(() => {
-    const a = $try!({ value: 123, is_err: () => false });
-});`,
+
+const a = $try!({ value: 123, is_err: () => false });`,
     `type ClassInfo = { name: string, value: string };
 
 function $makeClasses(...info: Array<ClassInfo>) {
@@ -47,19 +45,17 @@ $makeClasses!({name: "A", value: "123"}, {name: "B", value: "345"});`,
     $$escape!(() => {
         const res = [];
         for (let i=0; i < arr.length; i++) {
-        res.push($$inlineFunc!(cb, arr[i]));
+        res.push($$inline!(cb, [arr[i]]));
         }
     });
     return $$ident!("res");
 }
 
-(() => {
-    $map!([1, 2, 3, 4, 5, 6, 7, 8, 9], (num) => num * 2);
-})();`,
+const result = $map!([1, 2, 3, 4, 5, 6, 7, 8, 9], (num) => num * 2);`,
 `function $ToInterval(info: WhileLabel, intervalTimer = 1000) {
     const interval = setInterval(() => {
         if (info.condition) {
-            $$inlineFunc!(info.statement);
+            $$inline!(info.statement, []);
         } else {
             clearInterval(interval);
         }
