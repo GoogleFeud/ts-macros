@@ -21,7 +21,7 @@ declare function $$slice<T>(str: Array<T>, start?: number, end?: number) : Array
 declare function $$slice(str: string, start?: number, end?: number) : string;
 declare function $$ts<T = unknown>(code: string) : T;
 declare function $$escape<T>(code: () => T) : T;
-declare function $$typeToString<T>(simplify?: boolean, nonNull?: boolean) : string;
+declare function $$typeToString<T>(simplify?: boolean, nonNull?: boolean, fullExpand?: boolean) : string;
 declare function $$propsOfType<T>() : Array<string>;
 declare function $$typeAssignableTo<T, K>() : boolean;
 declare function $$comptime(fn: () => void) : void;

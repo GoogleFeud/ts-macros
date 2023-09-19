@@ -202,12 +202,12 @@ export default {
         }
     },
     "$$typeToString": {
-        call: ([simplifyType, nonNullType], transformer, callSite) => {
+        call: ([simplifyType, nonNullType, fullExpand], transformer, callSite) => {
             let type = transformer.resolveTypeArgumentOfCall(callSite, 0);
             if (!type) throw new MacroError(callSite, "`typeToString` macro expects one type parameter.");
             if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
             if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
-            return ts.factory.createStringLiteral(transformer.checker.typeToString(type));
+            return ts.factory.createStringLiteral(transformer.checker.typeToString(type, undefined, transformer.getBoolFromNode(fullExpand) ? ts.TypeFormatFlags.NoTruncation : undefined));
         }
     },
     "$$typeAssignableTo": {
