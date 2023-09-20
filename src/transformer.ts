@@ -86,6 +86,7 @@ export class MacroTransformer {
         if (node.isDeclarationFile) return node;
         const statements: Array<ts.Statement> = [];
         this.addEscapeScope();
+
         for (const stmt of node.statements) {
             if (ts.isImportDeclaration(stmt) && stmt.importClause && !stmt.importClause.isTypeOnly) {
                 if (stmt.importClause.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
@@ -94,7 +95,7 @@ export class MacroTransformer {
                         const sym = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(el.name));
                         if (!sym) return true;
                         if (this.macros.has(sym) || nativeMacros[sym.name]) return false;
-                        else if (hasBit(sym.flags, ts.SymbolFlags.Interface) || hasBit(sym.flags, ts.SymbolFlags.ConstEnum) || hasBit(sym.flags, ts.SymbolFlags.TypeAlias)) return this.config.keepImports;
+                        else if ((hasBit(sym.flags, ts.SymbolFlags.Interface) && !hasBit(sym.flags, ts.SymbolFlags.Class)) || hasBit(sym.flags, ts.SymbolFlags.ConstEnum) || hasBit(sym.flags, ts.SymbolFlags.TypeAlias)) return this.config.keepImports;
                         else return true;
                     });
                     if (filtered.length) statements.push(ts.factory.updateImportDeclaration(stmt, stmt.modifiers, ts.factory.createImportClause(stmt.importClause.isTypeOnly, undefined, ts.factory.createNamedImports(filtered)), stmt.moduleSpecifier, stmt.assertClause));
@@ -649,7 +650,7 @@ export class MacroTransformer {
 
         const visitor = (node: ts.Node) : ts.Node => {
             if (ts.isVariableDeclaration(node) && node.pos !== -1) {
-                return ts.factory.updateVariableDeclaration(node, makeBindingElementHygienic(node.name), undefined, undefined, node.initializer ? this.expectExpression(node.initializer) : undefined);
+                return ts.factory.updateVariableDeclaration(node, makeBindingElementHygienic(node.name), undefined, undefined, node.initializer ? visitor(this.expectExpression(node.initializer)) as ts.Expression : undefined);
             }
             else if (ts.isIdentifier(node)) {
                 if (node.parent && ts.isPropertyAccessExpression(node.parent) && node.parent.expression !== node) return node;

@@ -1,7 +1,8 @@
 
 import ts from "typescript";
-import TsMacros, { macros, MacroError } from "../../dist";
-import TypeResolverProgram from "../../dist/type-resolve";
+import { macros, MacroError } from "../../dist";
+import { extractGeneratedTypes } from "../../dist/type-resolve";
+import { MacroTransformer } from "../../dist/transformer";
 
 export let Markers = `
 declare function $$loadEnv(path?: string) : void;
@@ -20,7 +21,7 @@ declare function $$slice<T>(str: Array<T>, start?: number, end?: number) : Array
 declare function $$slice(str: string, start?: number, end?: number) : string;
 declare function $$ts<T = unknown>(code: string) : T;
 declare function $$escape<T>(code: () => T) : T;
-declare function $$typeToString<T>(simplify?: boolean, nonNull?: boolean) : string;
+declare function $$typeToString<T>(simplify?: boolean, nonNull?: boolean, fullExpand?: boolean) : string;
 declare function $$propsOfType<T>() : Array<string>;
 declare function $$typeAssignableTo<T, K>() : boolean;
 declare function $$comptime(fn: () => void) : void;
@@ -87,57 +88,41 @@ for (const kind in Object.keys(ts.SyntaxKind)) {
 }
 Markers += "\n}\n";
 
+const FinalMarkersFile = ts.createSourceFile("markers.d.ts", Markers, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+
 export const CompilerOptions: ts.CompilerOptions = {
     //...ts.getDefaultCompilerOptions(),                    
     noImplicitAny: true,
     strictNullChecks: true,
     target: ts.ScriptTarget.ESNext,
-    experimentalDecorators: true
+    experimentalDecorators: true,
+    lib: ["ES5"]
 };
 
-export function transpile(LibFile: ts.SourceFile, str: string): { code?: string, error?: MacroError } {
-    const SourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
-    let output = "";
+export interface GeneratedTypes {
+    fromMacros: string,
+    chainTypes: string
+}
+
+export function transpile(str: string) : {
+    generatedTypes: GeneratedTypes,
+    errors: MacroError[],
+    transpiledSourceCode?: string
+} {
+    macros.clear();
+
+    const sourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
+    const errors = [];
+
     const CompilerHost: ts.CompilerHost = {
         getSourceFile: (fileName) => {
-            if (fileName.endsWith("lib.d.ts")) return LibFile;
-            else if (fileName === "module.ts") return SourceFile;
-            else return;
+            if (fileName === "module.ts") return sourceFile;
+            else return FinalMarkersFile;
         },
         getDefaultLibFileName: () => "lib.d.ts",
         useCaseSensitiveFileNames: () => false,
-        writeFile: (_name, text) => output = text,
         getCanonicalFileName: fileName => fileName,
-        getCurrentDirectory: () => "",
-        getNewLine: () => "\n",
-        fileExists: () => true,
-        readFile: () => "",
-        directoryExists: () => true,
-        getDirectories: () => []
-    };
-
-    let error;
-    const program = ts.createProgram(["module.ts"], CompilerOptions, CompilerHost);
-    try {
-        macros.clear();
-        program.emit(undefined, undefined, undefined, undefined, { before: [TsMacros(program) as unknown as ts.TransformerFactory<ts.SourceFile>] });
-    } catch (err: unknown) {
-        if (err instanceof MacroError) error = err
-    }
-    return { code: output, error };
-};
-
-export function transpileTStoTS(LibFile: ts.SourceFile, str: string) : { code?: string, error?: MacroError } {
-    const SourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
-    const CompilerHost: ts.CompilerHost = {
-        getSourceFile: (fileName) => {
-            if (fileName.endsWith(".d.ts")) return LibFile;
-            else if (fileName === "module.ts") return SourceFile;
-        },
-        getDefaultLibFileName: () => "lib.d.ts",
-        useCaseSensitiveFileNames: () => false,
         writeFile: () => {},
-        getCanonicalFileName: fileName => fileName,
         getCurrentDirectory: () => "",
         getNewLine: () => "\n",
         fileExists: () => true,
@@ -145,14 +130,31 @@ export function transpileTStoTS(LibFile: ts.SourceFile, str: string) : { code?: 
         directoryExists: () => true,
         getDirectories: () => []
     };
+
     const program = ts.createProgram(["module.ts"], CompilerOptions, CompilerHost);
-    let code, error;
+
+    let genResult, transpiledSourceCode;
     try {
-        const newProgram = TypeResolverProgram(program, CompilerHost, {isTSC: false}, { ts });
-        code = newProgram.getSourceFile("module.ts")?.text.slice(str.length);
-    } catch(err) {
-        if (err instanceof MacroError) error = err;
-        code = program.getSourceFile("module.ts")?.text;
+        program.emit(undefined, (_, text) => transpiledSourceCode = text, undefined, undefined, {
+            before: [(ctx: ts.TransformationContext) => {
+                const transformer = new MacroTransformer(ctx, program.getTypeChecker(), macros);
+                return (node: ts.SourceFile) => {
+                    const modified = transformer.run(node);
+                    genResult = extractGeneratedTypes(program.getTypeChecker(), modified);
+                    return modified;
+                }
+            }]
+        });
+    } catch (err: unknown) {
+        if (err instanceof MacroError) errors.push(err);
     }
-    return { code, error };
+
+    return {
+        transpiledSourceCode,
+        generatedTypes: {
+            fromMacros: genResult!.print(genResult!.typeNodes),
+            chainTypes: genResult!.print(genResult!.chainTypes)
+        },
+        errors
+    }
 }

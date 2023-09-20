@@ -1,14 +1,11 @@
 
-import { Markers, transpile, transpileTStoTS } from "../utils/transpile";
+import { GeneratedTypes, transpile } from "../utils/transpile";
 import { useEffect, useState } from "react";
 import { TextEditor } from "../components/Editor";
 import { Runnable } from "../components/Runnable";
 import SplitPane from "react-split-pane";
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 import styles from "../css/App.module.css";
-import fs from "fs";
-import path from "path";
-import ts from "typescript";
 import { MacroError } from "../../dist";
 
 const SetupCodes = [
@@ -27,9 +24,8 @@ $contains!(searchItem, ["erwin", "tj"]);`,
     return resultObj.value;
 }
 
-(() => {
-    const a = $try!({ value: 123, is_err: () => false });
-});`,
+
+const a = $try!({ value: 123, is_err: () => false });`,
     `type ClassInfo = { name: string, value: string };
 
 function $makeClasses(...info: Array<ClassInfo>) {
@@ -49,19 +45,17 @@ $makeClasses!({name: "A", value: "123"}, {name: "B", value: "345"});`,
     $$escape!(() => {
         const res = [];
         for (let i=0; i < arr.length; i++) {
-        res.push($$inlineFunc!(cb, arr[i]));
+        res.push($$inline!(cb, [arr[i]]));
         }
     });
     return $$ident!("res");
 }
 
-(() => {
-    $map!([1, 2, 3, 4, 5, 6, 7, 8, 9], (num) => num * 2);
-})();`,
+const result = $map!([1, 2, 3, 4, 5, 6, 7, 8, 9], (num) => num * 2);`,
 `function $ToInterval(info: WhileLabel, intervalTimer = 1000) {
     const interval = setInterval(() => {
         if (info.condition) {
-            $$inlineFunc!(info.statement);
+            $$inline!(info.statement, []);
         } else {
             clearInterval(interval);
         }
@@ -108,22 +102,18 @@ const SetupCode = `
 ${SetupCodes[Math.floor(Math.random() * SetupCodes.length)]}
 `;
 
-function Main({lib}: { lib: ts.SourceFile }) {
+function Main() {
     const [code, setCode] = useState<string|undefined>();
     const [errors, setErrors] = useState<MacroError[]>([]);
-    const [libCode, setLibCode] = useState<string|undefined>();
+    const [libCode, setLibCode] = useState<GeneratedTypes>();
     const [compiledCode, setCompiled] = useState<string>();
 
     const transpileCode = (source: string) => {
         setCode(source);
-        const {code, error} = transpile(lib, source);
-        setCompiled(code);
-        const {code: libCode, error: libError} = transpileTStoTS(lib, source);
-        setLibCode(libCode);
-        const errs = [];
-        if (error) errs.push(error);
-        if (libError) errs.push(libError);
-        setErrors(errs);
+        const {generatedTypes, errors, transpiledSourceCode} = transpile(source);
+        setCompiled(transpiledSourceCode);
+        setLibCode(generatedTypes);
+        setErrors(errors);
     } 
 
     useEffect(() => {
@@ -170,15 +160,6 @@ function Main({lib}: { lib: ts.SourceFile }) {
     );
 }
 
-export default (props: { lib: string }) => {
-    const LibFile = ts.createSourceFile("lib.d.ts", Markers + props.lib, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
-    return <Main lib={LibFile} />;
+export default () => {
+    return <Main />;
 };
-
-export async function getStaticProps() {
-    return {
-        props: {
-            lib: fs.readFileSync(path.join(process.cwd(), "./node_modules/typescript/lib/lib.es5.d.ts"), "utf-8")
-        }
-    };
-}
