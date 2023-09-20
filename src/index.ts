@@ -9,7 +9,6 @@ export interface TsMacrosConfig {
     noComptime?: boolean,
     watchMode?: boolean,
     keepImports?: boolean,
-    isTSC?: boolean,
     logFileData?: boolean
 }
 
@@ -352,7 +351,11 @@ export declare function $$typeToString<T>(
     /**
      * If provided, the "null" and "undefined" types will be ignored, so "string | undefined" will turn to "string".
      */
-    nonNull?: boolean
+    nonNull?: boolean,
+    /**
+     * If provided, long nested types will **not** be ellipsized.
+     */
+    fullExpand?: boolean
 ) : string;
 
 /**

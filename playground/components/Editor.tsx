@@ -2,19 +2,23 @@
 import Editor, { useMonaco } from "@monaco-editor/react";
 import { languages, editor } from "monaco-editor";
 import { useEffect, useState } from "react";
-import { CompilerOptions, Markers } from "../utils/transpile";
+import { CompilerOptions, GeneratedTypes, Markers } from "../utils/transpile";
 import { MacroError } from "../../dist";
 
 
 export function TextEditor(props: {
     onChange: (code: string|undefined) => void,
     code: string|undefined,
-    libCode?: string,
+    libCode?: GeneratedTypes,
     errors: MacroError[]
 }) {
     const monaco = useMonaco();
     const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
-    const [libModel, setLibModel] = useState<editor.ITextModel>();
+    const [macroTypeModel, setMacroTypeModel] = useState<editor.ITextModel>();
+    const [chainTypeModel, setChainTypeModel] = useState<editor.ITextModel>();
+
+    const macroTypesLib = "ts:ts-macros/generated_types.d.ts";
+    const chainTypesLib = "ts:ts-macros/chain_types.d.ts"
 
     useEffect(() => {
         if (!monaco) return;
@@ -23,22 +27,29 @@ export function TextEditor(props: {
         });
         monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
             diagnosticCodesToIgnore: [1219]
-          });
+        });
 
-        const filename = "ts:ts-macros/global.d.ts";
-        monaco.languages.typescript.javascriptDefaults.addExtraLib(Markers, filename);
-        monaco.editor.createModel(Markers, "typescript", monaco.Uri.parse(filename));
+        const markersLibName = "ts:ts-macros/markers.d.ts";
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(Markers, markersLibName);
+        monaco.editor.createModel(Markers, "typescript", monaco.Uri.parse(markersLibName));
 
-        const otherFilename = "ts:ts-macros/global2.d.ts";
-        const content = `export {};${props.libCode || ""}`;
-        monaco.languages.typescript.javascriptDefaults.addExtraLib(content, otherFilename);
-        setLibModel(monaco.editor.createModel(content, "typescript", monaco.Uri.parse(otherFilename)));
+        const macroTypesContent = props.libCode?.fromMacros || "";
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(macroTypesContent, macroTypesLib);
+        setMacroTypeModel(monaco.editor.createModel(macroTypesContent, "typescript", monaco.Uri.parse(macroTypesLib)));
+
+        const chainTypesContent = `export {};\n\n${props.libCode?.chainTypes || ""}`;
+        monaco.languages.typescript.javascriptDefaults.addExtraLib(chainTypesContent, chainTypesLib);
+        setChainTypeModel(monaco.editor.createModel(chainTypesContent, "typescript", monaco.Uri.parse(chainTypesLib)));
     }, [monaco]);
 
     useEffect(() => {
         if (!monaco) return;
-        libModel?.setValue(`export {};${props.libCode || ""}`);
-        if (!editor) return;
+        macroTypeModel?.setValue(props.libCode?.fromMacros || "");
+        chainTypeModel?.setValue(`export {};\n\n${props.libCode?.chainTypes || ""}`);
+    }, [props.libCode]);
+
+    useEffect(() => {
+        if (!monaco || !editor) return;
         const model = editor.getModel();
         if (!model) return;
         monaco.editor.setModelMarkers(model, "_", props.errors.map(error => {
@@ -53,7 +64,7 @@ export function TextEditor(props: {
                 endLineNumber: endPos.lineNumber
             }
         }));
-    }, [props.libCode, props.errors]);
+    }, [props.errors]);
 
     return <Editor height="calc(90vh - 50px)" language="typescript" theme="vs-dark" value={props.code} onChange={props.onChange} onMount={editor => setEditor(editor)}>
 
