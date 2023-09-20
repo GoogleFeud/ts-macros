@@ -3,11 +3,16 @@
   "version": "2.4.2",
   "description": "A typescript transformer / plugin which allows you to write macros for typescript!",
   "main": "dist/index.js",
+  "bin": "dist/cli/index.js",
+  "dependencies": {
+    "yargs-parser": "^21.1.1"
+  },
   "devDependencies": {
     "@types/chai": "^4.3.4",
     "@types/mocha": "^9.1.1",
     "@types/node": "^16.18.10",
     "@types/ts-expose-internals": "npm:ts-expose-internals@^5.1.6",
+    "@types/yargs-parser": "^21.0.0",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
     "chai": "^4.3.7",
