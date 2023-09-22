@@ -18,8 +18,8 @@ export function transpileFile(sourceFile: ts.SourceFile, printer: ts.Printer, tr
         return printer.printFile(transformed);
     } catch(err) {
         if (err instanceof MacroError) return genDiagnosticFromMacroError(sourceFile, err);
+        else throw err;
     }
-    return "";
 }
 
 export function createMacroTransformerWatcher(configFileName: string, actions: MacroTransformerWatcherActions, jsOut?: boolean, transformerConfig?: TsMacrosConfig, inPrinter?: ts.Printer) : ts.WatchOfConfigFile<ts.SemanticDiagnosticsBuilderProgram> {
