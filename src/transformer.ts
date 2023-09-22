@@ -56,6 +56,12 @@ export type ComptimeFunction = (...params: Array<unknown>) => void;
 
 export type MacroMap = Map<ts.Symbol, Macro>;
 
+export interface MacroTransformerHooks {
+    beforeRegisterMacro?: (transformer: MacroTransformer, symbol: ts.Symbol, macro: Macro) => void,
+    beforeCallMacro?: (transformer: MacroTransformer, macro: Macro, expand: MacroExpand) => void,
+    beforeFileTransform?: (transformer: MacroTransformer, sourceFile: ts.SourceFile) => void
+}
+
 export const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
 
 export class MacroTransformer {
@@ -69,7 +75,8 @@ export class MacroTransformer {
     escapedStatements: Array<Array<ts.Statement>>;
     comptimeSignatures: Map<ts.Node, ComptimeFunction>;
     config: TsMacrosConfig;
-    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap, config?: TsMacrosConfig) {
+    hooks: MacroTransformerHooks;
+    constructor(context: ts.TransformationContext, checker: ts.TypeChecker, macroMap: MacroMap, config?: TsMacrosConfig, hooks?: MacroTransformerHooks) {
         this.context = context;
         this.boundVisitor = this.visitor.bind(this);
         this.repeat = [];
@@ -80,10 +87,12 @@ export class MacroTransformer {
         this.macros = macroMap;
         this.comptimeSignatures = new Map();
         this.config = config || {};
+        this.hooks = hooks || {};
     }
 
     run(node: ts.SourceFile): ts.SourceFile {
         if (node.isDeclarationFile) return node;
+        this.hooks.beforeFileTransform?.(this, node);
         const statements: Array<ts.Statement> = [];
         this.addEscapeScope();
 
@@ -167,30 +176,17 @@ export class MacroTransformer {
                 });
             }
 
-            const namespace = ts.isModuleBlock(node.parent) ? node.parent.parent : undefined;
-
-            // There cannot be 2 macros that have the same name and come from the same source file,
-            // which means that if the if statement is true, it's very likely the files are being watched
-            // for changes and transpiled every time there's a change, so it's a good idea to clean up the
-            // macros map for 2 important reasons:
-            // - To not excede the max capacity of the map
-            // - To allow for macro chaining to work, because it uses macro names only.
-            for (const [oldSym, macro] of this.macros) {
-                // Watcher has fed us the same file for this to be true
-                if (macroName === macro.name && macro.body?.getSourceFile().fileName === node.getSourceFile().fileName && macro.namespace === namespace) {
-                    this.macros.delete(oldSym);
-                    break;
-                }
-            }
-
-            this.macros.set(sym, {
+            const macro = {
                 name: macroName,
                 params,
                 body: node.body,
                 typeParams: (node.typeParameters as unknown as Array<ts.TypeParameterDeclaration>)|| [],
                 node,
-                namespace
-            });
+                namespace: ts.isModuleBlock(node.parent) ? node.parent.parent : undefined
+            };
+
+            this.hooks.beforeRegisterMacro?.(this, sym, macro);
+            this.macros.set(sym, macro);
             return;
         }
 
@@ -583,14 +579,9 @@ export class MacroTransformer {
     }
 
     execMacro(macro: Macro, args: ts.NodeArray<ts.Expression>, call: ts.Expression, target?: ts.Node) : ts.Statement[] {
-        this.macroStack.push({
-            macro,
-            args,
-            call,
-            target,
-            defined: new Map(),
-            store: new Map()
-        });
+        const macroExpand = { macro, args, call, target, defined: new Map(), store: new Map() };
+        this.hooks.beforeCallMacro?.(this, macro, macroExpand);
+        this.macroStack.push(macroExpand);
         const pre = [];
         for (let i=0; i < macro.params.length; i++) {
             const param = macro.params[i];

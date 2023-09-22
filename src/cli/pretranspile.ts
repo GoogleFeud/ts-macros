@@ -4,6 +4,7 @@ import * as childProcess from "child_process";
 import * as fs from "fs";
 import { MacroTransformer } from "../transformer";
 import { TsMacrosConfig, macros } from "..";
+import { createMacroTransformerWatcher } from "../watcher";
 
 export interface PretranspileSettings {
     dist: string,
@@ -45,30 +46,9 @@ export function pretranspile(settings: PretranspileSettings) : ts.Diagnostic[] |
     const printer = ts.createPrinter();
 
     if (settings.watch) {
-        const host = ts.createWatchCompilerHost(config, { noEmit: true }, ts.sys, ts.createSemanticDiagnosticsBuilderProgram, undefined, undefined, undefined, undefined);
-        const oldWrite = host.writeFile;
-        host.writeFile = (path, data) => {
-            console.log("WRITING:", path);
-            return oldWrite?.(path, data);
-        };
-        const oldCreateProgram = host.createProgram;
-        const transformer = new MacroTransformer(ts.nullTransformationContext, (undefined as unknown as ts.TypeChecker), macros, transformerConfig);
-        host.createProgram = (rootNames, options, host, oldProgram) => {
-            const newProgram = oldCreateProgram(rootNames, options, host, oldProgram);
-            transformer.checker = newProgram.getProgram().getTypeChecker();
-            const sourceFiles = [];
-            for (const source of newProgram.getProgram().getSourceFiles()) {
-                if (source.isDeclarationFile) continue;
-                const oldSource = oldProgram?.getSourceFile(source.fileName);
-                if (!oldSource || oldSource.version !== source.version) {
-                    const transpiled = pretranspileFile(source, printer, transformer);
-                    sourceFiles.push(ts.createSourceFile(source.fileName, transpiled, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS));
-                    createFile(path.join(process.cwd(), settings.dist, source.fileName.slice(process.cwd().length)), transpiled);
-                }
-            }
-            return newProgram;
-        };
-        ts.createWatchProgram(host);
+        createMacroTransformerWatcher(config, {
+            updateFile: (fileName, content) => createFile(path.join(process.cwd(), settings.dist, fileName.slice(process.cwd().length)), content)
+        }, false, transformerConfig, printer);
     } else {
         const readConfig = ts.parseConfigFileWithSystem(config, ts.getDefaultCompilerOptions(), undefined, undefined, ts.sys, () => undefined);
         if (!readConfig) return [createAnonDiagnostic("Couldn't read tsconfig.json file.")];
