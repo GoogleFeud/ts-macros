@@ -889,6 +889,16 @@ export class MacroTransformer {
         return ts.visitEachChild(file, uniquelize, this.context).statements;
     }
 
+    cleanupMacros(macro: Macro, extra?: (old: Macro) => void) : void {
+        for (const [oldSym, oldMacro] of this.macros) {
+            if (macro.name === oldMacro.name && macro.node.getSourceFile().fileName === oldMacro.node.getSourceFile().fileName && macro.namespace === oldMacro.namespace) {
+                this.macros.delete(oldSym);
+                extra?.(oldMacro);
+                break;
+            }
+        }
+    }
+
 }
 
 const separators: Record<string, (transformer: MacroTransformer, body: Array<ts.Node>) => ts.Expression> = {

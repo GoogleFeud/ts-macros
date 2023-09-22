@@ -29,14 +29,8 @@ export function createMacroTransformerWatcher(configFileName: string, actions: M
         macrosCreatedInFile = new MapArray<string, Macro>(),
         macrosReferencedInFiles = new MapArray<Macro, string>(),
         transformer = new MacroTransformer(ts.nullTransformationContext, (undefined as unknown as ts.TypeChecker), macros, transformerConfig, {
-            beforeRegisterMacro(_transformer, _symbol, macro) {
-                for (const [oldSym, oldMacro] of macros) {
-                    if (macro.name === oldMacro.name && macro.node.getSourceFile().fileName === oldMacro.node.getSourceFile().fileName && macro.namespace === oldMacro.namespace) {
-                        macros.delete(oldSym);
-                        macrosReferencedInFiles.transferKey(oldMacro, macro);
-                        break;
-                    }
-                }
+            beforeRegisterMacro(transformer, _symbol, macro) {
+                transformer.cleanupMacros(macro, (oldMacro) => macrosReferencedInFiles.transferKey(oldMacro, macro));
                 macrosCreatedInFile.push(macro.node.getSourceFile().fileName, macro);
             },
             beforeCallMacro(_transformer, macro, expand) {
@@ -79,7 +73,7 @@ export function createMacroTransformerWatcher(configFileName: string, actions: M
                 const transpiled = transpileFile(source, printer, transformer);
                 if (typeof transpiled === "string") {
                     forcedFilesToGetTranspiled.push(...getFilesThatNeedChanges(source.fileName));
-                    actions.updateFile(source.fileName, transpiled, isForced ? FileUpdateCause.MacroChange : FileUpdateCause.ContentChange);
+                    actions.updateFile(source.fileName, jsOut ? ts.transpile(transpiled, newProgram.getCompilerOptions()) : transpiled, isForced ? FileUpdateCause.MacroChange : FileUpdateCause.ContentChange);
                 } else errors.push(transpiled);
             }
         }

@@ -2,7 +2,7 @@
 
 import * as parseArgs from "yargs-parser";
 import * as ts from "typescript";
-import { PretranspileSettings, pretranspile, validateSettings } from "./pretranspile";
+import { PretranspileSettings, pretranspile, validateSettings } from "./transform";
 import { cyan, emitError, emitNotification } from "./formatter";
 
 type CLIArgs = {
@@ -45,6 +45,7 @@ Commands:
 * transform [OUT] - Expand all macros and write transformed TS files to the selected OUT directory.
     ${cyan("Example")}: ts-macros transform ./transformed --noComptime
     -- noComptime   - Disable usage of $$raw and $$comptime macros.
+    -- emitjs       - Emits javascript instead of typescript.
     -- exec=[CMD]   - Execute a command after writing the transformed typescript files to disk.
     -- cleanup      - Delete the OUT directory after executing CMD.
     -- tsconfig     - Point the transformer to a different tsconfig.json file.

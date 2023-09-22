@@ -13,17 +13,18 @@ export interface PretranspileSettings {
     cleanup?: boolean,
     watch?: boolean,
     noComptime?: boolean,
+    emitjs?: boolean
 }
 
-export function pretranspileFile(sourceFile: ts.SourceFile, printer: ts.Printer, transformer: MacroTransformer) : string {
+export function transformFile(sourceFile: ts.SourceFile, printer: ts.Printer, transformer: MacroTransformer) : string {
     const newSourceFile = transformer.run(sourceFile);
     return printer.printFile(newSourceFile);
 }
 
-export function createFile(providedPath: string, content: string) : void {
+export function createFile(providedPath: string, content: string, jsExtension?: boolean) : void {
     const withoutFilename = providedPath.slice(0, providedPath.lastIndexOf(path.sep));
     if (!fs.existsSync(withoutFilename)) fs.mkdirSync(withoutFilename, { recursive: true });
-    fs.writeFileSync(providedPath, content);
+    fs.writeFileSync(jsExtension ? providedPath.slice(0, -3) + ".js" : providedPath, content);
 }
 
 export function createAnonDiagnostic(message: string) : ts.Diagnostic {
@@ -47,10 +48,10 @@ export function pretranspile(settings: PretranspileSettings) : ts.Diagnostic[] |
 
     if (settings.watch) {
         createMacroTransformerWatcher(config, {
-            updateFile: (fileName, content) => createFile(path.join(process.cwd(), settings.dist, fileName.slice(process.cwd().length)), content)
-        }, false, transformerConfig, printer);
+            updateFile: (fileName, content) => createFile(path.join(process.cwd(), settings.dist, fileName.slice(process.cwd().length)), content, settings.emitjs)
+        }, settings.emitjs, transformerConfig, printer);
     } else {
-        const readConfig = ts.parseConfigFileWithSystem(config, ts.getDefaultCompilerOptions(), undefined, undefined, ts.sys, () => undefined);
+        const readConfig = ts.parseConfigFileWithSystem(config, {}, undefined, undefined, ts.sys, () => undefined);
         if (!readConfig) return [createAnonDiagnostic("Couldn't read tsconfig.json file.")];
         if (readConfig.errors.length) return readConfig.errors;
         const program = ts.createProgram({
@@ -60,7 +61,8 @@ export function pretranspile(settings: PretranspileSettings) : ts.Diagnostic[] |
         const transformer = new MacroTransformer(ts.nullTransformationContext, program.getTypeChecker(), macros, transformerConfig);
         for (const file of program.getSourceFiles()) {
             if (file.isDeclarationFile) continue;
-            createFile(path.join(process.cwd(), settings.dist, file.fileName.slice(process.cwd().length)), pretranspileFile(file, printer, transformer));
+            const transformed = transformFile(file, printer, transformer);
+            createFile(path.join(process.cwd(), settings.dist, file.fileName.slice(process.cwd().length)), settings.emitjs ? ts.transpile(transformed, program.getCompilerOptions()) : transformed, settings.emitjs);
         }
 
         if (settings.exec) childProcess.execSync(settings.exec);

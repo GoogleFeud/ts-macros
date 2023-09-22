@@ -57,7 +57,9 @@ export default function (
     const isTSC = process.argv[1]?.endsWith("tsc");
 
     const instance = extras.ts as typeof ts;
-    const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true});
+    const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true}, {
+        beforeRegisterMacro: (transformer, _sym, macro) =>  transformer.cleanupMacros(macro)
+    });
     const newSourceFiles: Map<string, ts.SourceFile> = new Map();
     const diagnostics: ts.Diagnostic[] = [];
     const compilerOptions = program.getCompilerOptions();
