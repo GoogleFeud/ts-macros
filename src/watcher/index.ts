@@ -73,7 +73,7 @@ export function createMacroTransformerWatcher(configFileName: string, actions: M
                 const transpiled = transpileFile(source, printer, transformer);
                 if (typeof transpiled === "string") {
                     forcedFilesToGetTranspiled.push(...getFilesThatNeedChanges(source.fileName));
-                    actions.updateFile(source.fileName, jsOut ? ts.transpile(transpiled, newProgram.getCompilerOptions()) : transpiled, isForced ? FileUpdateCause.MacroChange : FileUpdateCause.ContentChange);
+                    actions.updateFile(source.fileName, jsOut ? ts.transpile(transpiled, newProgram.getCompilerOptions()) : transpiled, isForced ? FileUpdateCause.MacroChange : FileUpdateCause.ContentChange, jsOut);
                 } else errors.push(transpiled);
             }
         }
