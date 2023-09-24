@@ -1,6 +1,6 @@
 {
   "name": "ts-macros",
-  "version": "2.4.2",
+  "version": "2.5.0",
   "description": "A typescript transformer / plugin which allows you to write macros for typescript!",
   "main": "dist/index.js",
   "bin": "dist/cli/index.js",
