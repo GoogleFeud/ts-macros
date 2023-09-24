@@ -12,7 +12,7 @@ export interface PretranspileSettings {
     tsconfig?: string,
     cleanup?: boolean,
     watch?: boolean,
-    noComptime?: boolean,
+    nocomptime?: boolean,
     emitjs?: boolean
 }
 
@@ -43,7 +43,7 @@ export function pretranspile(settings: PretranspileSettings) : ts.Diagnostic[] |
     const distPath = path.join(process.cwd(), settings.dist);
     if (!fs.existsSync(distPath)) fs.mkdirSync(distPath, { recursive: true });
 
-    const transformerConfig: TsMacrosConfig = { noComptime: settings.noComptime, keepImports: true };
+    const transformerConfig: TsMacrosConfig = { noComptime: settings.nocomptime, keepImports: true };
     const printer = ts.createPrinter();
 
     if (settings.watch) {
