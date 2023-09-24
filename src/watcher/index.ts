@@ -9,7 +9,8 @@ export enum FileUpdateCause {
 }
 
 export interface MacroTransformerWatcherActions {
-    updateFile: (fileName: string, content: string, cause: FileUpdateCause, isJS?: boolean) => void
+    updateFile: (fileName: string, content: string, cause: FileUpdateCause, isJS?: boolean) => void,
+    afterUpdate?: (isInitial: boolean) => void
 }
 
 export function transpileFile(sourceFile: ts.SourceFile, printer: ts.Printer, transformer: MacroTransformer) : ts.Diagnostic | string {
@@ -77,7 +78,7 @@ export function createMacroTransformerWatcher(configFileName: string, actions: M
                 } else errors.push(transpiled);
             }
         }
-
+        actions.afterUpdate?.(!!oldProgram);
         return newProgram;
     };
     return ts.createWatchProgram(host);
