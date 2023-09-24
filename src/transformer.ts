@@ -88,6 +88,7 @@ export class MacroTransformer {
         this.comptimeSignatures = new Map();
         this.config = config || {};
         this.hooks = hooks || {};
+        console.log(ts.version);
     }
 
     run(node: ts.SourceFile): ts.SourceFile {

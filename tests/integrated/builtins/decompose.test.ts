@@ -3,7 +3,6 @@ import ts from "typescript";
 const { $$decompose, $$kindof, $$text, $$length, $$i, $$slice } = require("../../../../dist/index");
 
 describe("$$decompose", () => {
-
     function $stringify(value: any): string {
         const $decomposed = $$decompose!(value);
         if ($$kindof!(value) === ts.SyntaxKind.PropertyAccessExpression) return $stringify!($decomposed[0]) + "." + $stringify!($decomposed[1]);
