@@ -23,7 +23,6 @@ export function transformFile(sourceFile: ts.SourceFile, printer: ts.Printer, tr
 
 export function createFile(providedPath: string, content: string, jsExtension?: boolean) : void {
     const withoutFilename = providedPath.slice(0, providedPath.lastIndexOf(path.sep));
-    console.log(providedPath, withoutFilename);
     if (!fs.existsSync(withoutFilename)) fs.mkdirSync(withoutFilename, { recursive: true });
     fs.writeFileSync(jsExtension ? providedPath.slice(0, -3) + ".js" : providedPath, content);
 }
@@ -52,12 +51,6 @@ export function pretranspile(settings: PretranspileSettings) : ts.Diagnostic[] |
             updateFile: (fileName, content) => createFile(path.join(process.cwd(), settings.dist, fileName.slice(process.cwd().length)), content, settings.emitjs),
             afterUpdate: settings.exec ? (isInitial) => isInitial && childProcess.exec(settings.exec as string) : undefined
         }, settings.emitjs, transformerConfig, printer);
-
-        if (settings.cleanup) {
-            process.on("beforeExit", () => {
-                fs.rmSync(settings.dist, { recursive: true, force: true });
-            });
-        }
     } else {
         const readConfig = ts.parseConfigFileWithSystem(config, {}, undefined, undefined, ts.sys, () => undefined);
         if (!readConfig) return [createAnonDiagnostic("Couldn't read tsconfig.json file.")];
