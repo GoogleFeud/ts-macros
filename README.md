@@ -81,6 +81,18 @@ npm i --save-dev ts-node
 </details>
 
 <details>
+    <summary>CLI Usage (esbuild, vite, watchers)</summary>
+
+If you want to use ts-macros with:
+- tools that don't support typescript
+- tools that aren't written in javascript and therefore cannot run typescript transformers (tools that use swc, for example)
+- any tools' watch mode (webpack, vite, esbuild, etc)
+
+you can use the CLI - [read more about the CLI and example here](https://github.com/GoogleFeud/ts-macros/wiki/CLI-usage)
+
+</details>
+
+<details>
     <summary>Usage with vite</summary>
 
 If you want to use ts-macros with vite, you'll have to use the `@rollup/plugin-typescript` plugin. [Here](https://github.com/GoogleFeud/ts-macros-vite-example) is an example repository which sets up a basic vite project which includes ts-macros.
