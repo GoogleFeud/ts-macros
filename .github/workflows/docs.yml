@@ -2,6 +2,7 @@ name: Deploy docs to Github Pages
 on:
   workflow_dispatch:
   release:
+    type: [published]
     branches:
       - dev
 jobs:
