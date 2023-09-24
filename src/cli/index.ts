@@ -42,13 +42,13 @@ function emitHelp() : void {
     emitNotification`ts-macros CLI args
 
 Commands:
-* transform [OUT] - Expand all macros and write transformed TS files to the selected OUT directory.
+* transform [OUT] - Expand all macros and write transformed files to the selected OUT directory.
     ${cyan("Example")}: ts-macros transform ./transformed --noComptime
     -- noComptime   - Disable usage of $$raw and $$comptime macros.
     -- emitjs       - Emits javascript instead of typescript.
     -- exec=[CMD]   - Execute a command after writing the transformed typescript files to disk.
     -- cleanup      - Delete the OUT directory after executing CMD.
     -- tsconfig     - Point the transformer to a different tsconfig.json file.
-    -- watch        - Transformer will transform your files on changes. Cleanup and exec options are ignored.
+    -- watch        - Transformer will transform your files on changes. If the exec option is also provided, it will be run only after the first transform.
 `;
 }
