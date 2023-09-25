@@ -43,7 +43,7 @@ function emitHelp() : void {
 
 Commands:
 * transform [OUT] - Expand all macros and write transformed files to the selected OUT directory.
-    ${cyan("Example")}: ts-macros transform ./transformed --noComptime
+    ${cyan("Example")}: ts-macros transform ./transformed --nocomptime
     -- nocomptime   - Disable usage of $$raw and $$comptime macros.
     -- emitjs       - Emits javascript instead of typescript.
     -- exec=[CMD]   - Execute a command after writing the transformed typescript files to disk.
