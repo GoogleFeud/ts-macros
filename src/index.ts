@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as ts from "typescript";
-import { MacroExpand, MacroTransformer } from "./transformer";
+import { Macro, MacroExpand, MacroTransformer } from "./transformer";
 
-export const macros = new Map();
+export const macros = new Map<ts.Symbol, Macro>();
 
 export interface TsMacrosConfig {
     noComptime?: boolean,

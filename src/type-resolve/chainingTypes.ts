@@ -1,6 +1,6 @@
 import ts = require("typescript");
 import { Macro } from "../transformer";
-import { hasBit } from "../utils";
+import { MapArray, hasBit } from "../utils";
 import { UNKNOWN_TOKEN } from "./declarations";
 
 function resolveTypeName(checker: ts.TypeChecker, type: ts.Type) : string | undefined {
@@ -12,14 +12,8 @@ function resolveTypeName(checker: ts.TypeChecker, type: ts.Type) : string | unde
     else return;
 }
 
-function addNodeToMap(map: Map<ts.Type, ts.MethodSignature[]>, type: ts.Type, decl: ts.MethodSignature) : void {
-    if (map.has(type)) (map.get(type) as ts.MethodSignature[]).push(decl);
-    else map.set(type, [decl]);
-}
-
-
 export function generateChainingTypings(checker: ts.TypeChecker, macros: Map<ts.Symbol, Macro>) : ts.Statement[] {
-    const ambientDecls: Map<ts.Type, ts.MethodSignature[]> = new Map();
+    const ambientDecls = new MapArray<ts.Type, ts.MethodSignature>();
     for (const [, macro] of macros) {
         const macroParamNode = macro.params[0]?.node;
         if (!macroParamNode) continue;
@@ -27,9 +21,9 @@ export function generateChainingTypings(checker: ts.TypeChecker, macros: Map<ts.
         if (!macroParamType) continue;
         const decl = ts.factory.createMethodSignature([], macro.name, macro.node.questionToken, macro.node.typeParameters, macro.node.parameters.slice(1), macro.node.type || UNKNOWN_TOKEN);
         if (macroParamType.isUnion()) {
-            for (const type of macroParamType.types) addNodeToMap(ambientDecls, type, decl);
+            for (const type of macroParamType.types) ambientDecls.push(type, decl);
         }
-        else addNodeToMap(ambientDecls, macroParamType, decl);
+        else ambientDecls.push(macroParamType, decl);
     }
 
     const decls: ts.Statement[] = [];

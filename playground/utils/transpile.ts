@@ -1,5 +1,5 @@
 
-import ts from "typescript";
+import * as ts from "typescript";
 import { macros, MacroError } from "../../dist";
 import { extractGeneratedTypes } from "../../dist/type-resolve";
 import { MacroTransformer } from "../../dist/transformer";

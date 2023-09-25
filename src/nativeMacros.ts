@@ -1,4 +1,4 @@
-import ts = require("typescript");
+import * as ts from "typescript";
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
