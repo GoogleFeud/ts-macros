@@ -3,7 +3,7 @@ import type { ProgramTransformerExtras, PluginConfig } from "ts-patch";
 import { MacroTransformer } from "../transformer";
 import { TsMacrosConfig, macros } from "../index";
 import { transformDeclaration } from "./declarations";
-import { MacroError } from "../utils";
+import { MacroError, genDiagnosticFromMacroError } from "../utils";
 import { generateChainingTypings } from "./chainingTypes";
 
 function printAsTS(printer: ts.Printer, statements: ts.Statement[], source: ts.SourceFile) : string {
@@ -14,7 +14,7 @@ function printAsTS(printer: ts.Printer, statements: ts.Statement[], source: ts.S
     return fileText;
 }
 
-function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.CompilerOptions | undefined, newSourceFiles: Map<string, ts.SourceFile>, instance: typeof ts) : ts.CompilerHost {
+export function patchCompilerHost(host: ts.CompilerHost | undefined, config: ts.CompilerOptions | undefined, newSourceFiles: Map<string, ts.SourceFile>, instance: typeof ts) : ts.CompilerHost {
     const compilerHost = host || instance.createCompilerHost(config || instance.getDefaultCompilerOptions(), true);
     const ogGetSourceFile = compilerHost.getSourceFile;
     return {
@@ -57,7 +57,9 @@ export default function (
     const isTSC = process.argv[1]?.endsWith("tsc");
 
     const instance = extras.ts as typeof ts;
-    const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true});
+    const transformer = new MacroTransformer(instance.nullTransformationContext, program.getTypeChecker(), macros, {...options as TsMacrosConfig, keepImports: true}, {
+        beforeRegisterMacro: (transformer, _sym, macro) =>  transformer.cleanupMacros(macro)
+    });
     const newSourceFiles: Map<string, ts.SourceFile> = new Map();
     const diagnostics: ts.Diagnostic[] = [];
     const compilerOptions = program.getCompilerOptions();
@@ -77,14 +79,7 @@ export default function (
         } catch(err) {
             parsed = sourceFile;
             if (err instanceof MacroError) {
-                localDiagnostic = {
-                    code: 8000,
-                    start: err.start,
-                    length: err.length,
-                    messageText: err.rawMsg,
-                    file: sourceFile,
-                    category: ts.DiagnosticCategory.Error
-                };
+                localDiagnostic = genDiagnosticFromMacroError(sourceFile, err);
                 diagnostics.push(localDiagnostic);
             }
         }

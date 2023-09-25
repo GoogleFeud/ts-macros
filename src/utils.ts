@@ -81,6 +81,17 @@ export class MacroError extends Error {
     }
 }
 
+export function genDiagnosticFromMacroError(sourceFile: ts.SourceFile, err: MacroError) : ts.Diagnostic {
+    return {
+        code: 8000,
+        start: err.start,
+        length: err.length,
+        messageText: err.rawMsg,
+        file: sourceFile,
+        category: ts.DiagnosticCategory.Error
+    };
+}
+
 export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
     if (ts.isIdentifier(obj) || ts.isStringLiteral(obj) || ts.isPrivateIdentifier(obj) || ts.isNumericLiteral(obj)) return obj.text;
     else return undefined;
@@ -289,3 +300,41 @@ export function expressionToStringLiteral(exp: ts.Expression) : ts.Expression {
     else if (exp.kind === ts.SyntaxKind.FalseKeyword) return ts.factory.createStringLiteral("false");
     else return ts.factory.createStringLiteral("null");
 }
+
+export class MapArray<K, V> extends Map<K, V[]> {
+    constructor() {
+        super();
+    }
+
+    push(key: K, value: V) : void {
+        const arr = this.get(key);
+        if (!arr) this.set(key, [value]);
+        else arr.push(value);
+    }
+
+    transferKey(oldKey: K, newKey: K) : void {
+        const returned = this.deleteAndReturn(oldKey);
+        if (!returned) return;
+        this.set(newKey, returned);
+    }
+
+    deleteAndReturn(key: K) : V[] | undefined {
+        const returned = this.get(key);
+        this.delete(key);
+        return returned;
+    }
+
+    deleteEntry(toBeDeleted: V) : void {
+        for (const [, arr] of this) {
+            const ind = arr.indexOf(toBeDeleted);
+            if (ind === -1) continue;
+            arr.splice(ind, 1);
+        }
+    }
+
+    clearArray(key: K) : void {
+        const arr = this.get(key);
+        if (arr) arr.length = 0;
+    }
+
+} 
