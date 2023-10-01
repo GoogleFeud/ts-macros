@@ -133,7 +133,7 @@ export function transpile(str: string) : {
 
     const program = ts.createProgram(["module.ts"], CompilerOptions, CompilerHost);
 
-    let genResult, transpiledSourceCode;
+    let genResult: ReturnType<typeof extractGeneratedTypes> | undefined, transpiledSourceCode;
     try {
         program.emit(undefined, (_, text) => transpiledSourceCode = text, undefined, undefined, {
             before: [(ctx: ts.TransformationContext) => {
@@ -152,8 +152,8 @@ export function transpile(str: string) : {
     return {
         transpiledSourceCode,
         generatedTypes: {
-            fromMacros: genResult!.print(genResult!.typeNodes),
-            chainTypes: genResult!.print(genResult!.chainTypes)
+            fromMacros: genResult ? genResult.print(genResult.typeNodes) : "",
+            chainTypes: genResult ? genResult.print(genResult.chainTypes) : ""
         },
         errors
     }

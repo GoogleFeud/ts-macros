@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -45,7 +45,8 @@ export interface MacroExpand {
 export interface MacroRepeat {
     index: number,
     repeatNames: Array<string>,
-    elementSlices: Array<Array<ts.Expression>>
+    elementSlices: Array<Array<ts.Expression>>,
+    indexTypes: ts.Type[]
 }
 
 export interface MacroTransformerBuiltinProps {
@@ -418,15 +419,12 @@ export class MacroTransformer {
             }
 
             // Detects a repetition
-            else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.expression.operand)) {
-                const { separator, function: fn, literals} = getRepetitionParams(node.expression.operand);
-                return this.execRepetition(fn, literals, separator);
-            }
+            else if (ts.isExpressionStatement(node) && ts.isPrefixUnaryExpression(node.expression) && node.expression.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.expression.operand)) return this.execRepetition(getRepetitionParams(this.checker, node.expression.operand));
             else if (ts.isPrefixUnaryExpression(node)) {
                 if (node.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(node.operand)) {
-                    const { separator, function: fn, literals} = getRepetitionParams(node.operand);
-                    if (!separator) throw new MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
-                    return this.execRepetition(fn, literals, separator, true);
+                    const params = getRepetitionParams(this.checker, node.operand);
+                    if (!params.separator) throw new MacroError(node, "Repetition separator must be included if a repetition is used as an expression.");
+                    return this.execRepetition(params, true);
                 } else {
                     // Detects a unary expression and tries to remove it if possible
                     const op = node.operator;
@@ -440,9 +438,9 @@ export class MacroTransformer {
                 const repNodeIndex = node.arguments.findIndex(arg => ts.isPrefixUnaryExpression(arg) && arg.operator === ts.SyntaxKind.PlusToken && ts.isArrayLiteralExpression(arg.operand));
                 if (repNodeIndex !== -1) {
                     const repNode = (node.arguments[repNodeIndex] as ts.PrefixUnaryExpression).operand as ts.ArrayLiteralExpression;
-                    const { separator, function: fn, literals} = getRepetitionParams(repNode);
-                    if (!separator) {
-                        const newBod = this.execRepetition(fn, literals, separator, true);
+                    const params = getRepetitionParams(this.checker, repNode);
+                    if (!params.separator) {
+                        const newBod = this.execRepetition(params, true);
                         const finalArgs = [];
                         for (let i=0; i < node.arguments.length; i++) {
                             if (i === repNodeIndex) finalArgs.push(...newBod);
@@ -457,15 +455,15 @@ export class MacroTransformer {
         return ts.visitEachChild(node, this.boundVisitor, this.context);
     }
 
-    execRepetition(fn: ts.ArrowFunction, elements: Array<ts.Expression>, separator?: string, wrapStatements?: boolean) : Array<ts.Node> {
+    execRepetition({ fn, literals, separator, indexTypes }: RepetitionData, wrapStatements?: boolean) : Array<ts.Node> {
         const newBod: Array<ts.Node> = [];
         const repeatNames = fn.parameters.map(p => p.name.getText());
         const elementSlices: Array<Array<ts.Expression>> = Array.from({length: repeatNames.length}, () => []);
         
         let totalLoopsNeeded = 0;
 
-        for (let i=0; i < elements.length; i++) {
-            const lit = elements[i];
+        for (let i=0; i < literals.length; i++) {
+            const lit = literals[i];
             const resolved = this.expectExpression(lit);
             if (ts.isArrayLiteralExpression(resolved)) {
                 if (resolved.elements.length > totalLoopsNeeded) totalLoopsNeeded = resolved.elements.length;
@@ -478,7 +476,8 @@ export class MacroTransformer {
         const ind = this.repeat.push({
             index: 0,
             elementSlices,
-            repeatNames
+            repeatNames,
+            indexTypes
         }) - 1;
 
 
@@ -784,17 +783,32 @@ export class MacroTransformer {
         const type = this.checker.getTypeAtLocation(macroCall.typeArguments[typeIndex]);
         const lastMacroCall = this.getLastMacro();
         if (!lastMacroCall) return type;
+        const lastRep = this.repeat[this.repeat.length - 1];
         if (type.isTypeParameter()) {
+            if (lastRep && lastRep.indexTypes) {
+                const resolvedIndexTypeParameterIndex = lastRep.indexTypes.findIndex(indType => indType === type);
+                if (resolvedIndexTypeParameterIndex !== -1) {
+                    const resolvedTypeParam = lastRep.elementSlices[resolvedIndexTypeParameterIndex]?.[lastRep.index];
+                    if (!resolvedTypeParam) return;
+                    return this.checker.getTypeAtLocation(resolvedTypeParam);
+                }
+            }
             const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
-            if (resolvedTypeParameterIndex === -1) return;
-            if (lastMacroCall.call && ts.isCallExpression(lastMacroCall.call)) {
+            if (resolvedTypeParameterIndex !== -1 && lastMacroCall.call && ts.isCallExpression(lastMacroCall.call)) {
                 const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
                 if (!resolvedTypeParam) return resolveTypeArguments(this.checker, lastMacroCall.call)[resolvedTypeParameterIndex];
                 return this.checker.getTypeAtLocation(resolvedTypeParam);
-            } else return;
+            }
         } else {
             const allParams = lastMacroCall.macro.typeParams.map(p => this.checker.getTypeAtLocation(p));
             const replacementTypes = resolveTypeArguments(this.checker, lastMacroCall.call as ts.CallExpression);
+            if (lastRep && lastRep.indexTypes) {
+                allParams.push(...lastRep.indexTypes);
+                for (let i=0; i < lastRep.repeatNames.length; i++) {
+                    const replacementType = lastRep.elementSlices[i][lastRep.index];
+                    if (replacementType) replacementTypes.push(this.checker.getTypeAtLocation(replacementType));
+                }
+            }
             return resolveTypeWithTypeParams(type, allParams, replacementTypes);
         }
     }

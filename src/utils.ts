@@ -32,28 +32,33 @@ export function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Node>,
     return ts.visitNode(last, transformer.boundVisitor) as ts.Expression;
 }
 
-export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
+export interface RepetitionData {
     separator?: string,
     literals: Array<ts.Expression>,
-    function: ts.ArrowFunction
-} {
-    const res: { separator?: string, literals: Array<ts.Expression>, function?: ts.ArrowFunction} = { literals: [] };
+    fn: ts.ArrowFunction,
+    indexTypes: ts.Type[]
+}
+
+export function getRepetitionParams(checker: ts.TypeChecker, rep: ts.ArrayLiteralExpression) : RepetitionData {
+    const res: Partial<RepetitionData> = { literals: [] };
     const firstElement = rep.elements[0];
     if (ts.isStringLiteral(firstElement)) res.separator = firstElement.text;
-    else if (ts.isArrayLiteralExpression(firstElement)) res.literals.push(...firstElement.elements);
-    else if (ts.isArrowFunction(firstElement)) res.function = firstElement;
+    else if (ts.isArrayLiteralExpression(firstElement)) res.literals!.push(...firstElement.elements);
+    else if (ts.isArrowFunction(firstElement)) res.fn = firstElement;
 
     const secondElement = rep.elements[1];
     if (secondElement) {
-        if (ts.isArrayLiteralExpression(secondElement)) res.literals.push(...secondElement.elements);
-        else if (ts.isArrowFunction(secondElement)) res.function = secondElement;
+        if (ts.isArrayLiteralExpression(secondElement)) res.literals!.push(...secondElement.elements);
+        else if (ts.isArrowFunction(secondElement)) res.fn = secondElement;
     }
 
     const thirdElement = rep.elements[2];
-    if (thirdElement && ts.isArrowFunction(thirdElement)) res.function = thirdElement;
+    if (thirdElement && ts.isArrowFunction(thirdElement)) res.fn = thirdElement;
+    if (!res.fn) throw new MacroError(rep, "Repetition must include arrow function.");
 
-    if (!res.function) throw new MacroError(rep, "Repetition must include arrow function.");
-    return res as ReturnType<typeof getRepetitionParams>;
+    res.indexTypes = (res.fn.typeParameters || []).map(arg => checker.getTypeAtLocation(arg));
+
+    return res as RepetitionData;
 }
 
 export class MacroError extends Error {
@@ -206,7 +211,6 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         if (checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
         else return falseType;
     }
-    // Intersections
     else if (providedType.isIntersection()) {
         const symTable = new Map();
         for (const unresolvedType of providedType.types) {
@@ -216,6 +220,11 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
             }
         }
         return checker.createAnonymousType(undefined, symTable, [], [], []);
+    }
+    else if (providedType.isUnion()) {
+        const newType = {...providedType};
+        newType.types = newType.types.map(t => resolveTypeWithTypeParams(t, typeParams, replacementTypes));
+        return newType;
     }
     else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
     //@ts-expect-error Private API
