@@ -310,6 +310,20 @@ export function expressionToStringLiteral(exp: ts.Expression) : ts.Expression {
     else return ts.factory.createStringLiteral("null");
 }
 
+/**
+ * If you attempt to get the type of a synthetic node literal (string literals like "abc", numeric literals like 3.14, etc.),
+ * the default `checker.getTypeAtLocation` method will return the `never` type. This fixes that issue.
+ */
+export function getTypeAtLocation(checker: ts.TypeChecker, node: ts.Node) : ts.Type {
+    if (node.pos === -1) {
+        if (ts.isStringLiteral(node)) return checker.getStringLiteralType(node.text);
+        else if (ts.isNumericLiteral(node)) return checker.getNumberLiteralType(+node.text);
+        else if (ts.isTemplateExpression(node)) return checker.getStringType();
+        else return checker.getTypeAtLocation(node);
+    }
+    return checker.getTypeAtLocation(node);
+}
+
 export class MapArray<K, V> extends Map<K, V[]> {
     constructor() {
         super();

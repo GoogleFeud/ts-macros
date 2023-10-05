@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -790,14 +790,14 @@ export class MacroTransformer {
                 if (resolvedIndexTypeParameterIndex !== -1) {
                     const resolvedTypeParam = lastRep.elementSlices[resolvedIndexTypeParameterIndex]?.[lastRep.index];
                     if (!resolvedTypeParam) return;
-                    return this.checker.getTypeAtLocation(resolvedTypeParam);
+                    return getTypeAtLocation(this.checker, resolvedTypeParam);
                 }
             }
             const resolvedTypeParameterIndex = lastMacroCall.macro.typeParams.findIndex(arg => this.checker.getTypeAtLocation(arg) === type);
             if (resolvedTypeParameterIndex !== -1 && lastMacroCall.call && ts.isCallExpression(lastMacroCall.call)) {
                 const resolvedTypeParam = lastMacroCall.call.typeArguments?.[resolvedTypeParameterIndex];
                 if (!resolvedTypeParam) return resolveTypeArguments(this.checker, lastMacroCall.call)[resolvedTypeParameterIndex];
-                return this.checker.getTypeAtLocation(resolvedTypeParam);
+                return getTypeAtLocation(this.checker, resolvedTypeParam);
             }
         } else {
             const allParams = lastMacroCall.macro.typeParams.map(p => this.checker.getTypeAtLocation(p));
@@ -806,7 +806,7 @@ export class MacroTransformer {
                 allParams.push(...lastRep.indexTypes);
                 for (let i=0; i < lastRep.repeatNames.length; i++) {
                     const replacementType = lastRep.elementSlices[i][lastRep.index];
-                    if (replacementType) replacementTypes.push(this.checker.getTypeAtLocation(replacementType));
+                    if (replacementType) replacementTypes.push(getTypeAtLocation(this.checker, replacementType));
                 }
             }
             return resolveTypeWithTypeParams(type, allParams, replacementTypes);
