@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation, primitiveToNode } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -901,6 +901,16 @@ export class MacroTransformer {
         const file = ts.createSourceFile("", str, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TSX);
         const uniquelize: (node: ts.Node) => ts.Node = (node: ts.Node) => ts.factory.cloneNode(ts.visitEachChild(node, uniquelize, this.context));
         return ts.visitEachChild(file, uniquelize, this.context).statements;
+    }
+
+    getIdent(name: string) : ts.Identifier {
+        const lastMacro = this.macroStack[this.macroStack.length - 1];
+        if (!lastMacro) return ts.factory.createIdentifier(name);
+        return lastMacro.defined.get(name) || ts.factory.createIdentifier(name);
+    }
+
+    toNode(primitive: string | number | boolean | Array<unknown> | Record<string, unknown>) : ts.Expression {
+        return primitiveToNode(primitive);
     }
 
     cleanupMacros(macro: Macro, extra?: (old: Macro) => void) : void {

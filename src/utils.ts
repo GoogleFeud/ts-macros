@@ -142,7 +142,7 @@ export function resolveAliasedSymbol(checker: ts.TypeChecker, sym?: ts.Symbol) :
     return sym;
 }
 
-export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseBody | undefined }) : string {
+export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseBody | undefined }, compilerOptions?: ts.CompilerOptions) : string {
     if (!fn.body) return "";
     const includedFns = new Set<string>();
     let code = "";
@@ -160,14 +160,14 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
                 const name = signature.declaration.name ? signature.declaration.name.text : ts.isIdentifier(node.expression) ? node.expression.text : undefined;
                 if (!name || includedFns.has(name)) return;
                 includedFns.add(name);
-                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration)}}`;
+                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration, compilerOptions)}}`;
             }
             ts.forEachChild(node, visitor);
         } 
         else ts.forEachChild(node, visitor);
     };
     ts.forEachChild(fn.body, visitor);
-    return code + ts.transpile((fn.body.original || fn.body).getText());
+    return code + ts.transpile((fn.body.original || fn.body).getText(), compilerOptions);
 }
 
 export function tryRun(contentStartNode: ts.Node, comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {

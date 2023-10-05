@@ -275,7 +275,7 @@ export default {
                 if ("body" in parent) {
                     const signature = transformer.checker.getSignatureFromDeclaration(parent as ts.SignatureDeclaration);
                     if (!signature || !signature.declaration) return;
-                    transformer.addComptimeSignature(signature.declaration, fnBodyToString(transformer.checker, callableFn), signature.parameters.map(p => p.name));
+                    transformer.addComptimeSignature(signature.declaration, fnBodyToString(transformer.checker, callableFn, transformer.context.getCompilerOptions()), signature.parameters.map(p => p.name));
                     return;
                 }
             }
@@ -295,7 +295,7 @@ export default {
                 if (!ts.isIdentifier(param.name)) throw new MacroError(callSite, "`raw` macro parameters cannot be deconstructors.");
                 renamedParameters.push(param.name.text);
             }
-            const stringified = transformer.addComptimeSignature(callableFn, fnBodyToString(transformer.checker, callableFn), ["ctx", ...renamedParameters]);
+            const stringified = transformer.addComptimeSignature(callableFn, fnBodyToString(transformer.checker, callableFn, transformer.context.getCompilerOptions()), ["ctx", ...renamedParameters]);
             return tryRun(fn, stringified, [{
                 ts,
                 factory: ts.factory,
