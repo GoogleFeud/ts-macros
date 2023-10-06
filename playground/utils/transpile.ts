@@ -30,7 +30,8 @@ interface RawContext {
     factory: any,
     transformer: any,
     checker: any,
-    thisMacro: any
+    thisMacro: any,
+    error: (node: any, message: string) => void
 }
 declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 declare function $$text(exp: any) : string;

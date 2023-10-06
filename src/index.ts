@@ -45,6 +45,7 @@ export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFac
  * TRIPLE=yes
  * ```
  * @category Built-in Macros
+ * @deprecated
  */
 export declare function $$loadEnv(path?: string) : void;
 
@@ -420,6 +421,7 @@ export declare function $$typeToString<T>(
  * send("ABC")
  * ```
  * @category Built-in Macros
+ * @deprecated
  */
 export declare function $$comptime(fn: () => void) : void;
 
@@ -580,6 +582,7 @@ export declare function $$typeAssignableTo<T, K>() : boolean;
  * 1
  * 2
  * ```
+ * @deprecated
  */
 export type Accumulator = number & { __marker?: "Accumulator" };
 
