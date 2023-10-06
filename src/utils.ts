@@ -323,6 +323,13 @@ export function getTypeAtLocation(checker: ts.TypeChecker, node: ts.Node) : ts.T
     return checker.getTypeAtLocation(node);
 }
 
+export function getGeneralType(checker: ts.TypeChecker, type: ts.Type) : ts.Type {
+    if (type.isStringLiteral()) return checker.getStringType();
+    else if (type.isNumberLiteral()) return checker.getNumberType();
+    else if (hasBit(type.flags, ts.TypeFlags.BooleanLiteral)) return checker.getBooleanType();
+    else return type;
+}
+
 export class MapArray<K, V> extends Map<K, V[]> {
     constructor() {
         super();

@@ -2,7 +2,7 @@ import * as ts from "typescript";
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { expressionToStringLiteral, fnBodyToString, hasBit, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
+import { expressionToStringLiteral, fnBodyToString, getGeneralType, hasBit, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -205,7 +205,7 @@ export default {
         call: ([simplifyType, nonNullType, fullExpand], transformer, callSite) => {
             let type = transformer.resolveTypeArgumentOfCall(callSite, 0);
             if (!type) throw new MacroError(callSite, "`typeToString` macro expects one type parameter.");
-            if (transformer.getBoolFromNode(simplifyType)) type = transformer.checker.getApparentType(type);
+            if (transformer.getBoolFromNode(simplifyType)) type = getGeneralType(transformer.checker, type);
             if (transformer.getBoolFromNode(nonNullType)) type = transformer.checker.getNonNullableType(type);
             return ts.factory.createStringLiteral(transformer.checker.typeToString(type, undefined, transformer.getBoolFromNode(fullExpand) ? ts.TypeFormatFlags.NoTruncation : undefined));
         }
