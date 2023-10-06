@@ -37,6 +37,25 @@ declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.
 declare function $$text(exp: any) : string;
 declare function $$decompose(exp: any) : any[];
 declare function $$map<T>(exp: T, mapper: (value: any, parent: number) => any) : T;
+type TypeMetadataJSDocTagCollection = Record<string, string|true>;
+interface TypeMetadataProperty {
+    name: string,
+    tags: TypeMetadataJSDocTagCollection,
+    type: string,
+    optional: boolean
+}
+interface TypeMetadataMethod {
+    name: string,
+    tags: TypeMetadataJSDocTagCollection,
+    parameters: Array<{name: string, type: string, optional: boolean}>,
+    returnType: string
+}
+interface TypeMedatada {
+    name: string,
+    properties: TypeMetadataProperty[],
+    methods: TypeMetadataMethod[]
+}
+declare function $$typeMetadata<T>(collectProps?: boolean, collectMethods?: boolean) : TypeMedatada;
 type Accumulator = number & { __marker?: "Accumulator" };
 type Save<T> = T & { __marker?: "Save" };
 type EmptyDecorator = (...props: any) => void;

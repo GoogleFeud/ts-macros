@@ -309,8 +309,9 @@ export class MacroTransformer {
                         const name = ts.isPropertyAccessExpression(node) ? getNameFromProperty(node.name) : this.getNumberFromNode(this.expectExpression(node.argumentExpression));
                         if (!name) return node;
                         const prop = exp.properties.find(p => p.name && (getNameFromProperty(p.name) === name));
-                        if (prop && ts.isPropertyAssignment(prop)) return prop.initializer;
-                        return ts.factory.createPropertyAccessExpression(exp, name.toString()); 
+                        if (!prop) return ts.factory.createNull();
+                        if (ts.isPropertyAssignment(prop)) return prop.initializer;
+                        else return ts.factory.createPropertyAccessExpression(exp, name.toString()); 
                     } else if (ts.isArrayLiteralExpression(exp)) {
                         if (!ts.isElementAccessExpression(node)) return ts.factory.createPropertyAccessExpression(exp, node.name);
                         const nameNode = this.expectExpression(node.argumentExpression);

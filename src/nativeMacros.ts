@@ -2,7 +2,7 @@ import * as ts from "typescript";
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { expressionToStringLiteral, fnBodyToString, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
+import { expressionToStringLiteral, fnBodyToString, hasBit, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -216,6 +216,56 @@ export default {
             const compareTo = transformer.resolveTypeArgumentOfCall(callSite, 1);
             if (!type || !compareTo) throw new MacroError(callSite, "`typeAssignableTo` macro expects two type parameters.");
             return transformer.checker.isTypeAssignableTo(type, compareTo) ? ts.factory.createTrue() : ts.factory.createFalse();
+        }
+    },
+    "$$typeMetadata": {
+        call: ([collectProps, collectMethods], transformer, callSite) => {
+            const type = transformer.resolveTypeArgumentOfCall(callSite, 0);
+            if (!type) throw new MacroError(callSite, "`typeMetadata` macro expects a type parameter.");
+            const shouldCollectProps = transformer.getBoolFromNode(collectProps);
+            const shouldCollectMethods = transformer.getBoolFromNode(collectMethods);
+
+            const methods: ts.ObjectLiteralExpression[] = [];
+            const properties: ts.ObjectLiteralExpression[] = [];
+
+            const stringifyType = (type: ts.Type) => ts.factory.createStringLiteral(transformer.checker.typeToString(transformer.checker.getNonNullableType(type), undefined, ts.TypeFormatFlags.NoTruncation));
+
+            for (const property of type.getProperties()) {
+                const valueDecl = property.valueDeclaration;
+                if (!valueDecl) continue;
+                const propType = transformer.checker.getTypeOfSymbolAtLocation(property, valueDecl);
+                const callSig = propType.getCallSignatures()[0];
+
+                if (callSig && shouldCollectMethods) {
+                    methods.push(ts.factory.createObjectLiteralExpression([
+                        ts.factory.createPropertyAssignment("name", ts.factory.createStringLiteral(property.name)),
+                        ts.factory.createPropertyAssignment("tags", ts.factory.createObjectLiteralExpression(ts.getJSDocTags(valueDecl).map(tag => ts.factory.createPropertyAssignment(tag.tagName.text, typeof tag.comment === "string" ? ts.factory.createStringLiteral(tag.comment) : ts.factory.createTrue())))),
+                        ts.factory.createPropertyAssignment("parameters", ts.factory.createArrayLiteralExpression(callSig.getParameters().map(method => {
+                            const paramType = transformer.checker.getTypeOfSymbol(method);
+                            return ts.factory.createObjectLiteralExpression([
+                                ts.factory.createPropertyAssignment("name", ts.factory.createStringLiteral(method.name)),
+                                ts.factory.createPropertyAssignment("type", stringifyType(paramType)),
+                                ts.factory.createPropertyAssignment("optional", hasBit(method.flags, ts.SymbolFlags.Optional) ? ts.factory.createTrue() : ts.factory.createFalse())
+                            ]);
+                        }))),
+                        ts.factory.createPropertyAssignment("returnType", stringifyType(callSig.getReturnType()))
+                    ]));
+                }
+                else if (!callSig && shouldCollectProps) {
+                    properties.push(ts.factory.createObjectLiteralExpression([
+                        ts.factory.createPropertyAssignment("name", ts.factory.createStringLiteral(property.name)),
+                        ts.factory.createPropertyAssignment("tags", ts.factory.createObjectLiteralExpression(ts.getJSDocTags(valueDecl).map(tag => ts.factory.createPropertyAssignment(tag.tagName.text, typeof tag.comment === "string" ? ts.factory.createStringLiteral(tag.comment) : ts.factory.createTrue())))),
+                        ts.factory.createPropertyAssignment("type", stringifyType(propType)),
+                        ts.factory.createPropertyAssignment("optional", hasBit(property.flags, ts.SymbolFlags.Optional) ? ts.factory.createTrue() : ts.factory.createFalse())
+                    ]));
+                }
+            }
+
+            return ts.factory.createObjectLiteralExpression([
+                ts.factory.createPropertyAssignment("name", ts.factory.createStringLiteral(type.symbol?.name || "anonymous")),
+                ts.factory.createPropertyAssignment("properties", ts.factory.createArrayLiteralExpression(properties)),
+                ts.factory.createPropertyAssignment("methods", ts.factory.createArrayLiteralExpression(methods))
+            ]);
         }
     },
     "$$text": {
