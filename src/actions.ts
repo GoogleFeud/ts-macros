@@ -1,6 +1,6 @@
 import * as ts from "typescript";
 import { LabelKinds } from ".";
-import { createObject, hasBit } from "./utils";
+import { NO_LIT_FOUND, createObject, hasBit } from "./utils";
 
 export const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
     [ts.SyntaxKind.MinusToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left - right),
@@ -36,6 +36,23 @@ export const binaryActions: Record<number, (origLeft: ts.Expression, origRight: 
         else return origRight;
     }
 };
+
+
+export const possiblyUnknownValueBinaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => ts.Expression|undefined> = {
+    [ts.SyntaxKind.AmpersandAmpersandToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown) => {
+        if (left !== NO_LIT_FOUND) {
+            if (left) return origRight;
+            else return origLeft;
+        }
+    },
+    [ts.SyntaxKind.BarBarToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown) => {
+        if (left !== NO_LIT_FOUND) {
+            if (left) return origLeft;
+            else return origRight;
+        }
+    }
+};
+
 
 export const unaryActions: Record<number, (val: unknown) => ts.Expression|undefined> = {
     [ts.SyntaxKind.ExclamationToken]: (val: unknown) => !val ? ts.factory.createTrue() : ts.factory.createFalse(),

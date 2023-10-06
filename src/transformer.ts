@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation, primitiveToNode } from "./utils";
-import { binaryActions, binaryNumberActions, unaryActions, labelActions } from "./actions";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation, primitiveToNode, NO_LIT_FOUND } from "./utils";
+import { binaryActions, binaryNumberActions, unaryActions, labelActions, possiblyUnknownValueBinaryActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
 export const enum MacroParamMarkers {
@@ -62,8 +62,6 @@ export interface MacroTransformerHooks {
     beforeCallMacro?: (transformer: MacroTransformer, macro: Macro, expand: MacroExpand) => void,
     beforeFileTransform?: (transformer: MacroTransformer, sourceFile: ts.SourceFile) => void
 }
-
-export const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
 
 export class MacroTransformer {
     context: ts.TransformationContext;
@@ -409,7 +407,7 @@ export class MacroTransformer {
                 const left = this.expectExpression(node.left);
                 const leftVal = this.getLiteralFromNode(left);
                 const rightVal = this.getLiteralFromNode(right);
-                if (leftVal === NO_LIT_FOUND || rightVal === NO_LIT_FOUND) return ts.factory.createBinaryExpression(left, op, right);
+                if (leftVal === NO_LIT_FOUND || rightVal === NO_LIT_FOUND) return possiblyUnknownValueBinaryActions[op]?.(left, right, leftVal, rightVal) ?? ts.factory.createBinaryExpression(left, op, right);
                 if (binaryNumberActions[op] && typeof leftVal === "number" && typeof rightVal === "number") return binaryNumberActions[op](leftVal, rightVal);
                 else return binaryActions[op]?.(left, right, leftVal, rightVal) ?? ts.factory.createBinaryExpression(left, op, right);
             }
