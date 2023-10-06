@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, isStatement, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation, primitiveToNode, NO_LIT_FOUND } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation, primitiveToNode, NO_LIT_FOUND } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions, possiblyUnknownValueBinaryActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -135,7 +135,7 @@ export class MacroTransformer {
 
     expectStatement(node: ts.Node) : ts.Statement {
         const visited = ts.visitNode(node, this.boundVisitor);
-        if (!visited || !isStatement(visited)) throw new MacroError(node, "Expected a statement.");
+        if (!visited || !ts.isStatement(visited)) throw new MacroError(node, "Expected a statement.");
         return visited as ts.Statement;
     }
 
@@ -143,7 +143,7 @@ export class MacroTransformer {
         if (!node) return;
         const visited = ts.visitNode(node, this.boundVisitor);
         if (!visited) return undefined;
-        if (!isStatement(visited)) throw new MacroError(node, "Expected a statement.");
+        if (!ts.isStatement(visited)) throw new MacroError(node, "Expected a statement.");
         return visited as ts.Statement;
     }
 
@@ -390,7 +390,7 @@ export class MacroTransformer {
                 }
                 else if (res === false) {
                     if (!node.elseStatement) return undefined;
-                    const res = this.expectStatement(node.elseStatement);
+                    const res = this.maybeStatement(node.elseStatement);
                     if (res && ts.isBlock(res)) return [...res.statements];
                     return res;
                 }
@@ -615,10 +615,10 @@ export class MacroTransformer {
             let last = statements.pop()!;
             if (statements.length === 0) {
                 if (ts.isReturnStatement(last) || ts.isExpressionStatement(last)) return last.expression;
-                else if (!isStatement(last)) return last;
+                else if (!ts.isStatement(last)) return last;
             }
             if (ts.isExpressionStatement(last)) last = ts.factory.createReturnStatement(last.expression);
-            else if (!isStatement(last)) last = ts.factory.createReturnStatement(last);
+            else if (!ts.isStatement(last)) last = ts.factory.createReturnStatement(last);
             return ts.factory.createCallExpression(
                 ts.factory.createParenthesizedExpression(
                     ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.factory.createBlock([...statements, last], true))
