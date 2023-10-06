@@ -300,7 +300,7 @@ export class MacroTransformer {
 
             // Detects property / element access and tries to remove it if possible
             if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
-                if (ts.isPropertyAccessExpression(node) && this.props.optimizeEnv && node.expression.getText() === "process.env") {
+                if (this.props.optimizeEnv && ts.isPropertyAccessExpression(node) && node.expression.getText() === "process.env") {
                     const value = process.env[node.name.text];
                     if (!value) return node;
                     return ts.factory.createStringLiteral(value);
@@ -391,7 +391,7 @@ export class MacroTransformer {
                 }
                 else if (res === false) {
                     if (!node.elseStatement) return undefined;
-                    const res = ts.visitNode(node.elseStatement, this.boundVisitor);
+                    const res = this.expectStatement(node.elseStatement);
                     if (res && ts.isBlock(res)) return [...res.statements];
                     return res;
                 }
@@ -401,8 +401,12 @@ export class MacroTransformer {
             // Detects a binary operation and tries to remove it if possible
             else if (ts.isBinaryExpression(node)) {
                 const op = node.operatorToken.kind;
-                const left = this.expectExpression(node.left);
                 const right = this.expectExpression(node.right);
+                if (op === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.left) && store.has(node.left.text)) {
+                    store.set(node.left.text, right);
+                    return;
+                }
+                const left = this.expectExpression(node.left);
                 const leftVal = this.getLiteralFromNode(left);
                 const rightVal = this.getLiteralFromNode(right);
                 if (leftVal === NO_LIT_FOUND || rightVal === NO_LIT_FOUND) return ts.factory.createBinaryExpression(left, op, right);
@@ -495,7 +499,7 @@ export class MacroTransformer {
             if (wrapStatements) newBod.push(wrapExpressions(fn.body.statements.map(node => this.maybeStatement(node)).filter(el => el) as ts.Statement[]));
             else {
                 for (const stmt of fn.body.statements) {
-                    const res = this.boundVisitor(stmt);
+                    const res = ts.visitNode(stmt, this.boundVisitor);
                     if (res) {
                         if (Array.isArray(res)) newBod.push(...res as ts.Statement[]);
                         else newBod.push(res as ts.Statement);
