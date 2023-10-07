@@ -128,7 +128,7 @@ function Main() {
     }, []);
 
     return (
-        <div>
+        <div className={styles.app}>
             <header className={styles.header}>
                 <div style={{display: "flex"}}>
                     <h2>Typescript Macros</h2>
@@ -147,12 +147,14 @@ function Main() {
                     </svg>
                 </a>
             </header>
-            <SplitPane split="vertical" defaultSize={"50%"} primary="first">
-                <TextEditor code={code} libCode={libCode} errors={errors} onChange={(code) => {
-                    transpileCode(code || "");
-                }} />
-                <Runnable code={compiledCode || ""} />
-            </SplitPane>
+            <div className={styles.mainContent}>
+                <SplitPane split="vertical" defaultSize={"50%"} primary="first" style={{position: "static"}}>
+                    <TextEditor code={code} libCode={libCode} errors={errors} onChange={(code) => {
+                        transpileCode(code || "");
+                    }} />
+                    <Runnable code={compiledCode || ""} />
+                </SplitPane>
+            </div>
             <footer className={styles.footer}>
                 <p>Made with ❤️ by <a href="https://github.com/GoogleFeud">GoogleFeud</a>.</p>
             </footer>
