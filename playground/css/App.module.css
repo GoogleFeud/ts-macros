@@ -43,7 +43,7 @@
 .runSection {
     background-color: #1e1e1e;
     color: white;
-    height: calc(100% - 55px);
+    height: 100%;
 }
 
 .runSectionResult {

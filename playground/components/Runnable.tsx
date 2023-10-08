@@ -1,5 +1,5 @@
 import SplitPane from "react-split-pane";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import style from "../css/App.module.css";
 
@@ -62,6 +62,7 @@ export function Runnable(props: { code: string }) {
     const [logs, setLogs] = useState<Log[]>([]);
     const [newHeight, setNewHeight] = useState<string>("100%");
     const topPaneRef = useRef<HTMLDivElement>(null);
+    const bottomPaneRef = useRef<HTMLDivElement>(null);
 
     const recalcHeight = () => {
         const current = topPaneRef.current;
@@ -69,18 +70,26 @@ export function Runnable(props: { code: string }) {
         setNewHeight(`${window.innerHeight - topPaneRef.current.clientHeight - (55 * 3)}px`);
     }
 
+    const scrollToBottom = () => {
+        const el = bottomPaneRef.current;
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    useEffect(() => {
+        recalcHeight();
+        scrollToBottom();
+    }, [logs]);
+
     const specialConsole = {
         log: (...messages: any[]) => {
             setLogs([...logs, ...messages.map(msg => ({ kind: LogKind.Log, message: msg }))]);
-            recalcHeight();
         },
         warn: (...messages: any[]) => {
             setLogs([...logs, ...messages.map(msg => ({ kind: LogKind.Warn, message: msg }))]);
-            recalcHeight();
         },
         error: (...messages: any[]) => {
             setLogs([...logs, ...messages.map(msg => ({ kind: LogKind.Error, message: msg }))]);
-            recalcHeight();
         },
     }
 
@@ -99,7 +108,7 @@ export function Runnable(props: { code: string }) {
             }}>Run</button>
             <button className={style.button} onClick={() => setLogs([])}>Clear</button>
             <br />
-            <div className={style.runSectionResult} style={{height: newHeight}}>
+            <div className={style.runSectionResult} style={{height: newHeight}} ref={bottomPaneRef}>
             {logs.map((log, index) => <div key={index}>
                 {!!index && <div className={style.logSeparator}></div>}
                 {resolveLogKind(log.kind)}{" "}
