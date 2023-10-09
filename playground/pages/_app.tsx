@@ -7,7 +7,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     <Head>
         <title>Typescript Macros</title>
     </Head>
-    <Component {...pageProps} />;
+    <Component {...pageProps} />
     </>;
 }
 

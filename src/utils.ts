@@ -3,11 +3,17 @@
 import * as ts from "typescript";
 import { ComptimeFunction, MacroParam, MacroTransformer } from "./transformer";
 
+export const NO_LIT_FOUND = Symbol("NO_LIT_FOUND");
+
 export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     if ("statements" in body) {
         return [...body.statements];
     }
     return [ts.factory.createExpressionStatement(body)];
+}
+
+export function isMacroIdent(ident: ts.MemberName) : boolean {
+    return ident.text[0] === "$";
 }
 
 export function hasBit(flags: number, bit: number) : boolean {
@@ -32,28 +38,33 @@ export function toBinaryExp(transformer: MacroTransformer, body: Array<ts.Node>,
     return ts.visitNode(last, transformer.boundVisitor) as ts.Expression;
 }
 
-export function getRepetitionParams(rep: ts.ArrayLiteralExpression) : {
+export interface RepetitionData {
     separator?: string,
     literals: Array<ts.Expression>,
-    function: ts.ArrowFunction
-} {
-    const res: { separator?: string, literals: Array<ts.Expression>, function?: ts.ArrowFunction} = { literals: [] };
+    fn: ts.ArrowFunction,
+    indexTypes: ts.Type[]
+}
+
+export function getRepetitionParams(checker: ts.TypeChecker, rep: ts.ArrayLiteralExpression) : RepetitionData {
+    const res: Partial<RepetitionData> = { literals: [] };
     const firstElement = rep.elements[0];
     if (ts.isStringLiteral(firstElement)) res.separator = firstElement.text;
-    else if (ts.isArrayLiteralExpression(firstElement)) res.literals.push(...firstElement.elements);
-    else if (ts.isArrowFunction(firstElement)) res.function = firstElement;
+    else if (ts.isArrayLiteralExpression(firstElement)) res.literals!.push(...firstElement.elements);
+    else if (ts.isArrowFunction(firstElement)) res.fn = firstElement;
 
     const secondElement = rep.elements[1];
     if (secondElement) {
-        if (ts.isArrayLiteralExpression(secondElement)) res.literals.push(...secondElement.elements);
-        else if (ts.isArrowFunction(secondElement)) res.function = secondElement;
+        if (ts.isArrayLiteralExpression(secondElement)) res.literals!.push(...secondElement.elements);
+        else if (ts.isArrowFunction(secondElement)) res.fn = secondElement;
     }
 
     const thirdElement = rep.elements[2];
-    if (thirdElement && ts.isArrowFunction(thirdElement)) res.function = thirdElement;
+    if (thirdElement && ts.isArrowFunction(thirdElement)) res.fn = thirdElement;
+    if (!res.fn) throw new MacroError(rep, "Repetition must include arrow function.");
 
-    if (!res.function) throw new MacroError(rep, "Repetition must include arrow function.");
-    return res as ReturnType<typeof getRepetitionParams>;
+    res.indexTypes = (res.fn.typeParameters || []).map(arg => checker.getTypeAtLocation(arg));
+
+    return res as RepetitionData;
 }
 
 export class MacroError extends Error {
@@ -97,26 +108,23 @@ export function getNameFromProperty(obj: ts.PropertyName) : string|undefined {
     else return undefined;
 }
 
-export function isStatement(obj: ts.Node) : obj is ts.Statement {
-    return obj.kind >= ts.SyntaxKind.Block && obj.kind <= ts.SyntaxKind.MissingDeclaration;
-}
-
-export function createObject(record: Record<string, ts.Expression|ts.Statement|undefined>) : ts.ObjectLiteralExpression {
+export function createObjectLiteral(record: Record<string, ts.Expression|ts.Statement|undefined>) : ts.ObjectLiteralExpression {
     const assignments = [];
     for (const key in record) {
         const obj = record[key];
         assignments.push(ts.factory.createPropertyAssignment(key, 
-            obj ? isStatement(obj) ? ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.isBlock(obj) ? obj : ts.factory.createBlock([obj])) : obj : ts.factory.createIdentifier("undefined")
+            obj ? ts.isStatement(obj) ? ts.factory.createArrowFunction(undefined, undefined, [], undefined, undefined, ts.isBlock(obj) ? obj : ts.factory.createBlock([obj])) : obj : ts.factory.createIdentifier("undefined")
         ));
     }
     return ts.factory.createObjectLiteralExpression(assignments);
 }
 
 export function primitiveToNode(primitive: unknown) : ts.Expression {
-    if (typeof primitive === "string") return ts.factory.createStringLiteral(primitive);
+    if (primitive === null) return ts.factory.createNull();
+    else if (primitive === undefined) return ts.factory.createIdentifier("undefined");
+    else if (typeof primitive === "string") return ts.factory.createStringLiteral(primitive);
     else if (typeof primitive === "number") return ts.factory.createNumericLiteral(primitive);
     else if (typeof primitive === "boolean") return primitive ? ts.factory.createTrue() : ts.factory.createFalse();
-    else if (primitive === null) return ts.factory.createNull();
     else if (Array.isArray(primitive)) return ts.factory.createArrayLiteralExpression(primitive.map(p => primitiveToNode(p)));
     else {
         const assignments: Array<ts.PropertyAssignment> = [];
@@ -137,7 +145,7 @@ export function resolveAliasedSymbol(checker: ts.TypeChecker, sym?: ts.Symbol) :
     return sym;
 }
 
-export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseBody | undefined }) : string {
+export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseBody | undefined }, compilerOptions?: ts.CompilerOptions) : string {
     if (!fn.body) return "";
     const includedFns = new Set<string>();
     let code = "";
@@ -155,14 +163,14 @@ export function fnBodyToString(checker: ts.TypeChecker, fn: { body?: ts.ConciseB
                 const name = signature.declaration.name ? signature.declaration.name.text : ts.isIdentifier(node.expression) ? node.expression.text : undefined;
                 if (!name || includedFns.has(name)) return;
                 includedFns.add(name);
-                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration)}}`;
+                code += `function ${name}(${signature.parameters.map(p => p.name).join(",")}){${fnBodyToString(checker, signature.declaration, compilerOptions)}}`;
             }
             ts.forEachChild(node, visitor);
         } 
         else ts.forEachChild(node, visitor);
     };
     ts.forEachChild(fn.body, visitor);
-    return code + ts.transpile((fn.body.original || fn.body).getText());
+    return code + ts.transpile((fn.body.original || fn.body).getText(), compilerOptions);
 }
 
 export function tryRun(contentStartNode: ts.Node, comptime: ComptimeFunction, args: Array<unknown> = [], additionalMessage?: string) : any {
@@ -206,7 +214,6 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
         if (checker.isTypeAssignableTo(checkType, extendsType)) return trueType;
         else return falseType;
     }
-    // Intersections
     else if (providedType.isIntersection()) {
         const symTable = new Map();
         for (const unresolvedType of providedType.types) {
@@ -216,6 +223,11 @@ export function resolveTypeWithTypeParams(providedType: ts.Type, typeParams: ts.
             }
         }
         return checker.createAnonymousType(undefined, symTable, [], [], []);
+    }
+    else if (providedType.isUnion()) {
+        const newType = {...providedType};
+        newType.types = newType.types.map(t => resolveTypeWithTypeParams(t, typeParams, replacementTypes));
+        return newType;
     }
     else if (providedType.isTypeParameter()) return replacementTypes[typeParams.findIndex(t => t === providedType)] || providedType;
     //@ts-expect-error Private API
@@ -299,6 +311,27 @@ export function expressionToStringLiteral(exp: ts.Expression) : ts.Expression {
     else if (exp.kind === ts.SyntaxKind.TrueKeyword) return ts.factory.createStringLiteral("true");
     else if (exp.kind === ts.SyntaxKind.FalseKeyword) return ts.factory.createStringLiteral("false");
     else return ts.factory.createStringLiteral("null");
+}
+
+/**
+ * If you attempt to get the type of a synthetic node literal (string literals like "abc", numeric literals like 3.14, etc.),
+ * the default `checker.getTypeAtLocation` method will return the `never` type. This fixes that issue.
+ */
+export function getTypeAtLocation(checker: ts.TypeChecker, node: ts.Node) : ts.Type {
+    if (node.pos === -1) {
+        if (ts.isStringLiteral(node)) return checker.getStringLiteralType(node.text);
+        else if (ts.isNumericLiteral(node)) return checker.getNumberLiteralType(+node.text);
+        else if (ts.isTemplateExpression(node)) return checker.getStringType();
+        else return checker.getTypeAtLocation(node);
+    }
+    return checker.getTypeAtLocation(node);
+}
+
+export function getGeneralType(checker: ts.TypeChecker, type: ts.Type) : ts.Type {
+    if (type.isStringLiteral()) return checker.getStringType();
+    else if (type.isNumberLiteral()) return checker.getNumberType();
+    else if (hasBit(type.flags, ts.TypeFlags.BooleanLiteral)) return checker.getBooleanType();
+    else return type;
 }
 
 export class MapArray<K, V> extends Map<K, V[]> {

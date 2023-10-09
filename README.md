@@ -2,13 +2,15 @@
 
 ts-macros is a typescript transformer which allows you to create function macros that expand to javascript code during the transpilation phase of your program. 
 
-## Basic usage
+📖 **[Documentation](https://github.com/GoogleFeud/ts-macros/wiki)**
+🎮 **[Playground](https://googlefeud.github.io/ts-macros/)**
+✍️ **[Examples](https://github.com/GoogleFeud/ts-macros/wiki/Practical-Macro-Examples)**
 
-All macro names must start with a dollar sign (`$`) and must be declared using the function keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `$macro!(params)`.
+## The Basics
+
+All macro names must start with a dollar sign (`$`) and must be declared using the function keyword. Macros can then be called just like a normal function, but with a `!` after it's name: `$macro!(params)`. All the code inside of the macro is going to "expand" where the macro is called.
 
 ![showcase](https://github.com/GoogleFeud/ts-macros/blob/dev/.github/assets/intro_gif.gif)
-
-To read more about ts-macros features, visit the [documentation](https://github.com/GoogleFeud/ts-macros/wiki), or you can check out the [interactive playground](https://googlefeud.github.io/ts-macros/) if you want to play with macros without having to set up an enviourment!
 
 **What you can do with ts-macros**:
 - Generate repetitive code
