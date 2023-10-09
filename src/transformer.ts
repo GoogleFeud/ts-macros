@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as ts from "typescript";
 import nativeMacros from "./nativeMacros";
-import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation, primitiveToNode, NO_LIT_FOUND } from "./utils";
+import { wrapExpressions, toBinaryExp, getRepetitionParams, MacroError, getNameFromProperty, resolveAliasedSymbol, tryRun, deExpandMacroResults, resolveTypeArguments, resolveTypeWithTypeParams, hasBit, RepetitionData, getTypeAtLocation, primitiveToNode, NO_LIT_FOUND, isMacroIdent } from "./utils";
 import { binaryActions, binaryNumberActions, unaryActions, labelActions, possiblyUnknownValueBinaryActions } from "./actions";
 import { TsMacrosConfig } from ".";
 
@@ -154,7 +154,7 @@ export class MacroTransformer {
     }
 
     visitor(node: ts.Node): ts.VisitResult<ts.Node|undefined> {
-        if (ts.isFunctionDeclaration(node) && node.name && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && node.name.getText().startsWith("$")) {
+        if (ts.isFunctionDeclaration(node) && node.name && !node.modifiers?.some(mod => mod.kind === ts.SyntaxKind.DeclareKeyword) && isMacroIdent(node.name)) {
             if (!node.body) return node;
             const sym = this.checker.getSymbolAtLocation(node.name);
             if (!sym) return node;
@@ -550,8 +550,9 @@ export class MacroTransformer {
 
     runMacroFromCallExpression(call: ts.CallExpression, name: ts.Expression, target?: ts.Node) : Array<ts.Statement>|undefined {
         const args = call.arguments;
-        let macro, normalArgs: ts.NodeArray<ts.Expression>;
+        let macro, normalArgs: ts.NodeArray<ts.Expression> | undefined;
         if (ts.isPropertyAccessExpression(name)) {
+            if (!isMacroIdent(name.name)) return;
             const symofArg = resolveAliasedSymbol(this.checker, this.checker.getSymbolAtLocation(name.expression));
             if (symofArg && hasBit(symofArg.flags, ts.SymbolFlags.Namespace)) return this.runMacroFromCallExpression(call, name.name);
             const possibleMacros = this.findMacroByTypeParams(name, call);
@@ -560,8 +561,9 @@ export class MacroTransformer {
             else macro = possibleMacros[0];
             const newArgs = ts.factory.createNodeArray([this.expectExpression(name.expression), ...call.arguments]);
             normalArgs = this.macroStack.length ? ts.factory.createNodeArray(newArgs.map(arg => this.expectExpression(arg))) : newArgs;
-        } else {
-            const nativeMacro = nativeMacros[name.getText()];
+        } else if (ts.isIdentifier(name)) {
+            if (!isMacroIdent(name)) return;
+            const nativeMacro = nativeMacros[name.text];
             if (nativeMacro) {
                 const macroResult = nativeMacro.call(nativeMacro.preserveParams ? args : ts.factory.createNodeArray(args.map(arg => this.expectExpression(arg))), this, call);
                 if (!macroResult) return [];
@@ -577,7 +579,7 @@ export class MacroTransformer {
             if (calledSym?.declarations?.length && !this.boundVisitor(calledSym.declarations[0])) return this.runMacroFromCallExpression(call, name, target);
             else return;
         }
-        return this.execMacro(macro, normalArgs, call, target);
+        return this.execMacro(macro, normalArgs || ts.factory.createNodeArray(), call, target);
     }
 
     execMacro(macro: Macro, args: ts.NodeArray<ts.Expression>, call: ts.Expression, target?: ts.Node) : ts.Statement[] {

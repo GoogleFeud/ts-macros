@@ -12,6 +12,10 @@ export function flattenBody(body: ts.ConciseBody) : Array<ts.Statement> {
     return [ts.factory.createExpressionStatement(body)];
 }
 
+export function isMacroIdent(ident: ts.MemberName) : boolean {
+    return ident.text[0] === "$";
+}
+
 export function hasBit(flags: number, bit: number) : boolean {
     return (flags & bit) !== 0;
 }
