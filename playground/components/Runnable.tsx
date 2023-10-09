@@ -54,7 +54,11 @@ function formatValue(obj: unknown, nestIdent = 0) : JSX.Element {
         {!!index && <span className={style.comma}>, </span>}
         {formatValue(element, nestIdent + 1)}
     </span>)}{"}"}</span> 
-    else return formatObjectLike(Object.entries(obj), obj, nestIdent);
+    else {
+        const entries = Object.entries(obj);
+        if (entries.length === 0) return <>{"{}"}</>;
+        else return formatObjectLike(entries, obj, nestIdent);
+    }
 }
 
 
