@@ -907,7 +907,7 @@ export class MacroTransformer {
     }
 
     getIdent(name: string) : ts.Identifier {
-        const lastMacro = this.macroStack[this.macroStack.length - 1];
+        const lastMacro = this.getLastMacro();
         if (!lastMacro) return ts.factory.createIdentifier(name);
         return lastMacro.defined.get(name) || ts.factory.createIdentifier(name);
     }

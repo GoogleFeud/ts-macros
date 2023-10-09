@@ -14,7 +14,7 @@ const SetupCodes = [
 }
     
 const searchItem = "google";
-$contains!(searchItem, ["erwin", "tj"]);`,
+console.log($contains!(searchItem, ["erwin", "tj"]));`,
     `function $try(resultObj: Save<{ value?: number, is_err: () => boolean}>) {
     $$escape!(() => {
         if (resultObj.is_err()) {
@@ -25,7 +25,8 @@ $contains!(searchItem, ["erwin", "tj"]);`,
 }
 
 
-const a = $try!({ value: 123, is_err: () => false });`,
+const a = $try!({ value: 123, is_err: () => false });
+console.log(val);`,
     `type ClassInfo = { name: string, value: string };
 
 function $makeClasses(...info: Array<ClassInfo>) {
@@ -51,7 +52,7 @@ $makeClasses!({name: "A", value: "123"}, {name: "B", value: "345"});`,
     return $$ident!("res");
 }
 
-const result = $map!([1, 2, 3, 4, 5, 6, 7, 8, 9], (num) => num * 2);`,
+console.log($map!([1, 2, 3, 4, 5, 6, 7, 8, 9], (num) => num * 2));`,
 `function $ToInterval(info: WhileLabel, intervalTimer = 1000) {
     const interval = setInterval(() => {
         if (info.condition) {
@@ -91,6 +92,8 @@ class Test {
         this.propB = b;
     }
 }
+
+console.log(new NewTest(1, "hello!"));
 `
 ]
 
