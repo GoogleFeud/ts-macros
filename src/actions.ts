@@ -1,6 +1,6 @@
 import * as ts from "typescript";
 import { LabelKinds } from ".";
-import { createObject, hasBit } from "./utils";
+import { NO_LIT_FOUND, createObjectLiteral, hasBit } from "./utils";
 
 export const binaryNumberActions: Record<number, (left: number, right: number) => ts.Expression> = {
     [ts.SyntaxKind.MinusToken]: (left: number, right: number) => ts.factory.createNumericLiteral(left - right),
@@ -37,6 +37,23 @@ export const binaryActions: Record<number, (origLeft: ts.Expression, origRight: 
     }
 };
 
+
+export const possiblyUnknownValueBinaryActions: Record<number, (origLeft: ts.Expression, origRight: ts.Expression, left: unknown, right: unknown) => ts.Expression|undefined> = {
+    [ts.SyntaxKind.AmpersandAmpersandToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown) => {
+        if (left !== NO_LIT_FOUND) {
+            if (left) return origRight;
+            else return origLeft;
+        }
+    },
+    [ts.SyntaxKind.BarBarToken]: (origLeft: ts.Expression, origRight: ts.Expression, left: unknown) => {
+        if (left !== NO_LIT_FOUND) {
+            if (left) return origLeft;
+            else return origRight;
+        }
+    }
+};
+
+
 export const unaryActions: Record<number, (val: unknown) => ts.Expression|undefined> = {
     [ts.SyntaxKind.ExclamationToken]: (val: unknown) => !val ? ts.factory.createTrue() : ts.factory.createFalse(),
     [ts.SyntaxKind.MinusToken]: (val: unknown) => {
@@ -56,7 +73,7 @@ export const unaryActions: Record<number, (val: unknown) => ts.Expression|undefi
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const labelActions: Record<number, (statement: any) => ts.Expression> = {
     [ts.SyntaxKind.IfStatement]: (node: ts.IfStatement) => {
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.If),
             condition: node.expression,
             then: node.thenStatement,
@@ -71,7 +88,7 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
         } else {
             initializer = node.initializer;
         }
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.ForIter),
             type: ts.factory.createStringLiteral("of"),
             initializer: initializer,
@@ -87,7 +104,7 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
         } else {
             initializer = node.initializer;
         }
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.ForIter),
             type: ts.factory.createStringLiteral("in"),
             initializer: initializer,
@@ -96,7 +113,7 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
         });
     },
     [ts.SyntaxKind.WhileStatement]: (node: ts.WhileStatement) => {
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.While),
             do: ts.factory.createFalse(),
             condition: node.expression,
@@ -104,7 +121,7 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
         });
     },
     [ts.SyntaxKind.DoStatement]: (node: ts.WhileStatement) => {
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.While),
             do: ts.factory.createTrue(),
             condition: node.expression,
@@ -122,9 +139,9 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
                 }
             } else expression = node.initializer;
         }
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.For),
-            initializer: createObject({
+            initializer: createObjectLiteral({
                 variables: variables && ts.factory.createArrayLiteralExpression(variables),
                 expression
             }),
@@ -134,7 +151,7 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
         });
     },
     [ts.SyntaxKind.Block]: (node: ts.Block) => {
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.Block),
             statement: node
         });
@@ -146,7 +163,7 @@ export const labelActions: Record<number, (statement: any) => ts.Expression> = {
             idents.push(decl.name);
             inits.push(decl.initializer || ts.factory.createIdentifier("undefined"));
         }
-        return createObject({
+        return createObjectLiteral({
             kind: ts.factory.createNumericLiteral(LabelKinds.VariableDeclaration),
             identifiers: ts.factory.createArrayLiteralExpression(idents),
             initializers: ts.factory.createArrayLiteralExpression(inits),

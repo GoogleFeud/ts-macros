@@ -30,12 +30,32 @@ interface RawContext {
     factory: any,
     transformer: any,
     checker: any,
-    thisMacro: any
+    thisMacro: any,
+    error: (node: any, message: string) => void
 }
 declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 declare function $$text(exp: any) : string;
 declare function $$decompose(exp: any) : any[];
 declare function $$map<T>(exp: T, mapper: (value: any, parent: number) => any) : T;
+type TypeMetadataJSDocTagCollection = Record<string, string|true>;
+interface TypeMetadataProperty {
+    name: string,
+    tags: TypeMetadataJSDocTagCollection,
+    type: string,
+    optional: boolean
+}
+interface TypeMetadataMethod {
+    name: string,
+    tags: TypeMetadataJSDocTagCollection,
+    parameters: Array<{name: string, type: string, optional: boolean}>,
+    returnType: string
+}
+interface TypeMedatada {
+    name: string,
+    properties: TypeMetadataProperty[],
+    methods: TypeMetadataMethod[]
+}
+declare function $$typeMetadata<T>(collectProps?: boolean, collectMethods?: boolean) : TypeMedatada;
 type Accumulator = number & { __marker?: "Accumulator" };
 type Save<T> = T & { __marker?: "Save" };
 type EmptyDecorator = (...props: any) => void;
@@ -88,8 +108,6 @@ for (const kind in Object.keys(ts.SyntaxKind)) {
 }
 Markers += "\n}\n";
 
-const FinalMarkersFile = ts.createSourceFile("markers.d.ts", Markers, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
-
 export const CompilerOptions: ts.CompilerOptions = {
     //...ts.getDefaultCompilerOptions(),                    
     noImplicitAny: true,
@@ -111,13 +129,12 @@ export function transpile(str: string) : {
 } {
     macros.clear();
 
-    const sourceFile = ts.createSourceFile("module.ts", str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
+    const sourceFile = ts.createSourceFile("module.ts", Markers + str, CompilerOptions.target || ts.ScriptTarget.ESNext, true);
     const errors = [];
 
     const CompilerHost: ts.CompilerHost = {
         getSourceFile: (fileName) => {
             if (fileName === "module.ts") return sourceFile;
-            else return FinalMarkersFile;
         },
         getDefaultLibFileName: () => "lib.d.ts",
         useCaseSensitiveFileNames: () => false,
@@ -133,7 +150,7 @@ export function transpile(str: string) : {
 
     const program = ts.createProgram(["module.ts"], CompilerOptions, CompilerHost);
 
-    let genResult, transpiledSourceCode;
+    let genResult: ReturnType<typeof extractGeneratedTypes> | undefined, transpiledSourceCode;
     try {
         program.emit(undefined, (_, text) => transpiledSourceCode = text, undefined, undefined, {
             before: [(ctx: ts.TransformationContext) => {
@@ -152,8 +169,8 @@ export function transpile(str: string) : {
     return {
         transpiledSourceCode,
         generatedTypes: {
-            fromMacros: genResult!.print(genResult!.typeNodes),
-            chainTypes: genResult!.print(genResult!.chainTypes)
+            fromMacros: genResult ? genResult.print(genResult.typeNodes) : "",
+            chainTypes: genResult ? genResult.print(genResult.chainTypes) : ""
         },
         errors
     }

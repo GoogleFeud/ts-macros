@@ -1,4 +1,9 @@
-
+.app {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+}
 
 .header {
     background-color: #222;
@@ -11,6 +16,11 @@
     padding-right: 30px;
 }
 
+.mainContent {
+    height: calc(100% - 55px);
+    width: 100%;
+}
+
 .footer {
     background-color: #222;
     color: white;
@@ -18,8 +28,6 @@
     height: 55px;
     justify-content: center;
     align-items: center;
-    position: absolute;
-    bottom: 0;
     width: 100%;
     z-index: 10;
 }
@@ -40,9 +48,49 @@
 
 .runSectionResult {
     margin-left: 30px;
+    overflow-y: auto;
+    height: calc(100% - 55px);
 }
-
 
 .header a, .header a:visited, .footer a, .footer a:visited {
     color: white !important;
+}
+
+.code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    white-space: pre;
+}
+
+.number {
+    color: #b5cea8;
+}
+
+.string {
+    color: #ce9178;
+}
+
+.keyword {
+    color: #569cd6;
+}
+
+.comma {
+    color: #777;
+}
+
+.classNameIdent {
+    color: #3dc9b0;
+}
+
+.logSeparator {
+    color: #777;
+    width: 100%;
+    border-bottom-style: dotted;
+    border-bottom-width: 3px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.Pane {
+    overflow: auto;
 }

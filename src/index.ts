@@ -45,6 +45,7 @@ export default (program: ts.Program, config?: TsMacrosConfig): ts.TransformerFac
  * TRIPLE=yes
  * ```
  * @category Built-in Macros
+ * @deprecated
  */
 export declare function $$loadEnv(path?: string) : void;
 
@@ -325,6 +326,7 @@ export declare function $$escape<T>(code: () => T) : T;
  * console.log(["a", "b"]);
  * ```
  * @category Built-in Macros
+ * @deprecated
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export declare function $$propsOfType<T>() : Array<string>;
@@ -420,6 +422,7 @@ export declare function $$typeToString<T>(
  * send("ABC")
  * ```
  * @category Built-in Macros
+ * @deprecated
  */
 export declare function $$comptime(fn: () => void) : void;
 
@@ -559,6 +562,31 @@ export declare function $$map<T>(exp: T, mapper: (value: any, kind: number) => a
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export declare function $$typeAssignableTo<T, K>() : boolean;
+
+export type TypeMetadataJSDocTagCollection = Record<string, string|true>;
+
+export interface TypeMetadataProperty {
+    name: string,
+    tags: TypeMetadataJSDocTagCollection,
+    type: string,
+    optional: boolean
+}
+
+export interface TypeMetadataMethod {
+    name: string,
+    tags: TypeMetadataJSDocTagCollection,
+    parameters: Array<{name: string, type: string, optional: boolean}>,
+    returnType: string
+}
+
+export interface TypeMedatada {
+    name: string,
+    properties: TypeMetadataProperty[],
+    methods: TypeMetadataMethod[]
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export declare function $$typeMetadata<T>(collectProps?: boolean, collectMethods?: boolean) : TypeMedatada;
 
 /**
  * A parameter which increments every time the macro is called. You can only have one accumulator parameter per macro.
