@@ -472,7 +472,7 @@ export interface RawContext {
 export declare function $$raw<T>(fn: (ctx: RawContext, ...args: any[]) => ts.Node | ts.Node[] | undefined) : T;
 
 /**
- * Expands to a string literal of the expression. If the transformation is not possible, it expands to `undefined`.
+ * Expands to a string literal of the expression. If the transformation is not possible, it expands to `null`.
  * 
  * Expressions that can be transformed:
  * 
