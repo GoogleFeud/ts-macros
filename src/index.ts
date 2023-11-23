@@ -213,7 +213,7 @@ export declare function $$ident(str: string) : any;
  * @param str - The error to throw.
  * @category Built-in Macros
  */
-export declare function $$err(str: string) : void;
+export declare function $$err(str: string) : never;
 
 /**
  * Checks if `val` is included in the array literal / string.
