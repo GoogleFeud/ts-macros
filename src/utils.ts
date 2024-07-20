@@ -334,6 +334,11 @@ export function getGeneralType(checker: ts.TypeChecker, type: ts.Type) : ts.Type
     else return type;
 }
 
+export function createNumberNode(num: number) : ts.Expression {
+    if (num < 0) return ts.factory.createPrefixUnaryExpression(ts.SyntaxKind.MinusToken, ts.factory.createNumericLiteral(Math.abs(num)));
+    else return ts.factory.createNumericLiteral(num);
+}
+
 export class MapArray<K, V> extends Map<K, V[]> {
     constructor() {
         super();

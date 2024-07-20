@@ -688,6 +688,7 @@ export class MacroTransformer {
     getNumberFromNode(node: ts.Expression) : number|undefined {
         if (ts.isParenthesizedExpression(node)) return this.getNumberFromNode(node.expression);
         if (ts.isNumericLiteral(node)) return +node.text;
+        else if (ts.isPrefixUnaryExpression(node) && ts.isNumericLiteral(node.operand)) return -(+node.operand.text);
         const type = this.checker.getTypeAtLocation(node);
         if (type.isNumberLiteral()) return type.value;
         //@ts-expect-error Private API
