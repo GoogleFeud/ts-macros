@@ -10,8 +10,8 @@
   "devDependencies": {
     "@types/chai": "^4.3.4",
     "@types/mocha": "^9.1.1",
-    "@types/node": "^16.18.10",
-    "@types/ts-expose-internals": "npm:ts-expose-internals@^5.2.2",
+    "@types/node": "^16.18.103",
+    "@types/ts-expose-internals": "npm:ts-expose-internals@^5.5.3",
     "@types/yargs-parser": "^21.0.0",
     "@typescript-eslint/eslint-plugin": "^6.7.2",
     "@typescript-eslint/parser": "^6.7.2",
@@ -19,11 +19,11 @@
     "diff": "^5.1.0",
     "eslint": "^7.32.0",
     "mocha": "^9.2.2",
-    "ts-patch": "^3.0.2",
-    "typescript": "^5.2.2"
+    "ts-patch": "^3.2.1",
+    "typescript": "^5.5.3"
   },
   "peerDependencies": {
-    "typescript": "4.7.x || 4.8.x || 4.9.x || 5.0.x || 5.1.x || 5.2.x"
+    "typescript": "5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x"
   },
   "scripts": {
     "build": "tsc",

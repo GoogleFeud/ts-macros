@@ -2,7 +2,7 @@ import * as ts from "typescript";
 import * as fs from "fs";
 import { MacroTransformer } from "./transformer";
 import * as path from "path";
-import { expressionToStringLiteral, fnBodyToString, getGeneralType, hasBit, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
+import { createNumberNode, expressionToStringLiteral, fnBodyToString, getGeneralType, hasBit, MacroError, macroParamsToArray, normalizeFunctionNode, primitiveToNode, tryRun } from "./utils";
 
 const jsonFileCache: Record<string, ts.Expression> = {};
 const regFileCache: Record<string, string> = {};
@@ -111,7 +111,7 @@ export default {
     "$$i": {
         call: (_, transformer) => {
             if (transformer.repeat.length) return transformer.context.factory.createNumericLiteral(transformer.repeat[transformer.repeat.length - 1].index);
-            else return transformer.context.factory.createNumericLiteral(-1); 
+            else return createNumberNode(-1);
         }
     },
     "$$length": {
@@ -186,8 +186,8 @@ export default {
     "$$slice": {
         call: ([thing, start, end], transformer, callSite) => {
             if (!thing) throw new MacroError(callSite, "`slice` macro expects an array/string literal as the first argument.");
-            const startNum = (start && transformer.getNumberFromNode(start)) || -Infinity;
-            const endNum = (end && transformer.getNumberFromNode(end)) || Infinity;
+            const startNum = (start && transformer.getNumberFromNode(start)) ?? -Infinity;
+            const endNum = (end && transformer.getNumberFromNode(end)) ?? Infinity;
             const strVal = transformer.getStringFromNode(thing, false, true);
             if (strVal) return ts.factory.createStringLiteral(strVal.slice(startNum, endNum));
             else if (ts.isArrayLiteralExpression(thing)) return ts.factory.createArrayLiteralExpression(thing.elements.slice(startNum, endNum));
