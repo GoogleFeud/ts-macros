@@ -1,0 +1,28 @@
+# This workflow will run tests using node. For more information see:
+# https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+
+name: Build and Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [12.x, 14.x, 16.x, 18.x]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - run: npm ci
+      - run: npm lint
+      - run: npm run build      
+      - run: npm test
+      
