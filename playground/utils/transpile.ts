@@ -14,7 +14,7 @@ declare function $$define(varname: string, initializer: unknown, let?: boolean, 
 declare function $$i() : number;
 declare function $$length(arr: Array<any>|string) : number;
 declare function $$ident(str: string) : any;
-declare function $$err(str: string) : void;
+declare function $$err(str: string) : never;
 declare function $$includes<T>(arr: Array<T>, val: T) : boolean;
 declare function $$includes(arr: string, val: string) : boolean;
 declare function $$slice<T>(str: Array<T>, start?: number, end?: number) : Array<T>;
