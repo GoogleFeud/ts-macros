@@ -31,7 +31,8 @@
     "test": "tsc && cd ./tests && tspc && mocha dist/integrated/**/*.js && node ./dist/snapshots/index",
     "playground": "tsc && cd ./playground && npm run dev",
     "manual": "tsc && cd ./test && tspc",
-    "prepublishOnly": "tsc"
+    "prepublishOnly": "tsc",
+    "prepare": "tsc"
   },
   "repository": {
     "type": "git",
